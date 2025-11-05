@@ -1,0 +1,54 @@
+name: Dependency Update Check
+
+on:
+  schedule:
+    # Run weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-dependencies:
+    name: Check for Dependency Updates
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Check backend dependencies
+      - name: Check Backend Dependencies
+        working-directory: ./backend
+        run: |
+          npm outdated || true
+          npm audit --audit-level=moderate || true
+
+      # Check frontend dependencies
+      - name: Check Frontend Dependencies
+        working-directory: ./frontend
+        run: |
+          npm outdated || true
+          npm audit --audit-level=moderate || true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # Check AI service dependencies
+      - name: Check AI Service Dependencies
+        working-directory: ./ai-service
+        run: |
+          pip list --outdated || true
+          pip check || true
+
+      # TODO: Add step to create issue or PR if critical updates are available
+      - name: Create summary
+        run: |
+          echo "## Dependency Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Run on: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for outdated packages." >> $GITHUB_STEP_SUMMARY
+

@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: talent-hub-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./init_mongo.js:/docker-entrypoint-initdb.d/init_mongo.js:ro
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: talent-hub
+    networks:
+      - talent-hub-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: talent-hub-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/talent-hub?authSource=admin
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRE=7d
+      - AI_SERVICE_URL=http://ai-service:8000
+      - CORS_ORIGIN=http://localhost:5173
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    networks:
+      - talent-hub-network
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # AI Microservice
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: talent-hub-ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-your-openai-api-key-here}
+      - PORT=8000
+      - HOST=0.0.0.0
+    networks:
+      - talent-hub-network
+    volumes:
+      - ../ai-service:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: talent-hub-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000/api
+    depends_on:
+      - backend
+    networks:
+      - talent-hub-network
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
+
+networks:
+  talent-hub-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+

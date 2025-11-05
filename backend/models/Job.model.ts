@@ -1,0 +1,93 @@
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface IJob extends Document {
+  companyId: mongoose.Types.ObjectId;
+  title: string;
+  description: string;
+  requirements: {
+    skills: string[];
+    education?: string;
+    experience?: string;
+  };
+  location?: string;
+  salary?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  status: 'active' | 'closed' | 'draft';
+  embedding?: number[];
+  matches?: {
+    graduateId: mongoose.Types.ObjectId;
+    score: number;
+    status: 'pending' | 'accepted' | 'rejected';
+    createdAt: Date;
+  }[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const JobSchema: Schema = new Schema(
+  {
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
+      required: true,
+    },
+    title: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    requirements: {
+      skills: {
+        type: [String],
+        required: true,
+      },
+      education: String,
+      experience: String,
+    },
+    location: String,
+    salary: {
+      min: Number,
+      max: Number,
+      currency: {
+        type: String,
+        default: 'USD',
+      },
+    },
+    status: {
+      type: String,
+      enum: ['active', 'closed', 'draft'],
+      default: 'active',
+    },
+    embedding: [Number],
+    matches: [
+      {
+        graduateId: {
+          type: Schema.Types.ObjectId,
+          ref: 'Graduate',
+        },
+        score: Number,
+        status: {
+          type: String,
+          enum: ['pending', 'accepted', 'rejected'],
+          default: 'pending',
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model<IJob>('Job', JobSchema);
+

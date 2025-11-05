@@ -1,0 +1,43 @@
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface ICompany extends Document {
+  userId: mongoose.Types.ObjectId;
+  companyName: string;
+  industry: string;
+  description: string;
+  website?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const CompanySchema: Schema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true,
+    },
+    companyName: {
+      type: String,
+      required: true,
+    },
+    industry: {
+      type: String,
+      required: true,
+    },
+    description: {
+      type: String,
+      required: true,
+    },
+    website: {
+      type: String,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export default mongoose.model<ICompany>('Company', CompanySchema);
+

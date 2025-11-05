@@ -1,0 +1,28 @@
+{
+  "name": "talent-hub",
+  "version": "1.0.0",
+  "description": "AI-Driven Job Matching Platform",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install",
+    "commitlint": "commitlint --edit",
+    "lint-staged": "lint-staged"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.6.0",
+    "@commitlint/config-conventional": "^18.6.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "lint-staged": {
+    "backend/**/*.{ts,tsx}": [
+      "cd backend && npm run lint -- --fix",
+      "cd backend && npm run format"
+    ],
+    "frontend/**/*.{ts,tsx}": [
+      "cd frontend && npm run lint -- --fix",
+      "cd frontend && npm run format"
+    ]
+  }
+}
+
