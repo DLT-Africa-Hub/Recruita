@@ -141,3 +141,5 @@ After setup, implement:
 3. Job posting
 4. AI matching logic
 5. Admin dashboard
+
+**📋 Full Implementation Roadmap:** See [ISSUE.md](./ISSUE.md) for a comprehensive list of all features and tasks that need to be implemented to complete the project.
