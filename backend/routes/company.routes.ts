@@ -13,6 +13,7 @@ import {
   getApplications,
 } from '../controllers/company.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
+import { strictLimiter, veryStrictLimiter } from '../middleware/rateLimit.middleware';
 
 const router = Router();
 
@@ -20,17 +21,21 @@ const router = Router();
 router.use(authenticate);
 router.use(authorize('company'));
 
-router.get('/profile', getProfile);
-router.post('/profile', createProfile);
-router.put('/profile', updateProfile);
-router.post('/jobs', createJob);
-router.get('/jobs', getJobs);
-router.get('/jobs/:jobId', getJob);
-router.put('/jobs/:jobId', updateJob);
-router.delete('/jobs/:jobId', deleteJob);
-router.get('/jobs/:jobId/matches', getJobMatches);
-router.put('/jobs/:jobId/matches/:matchId', updateMatchStatus);
-router.get('/applications', getApplications);
+// Apply rate limiting based on operation type
+// GET operations (database queries) - strict limiter
+router.get('/profile', strictLimiter, getProfile);
+router.get('/jobs', strictLimiter, getJobs);
+router.get('/jobs/:jobId', strictLimiter, getJob);
+router.get('/jobs/:jobId/matches', strictLimiter, getJobMatches);
+router.get('/applications', strictLimiter, getApplications);
+
+// Write operations (POST/PUT/DELETE) - very strict limiter
+router.post('/profile', veryStrictLimiter, createProfile);
+router.put('/profile', veryStrictLimiter, updateProfile);
+router.post('/jobs', veryStrictLimiter, createJob);
+router.put('/jobs/:jobId', veryStrictLimiter, updateJob);
+router.delete('/jobs/:jobId', veryStrictLimiter, deleteJob);
+router.put('/jobs/:jobId/matches/:matchId', veryStrictLimiter, updateMatchStatus);
 
 export default router;
 
