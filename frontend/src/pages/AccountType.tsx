@@ -7,7 +7,7 @@ interface Role {
   tags: string[];
 }
 
-const AccountType = () => {
+const AccountType: React.FC  = () => {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const roles: Role[] = [

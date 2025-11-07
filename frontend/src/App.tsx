@@ -8,7 +8,8 @@ import CompanyDashboard from './pages/CompanyDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
-import AccountType from './components/onboarding/AccountType';
+import AccountType from './pages/AccountType';
+import GraduateOnboarding from './pages/GraduateOnboarding';
 
 function App() {
   return (
@@ -43,7 +44,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/onboarding" element={<AccountType />} />
+          <Route path="/role" element={<AccountType />} />
+          <Route path="/onboarding" element={<GraduateOnboarding />} />
         </Routes>
       </div>
     </AuthProvider>
