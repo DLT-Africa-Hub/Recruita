@@ -33,26 +33,28 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       <div className="flex justify-between w-full">
         <div className="flex flex-col gap-[5px]">
           <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">{company.name}</p>
-          <p className="font-sf font-normal text-[16px] text-[#1C1C1CBF]">{company.role}</p>
+          <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">{company.role}</p>
         </div>
-        <div className="flex items-center  h-[49px] bg-[#2E5EAA33] py-[15px] px-6 rounded-[70px]">
+        <div className="flex items-center  h-[49px]  bg-[#2E5EAA33] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
           {company.match}% match
         </div>
       </div>
-      <div className="flex w-full">
-        <p className="text-center w-[100px] font-semibold text-[16px]">
+      <div className="flex w-full items-center justify-between">
+        <p className="text-center w-full font-semibold text-[16px]">
           {company.contract}
         </p>
-        <p className="text-center border-r-2 border-l-2 font-semibold w-[100px]">
+        <div className='h-[20px] bg-black w-0.5'/>
+        <p className="text-center  font-semibold w-full">
           {company.location}
         </p>
-        <p className="text-center font-semibold w-[100px]">
+        <div className='h-[20px] bg-black w-0.5'/>
+        <p className="text-center font-semibold w-full">
           {company.wage} {company.wageType}
         </p>
       </div>
       <button 
         onClick={onButtonClick}
-        className="h-[55px] bg-button w-full rounded-[10px] text-[#F8F8F8] font-medium transition-all duration-200 hover:bg-[#A9B9D3]"
+        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] font-medium transition-all duration-200 hover:bg-[#A9B9D3]"
       >
         {buttonText}
       </button>

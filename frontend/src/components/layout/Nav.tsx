@@ -18,7 +18,7 @@ const Nav = () => {
     const pages: Page[] = [
         {
             page: "Home",
-            link: "dashboard",
+            link: "graduate",
             icon: RiHomeSmile2Line
         },
         {

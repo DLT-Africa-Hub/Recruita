@@ -13,6 +13,9 @@ import GraduateOnboarding from './pages/GraduateOnboarding';
 import SkillAssessment from './pages/SkillAssessment';
 import Layout from './components/layout/Layout';
 import ExploreCompany from './pages/ExploreCompany';
+import GraduateApplications from './pages/GraduateApplications';
+import CompanyPreview from './pages/CompanyPreview';
+import AuthPage from './pages/AuthPage';
 
 function App() {
   return (
@@ -21,14 +24,14 @@ function App() {
         {/* <Navbar /> */}
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<AuthPage mode='login'/>} />
+          <Route path="/register" element={<AuthPage mode='register' />} />
           <Route
             path="/graduate/*"
             element={
-              <ProtectedRoute allowedRoles={['graduate']}>
-                <GraduateDashboard />
-              </ProtectedRoute>
+              <Layout>
+                 <GraduateDashboard />
+              </Layout>
             }
           />
           <Route
@@ -50,8 +53,13 @@ function App() {
           <Route path="/role" element={<AccountType />} />
           <Route path="/onboarding" element={<GraduateOnboarding />} />
           <Route path="/assessment" element={<SkillAssessment />} />
+          <Route path="/company-preview/:id" element={<CompanyPreview mode='application' />} />
+          <Route path="/contactCompany/:id" element={<CompanyPreview mode='contact'/>} />
           <Route path="/explore" element={<Layout >
             <ExploreCompany/>
+          </Layout>} />
+          <Route path="/applications" element={<Layout >
+            <GraduateApplications/>
           </Layout>} />
           
         </Routes>

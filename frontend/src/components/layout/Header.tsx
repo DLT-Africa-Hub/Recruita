@@ -14,7 +14,7 @@ const Header = () => {
   const pages: Page[] = [
     {
         page: "DashBoard",
-        link: "dashboard",
+        link: "graduate",
    
     },
     {
