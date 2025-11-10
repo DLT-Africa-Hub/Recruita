@@ -1,50 +1,69 @@
-import { useState, useEffect } from 'react';
-import api from '../api/auth';
+import {  useMemo } from 'react';
+import CompanyCard, {Company} from '../components/explore/CompanyCard';
+import { companies } from '../data/companies';
+
+
+
 
 const GraduateDashboard = () => {
-  const [profile, setProfile] = useState<any>(null);
-  const [matches, setMatches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // TODO: Fetch graduate profile and matches
-    // const fetchData = async () => {
-    //   try {
-    //     const profileRes = await api.get('/graduates/profile');
-    //     const matchesRes = await api.get('/graduates/matches');
-    //     setProfile(profileRes.data);
-    //     setMatches(matchesRes.data.matches);
-    //   } catch (error) {
-    //     console.error('Error fetching data:', error);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-    // fetchData();
-    setLoading(false);
-  }, []);
 
-  if (loading) {
-    return <div style={containerStyle}>Loading...</div>;
-  }
+
+  const getRandom = (arr: Company[], n: number) => {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy.slice(0, n);
+  };
+
+
+  const availableCompanies = useMemo(() => getRandom(companies, 4), []);
+  const contractCompanies = useMemo(() => getRandom(companies, 4), []);
+
+  const handleButtonClick = (companyName: string, buttonText: string) => {
+    console.log(`${buttonText} clicked for ${companyName}`);
+  };
 
   return (
-    <div style={containerStyle}>
-      <h1>Graduate Dashboard</h1>
-      <p>TODO: Implement profile management, assessment submission, and match viewing</p>
+    <div className='py-[35px] px-[20px] pb-[120px] lg:px-[150px] flex flex-col gap-[43px] items-start justify-center bg-[#F9F9F9]'>
+
       
-      {/* TODO: Profile Section */}
-      {/* TODO: Assessment Submission */}
-      {/* TODO: Matches List */}
+    <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
+      <p className='font-medium text-[22px] text-[#1C1C1C]'>
+          Available Opportunites
+        </p>
+     
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 gap-8  w-full'>
+        {availableCompanies.map((company, index) => (
+          <CompanyCard
+            key={index}
+            company={company}
+            buttonText="Preview"
+            onButtonClick={() => handleButtonClick(company.name, index === 0 ? "Preview" : "Get in Touch")}
+          />
+        ))}
+      </div>
     </div>
+    <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
+      <p className='font-medium text-[22px] text-[#1C1C1C]'>
+          Contract offers
+        </p>
+     
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 gap-8  w-full'>
+        {contractCompanies.map((company, index) => (
+          <CompanyCard
+            key={index}
+            company={company}
+            buttonText="Get in Touch"
+            onButtonClick={() => handleButtonClick(company.name, index === 0 ? "Preview" : "Get in Touch")}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
   );
 };
 
-const containerStyle: React.CSSProperties = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '2rem',
-};
-
 export default GraduateDashboard;
-
