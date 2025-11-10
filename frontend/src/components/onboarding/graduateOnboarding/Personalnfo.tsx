@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { GraduateForm } from "../../../constants/type";
+import { countryCodes } from "../../../utils/material.utils";
 
 interface Props {
   form: GraduateForm;
@@ -7,28 +8,23 @@ interface Props {
   onNext: () => void;
 }
 
-const countryCodes = [
-  { code: "+234", flag: "🇳🇬", country: "Nigeria" },
-  { code: "+233", flag: "🇬🇭", country: "Ghana" },
-  { code: "+254", flag: "🇰🇪", country: "Kenya" },
-  { code: "+27", flag: "🇿🇦", country: "South Africa" },
-];
+  
 
 const experienceLevels = ["Junior", "Intermediate", "Senior"];
 const experienceYears = ["0–1 year", "1–3 years", "3–5 years", "5+ years"];
 
 const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
-  // Local states for phone handling
+ 
   const [countryCode, setCountryCode] = useState("+234");
   const [localPhone, setLocalPhone] = useState("");
 
-  // Combine phone on update
+ 
   useEffect(() => {
     const combined = `${countryCode}${localPhone.replace(/\s+/g, "")}`;
     onChange({ phoneNo: combined });
   }, [countryCode, localPhone]);
 
-  // Handle normal input changes
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -36,7 +32,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
     onChange({ [name]: value });
   };
 
-  // Determine if form is filled
+  
   const isFormComplete = useMemo(() => {
     return (
       form.firstName.trim() !== "" &&

@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { GraduateForm } from '../../../constants/type';
-import { IoMdArrowBack } from "react-icons/io";
+import { skills } from '../../../utils/material.utils';
+
+
 
 interface Props {
     form: GraduateForm;
@@ -8,19 +10,10 @@ interface Props {
     onBack: () => void; 
   }
 
-const SkillSelection: React.FC<Props> = ({onBack, onChange, form}) => {
+const SkillSelection: React.FC<Props> = ({ onChange, form}) => {
   const [selectedSkills, setSelectedSkills] = useState<string[]>(form.skills || []);
-  const filled = false
-  const skills: string[] = [
-    "React",
-    "Node js",
-    "Solidity",
-    "Javascript",
-    "SQL",
-    "MongoDB",
-    "Rust",
-    "Typescript"
-  ];
+  const filled = true
+  
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -65,7 +58,7 @@ const SkillSelection: React.FC<Props> = ({onBack, onChange, form}) => {
       {/* Header */}
       <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
         <h2 className="font-semibold text-[32px] text-[#1C1C1C]">
-          Select your Role
+        Your Skills and Links
         </h2>
         <p className="font-normal text-[18px] text-[#1C1C1CBF]">
           Tell us more about you
@@ -151,7 +144,7 @@ const SkillSelection: React.FC<Props> = ({onBack, onChange, form}) => {
         <button
          
           disabled={!filled}
-          className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200  w-full max-w-[400px] ${
+          className={`cursor-pointer rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200  w-full max-w-[400px] ${
             !filled
               ? "bg-[#A9B9D3] text-[#F8F8F8] cursor-not-allowed"
               : "bg-[#2E5EAA] text-[#F8F8F8]"

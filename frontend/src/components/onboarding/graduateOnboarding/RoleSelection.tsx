@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { GraduateForm } from "../../../constants/type";
-import { IoMdArrowBack } from "react-icons/io";
+import { roles } from "../../../utils/material.utils";
+
+
 
 interface Props {
   form: GraduateForm;
@@ -9,16 +11,10 @@ interface Props {
   onBack: () => void;
 }
 
-const RoleSelection: React.FC<Props> = ({ form, onChange, onBack, onNext }) => {
+const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
   const [selectedRoles, setSelectedRoles] = useState<string[]>(form.roles || []);
 
-  const roles: string[] = [
-    "FrontEnd Developer",
-    "BackEnd Developer",
-    "Full Stack Developer",
-    "Product Manager",
-    "Blockchain Developer",
-  ];
+ 
 
   const handleSelectRole = (role: string) => {
     let updatedRoles: string[];
