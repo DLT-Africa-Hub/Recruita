@@ -19,7 +19,6 @@ import {
   mitigateXss,
 } from './middleware/security.middleware';
 import { enforceHttps } from './middleware/https.middleware';
-import { csrfProtection, exposeCsrfToken } from './middleware/csrf.middleware';
 import { userRateLimiter } from './middleware/userRateLimit.middleware';
 import { securityConfig } from './config/secrets';
 
@@ -55,8 +54,6 @@ app.use(mitigateXss);
 app.use(responseFormatter);
 app.use(apiLimiter);
 app.use(userRateLimiter);
-app.use(csrfProtection);
-app.use(exposeCsrfToken());
 
 app.get('/health', (_req, res) => {
   res.success({ status: 'ok', message: 'Talent Hub API is running' });
@@ -68,13 +65,6 @@ app.get(`${API_PREFIX}/health`, (_req, res) => {
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-app.get(`${API_PREFIX}/csrf-token`, (_req, res) => {
-  res.success({
-    token: res.locals.csrfToken,
-    headerName: securityConfig.csrf.headerNameCanonical,
-    cookieName: securityConfig.csrf.cookieName,
-  });
-});
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/graduates`, graduateRoutes);

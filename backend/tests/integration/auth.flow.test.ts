@@ -3,7 +3,6 @@ import app from '../../app';
 import Session from '../../models/Session.model';
 import User from '../../models/User.model';
 import { connectTestDb, clearDatabase, disconnectTestDb } from '../utils/testDb';
-import { fetchCsrfToken } from '../utils/csrf';
 
 describe('Authentication API flow', () => {
   beforeAll(async () => {
@@ -21,11 +20,8 @@ describe('Authentication API flow', () => {
   it('registers, logs in, refreshes tokens, and logs out successfully', async () => {
     const agent = request.agent(app);
 
-    const csrfForRegister = await fetchCsrfToken(agent);
-
     const registerResponse = await agent
       .post('/api/v1/auth/register')
-      .set(csrfForRegister.headerName, csrfForRegister.token)
       .send({
         email: 'graduate@example.com',
         password: 'Password123!',
@@ -49,10 +45,8 @@ describe('Authentication API flow', () => {
       })
     );
 
-    const csrfForLogin = await fetchCsrfToken(agent);
     const loginResponse = await agent
       .post('/api/v1/auth/login')
-      .set(csrfForLogin.headerName, csrfForLogin.token)
       .send({
         email: 'graduate@example.com',
         password: 'Password123!',
@@ -62,10 +56,8 @@ describe('Authentication API flow', () => {
     expect(loginResponse.body.accessToken).toBeDefined();
     expect(loginResponse.body.refreshToken).toBeDefined();
 
-    const csrfForRefresh = await fetchCsrfToken(agent);
     const refreshResponse = await agent
       .post('/api/v1/auth/refresh')
-      .set(csrfForRefresh.headerName, csrfForRefresh.token)
       .send({
         refreshToken: loginResponse.body.refreshToken,
       })
@@ -74,11 +66,9 @@ describe('Authentication API flow', () => {
     expect(refreshResponse.body.accessToken).toBeDefined();
     expect(refreshResponse.body.session.id).toBeDefined();
 
-    const csrfForLogout = await fetchCsrfToken(agent);
     await agent
       .post('/api/v1/auth/logout')
       .set('Authorization', `Bearer ${loginResponse.body.accessToken}`)
-      .set(csrfForLogout.headerName, csrfForLogout.token)
       .send({})
       .expect(200);
 

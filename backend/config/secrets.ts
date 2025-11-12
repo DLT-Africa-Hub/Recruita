@@ -20,14 +20,6 @@ const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean
   return defaultValue;
 };
 
-const parseCommaSeparated = (value: string | undefined): string[] =>
-  value
-    ? value
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
-    : [];
-
 const parseTrustProxy = (value: string | undefined): boolean | string | number => {
   if (value === undefined) {
     return false;
@@ -69,21 +61,6 @@ const parsePositiveIntOrUndefined = (value: string | undefined): number | undefi
   return parsed;
 };
 
-const normalizedSameSite =
-  process.env.CSRF_COOKIE_SAME_SITE?.trim().toLowerCase() || undefined;
-
-const defaultSameSite: 'strict' | 'lax' | 'none' =
-  normalizedSameSite === 'lax' || normalizedSameSite === 'none'
-    ? (normalizedSameSite as 'lax' | 'none')
-    : 'strict';
-
-const canonicalizeHeaderName = (value: string): string =>
-  value
-    .split('-')
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase())
-    .join('-');
-
 const configSchema = z.object({
   jwtAccessSecret: z
     .string({
@@ -93,29 +70,6 @@ const configSchema = z.object({
     .min(32, 'JWT access secret must be at least 32 characters long for security'),
   enforceHttps: z.boolean(),
   trustProxy: z.union([z.boolean(), z.string(), z.number()]),
-  csrfCookieName: z
-    .string()
-    .min(1, 'CSRF cookie name cannot be empty')
-    .transform((value) => value.trim()),
-  csrfHeaderName: z
-    .string()
-    .min(1, 'CSRF header name cannot be empty')
-    .transform((value) => value.trim()),
-  csrfCookieSecure: z.boolean(),
-  csrfCookieSameSite: z.enum(['strict', 'lax', 'none']),
-  csrfIgnoredMethods: z
-    .array(
-      z
-        .string()
-        .min(1)
-        .transform((method) => method.trim().toUpperCase())
-    )
-    .default(['GET', 'HEAD', 'OPTIONS']),
-  csrfCookieMaxAgeSeconds: z
-    .number()
-    .int()
-    .positive()
-    .default(60 * 60 * 8), // 8 hours
 });
 
 const parsedConfig = configSchema.parse({
@@ -125,19 +79,6 @@ const parsedConfig = configSchema.parse({
     process.env.NODE_ENV === 'production'
   ),
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
-  csrfCookieName: process.env.CSRF_COOKIE_NAME || 'talenthub.csrf',
-  csrfHeaderName: process.env.CSRF_HEADER_NAME || 'x-csrf-token',
-  csrfCookieSecure: parseBoolean(
-    process.env.CSRF_COOKIE_SECURE,
-    process.env.NODE_ENV === 'production'
-  ),
-  csrfCookieSameSite: (normalizedSameSite || defaultSameSite) as 'strict' | 'lax' | 'none',
-  csrfIgnoredMethods: parseCommaSeparated(process.env.CSRF_IGNORE_METHODS || '').map((method) =>
-    method.toUpperCase()
-  ),
-  csrfCookieMaxAgeSeconds: parsePositiveIntOrUndefined(
-    process.env.CSRF_COOKIE_MAX_AGE_SECONDS
-  ),
 });
 
 export const securityConfig = {
@@ -147,18 +88,6 @@ export const securityConfig = {
   https: {
     enforce: parsedConfig.enforceHttps,
     trustProxy: parsedConfig.trustProxy,
-  },
-  csrf: {
-    cookieName: parsedConfig.csrfCookieName,
-    headerName: parsedConfig.csrfHeaderName.toLowerCase(),
-    headerNameCanonical: canonicalizeHeaderName(parsedConfig.csrfHeaderName),
-    cookieSecure: parsedConfig.csrfCookieSecure,
-    cookieSameSite: parsedConfig.csrfCookieSameSite,
-    ignoredMethods:
-      parsedConfig.csrfIgnoredMethods.length > 0
-        ? parsedConfig.csrfIgnoredMethods
-        : ['GET', 'HEAD', 'OPTIONS'],
-    cookieMaxAgeMs: parsedConfig.csrfCookieMaxAgeSeconds * 1000,
   },
 };
 

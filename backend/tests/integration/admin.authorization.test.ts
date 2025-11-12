@@ -2,7 +2,6 @@ import request from 'supertest';
 import type { Agent } from 'supertest';
 import app from '../../app';
 import { connectTestDb, clearDatabase, disconnectTestDb } from '../utils/testDb';
-import { fetchCsrfToken } from '../utils/csrf';
 
 describe('Admin authorization protections', () => {
   beforeAll(async () => {
@@ -18,10 +17,8 @@ describe('Admin authorization protections', () => {
   });
 
   const registerUser = async (agent: Agent, email: string, role: 'admin' | 'graduate') => {
-    const csrf = await fetchCsrfToken(agent);
     return agent
       .post('/api/v1/auth/register')
-      .set(csrf.headerName, csrf.token)
       .send({
         email,
         password: 'Password123!',
