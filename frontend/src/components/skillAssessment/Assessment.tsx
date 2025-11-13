@@ -94,11 +94,11 @@ const Assessment: React.FC = () => {
   // Results Screen
   if (showResults) {
     const score = calculateScore();
-    const passed = score.percentage >= 70;
+    const passed = score.percentage >= 60;
 
     return (
       <div className="flex justify-between items-center h-full pb-20 md:justify-center w-full flex-col md:gap-[70px] font-inter">
-        <div className="flex flex-col w-full gap-[30px] items-center">
+        <div className="flex flex-col w-full h-full justify-between lg:gap-[40px] items-center">
           <div className="flex flex-col w-full  max-w-[226px]  gap-2.5 text-left md:text-center">
           {passed
                   ? (<img src="/congrats.png" className="object-cover w-full h-full " alt="pass symbol" />)
@@ -107,12 +107,32 @@ const Assessment: React.FC = () => {
             
           </div>
 
-          <div className="flex flex-col gap-5 w-full max-w-[542px]">
-         
+          <div className="flex flex-col gap-5 w-full max-w-[542px] text-center">
+          {passed
+                  ? (
+                  <div className="flex flex-col gap-2.5">
+                      <p className="text-[#1C1C1C] text-[32px] font-semibold">
+                        Congratulations!
+                      </p>
+                      <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+                        You passed the assessment and you got {score.percentage}% of the total score
+                      </p>
+                  </div>
+                  )
+                  : (
+                    <div className="flex flex-col gap-2.5">
+                    <p className="text-[#1C1C1C] text-[32px] font-semibold">
+                    Almost there!
+                    </p>
+                    <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+                    You got {score.percentage}%, you need 60% to pass. But don’t worry you can try again
+                    </p>
+                </div>
+                  )}
           </div>
 
-          <button>
-            
+          <button className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium">
+                    {passed ? "Go to Dashboard":"Try gain"}
           </button>
         </div>
       </div>
