@@ -14,6 +14,7 @@ import GraduateApplications from './pages/GraduateApplications';
 import CompanyPreview from './pages/CompanyPreview';
 import AuthPage from './pages/AuthPage';
 import Messages from './pages/Messages';
+import Notifications from './pages/Notifications';
 
 function App() {
   return (
@@ -59,8 +60,14 @@ function App() {
           <Route path="/applications" element={<Layout >
             <GraduateApplications/>
           </Layout>} />
+          <Route path="/messages/:id" element={<Layout >
+            <Messages/>
+          </Layout>} />
           <Route path="/messages" element={<Layout >
             <Messages/>
+          </Layout>} />
+          <Route path="/notifications" element={<Layout >
+            <Notifications/>
           </Layout>} />
           
         </Routes>

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BsSearch } from 'react-icons/bs';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { companies } from '../data/companies';
 import ChatModal from '../components/message/ChatModal';
 
-// Define the type for a company (adjust fields as needed)
 interface Company {
   id?: string | number;
   name: string;
@@ -11,15 +11,14 @@ interface Company {
   image: string;
 }
 
-// Props expected by ChatModal (for TypeScript awareness)
-interface ChatModalProps {
-  company: Company | null;
-  onClose: () => void;
-}
-
 const Messages: React.FC = () => {
   const [activeChat, setActiveChat] = useState<Company | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
+
+  
+  const { id } = useParams<{ id?: string }>();
+
+  const chatId = id
 
   const openChat = (company: Company) => {
     setActiveChat(company);
@@ -29,6 +28,20 @@ const Messages: React.FC = () => {
   const closeChat = () => {
     setIsOpen(false);
   };
+
+ 
+
+  // Check URL param on mount
+  useEffect(() => {
+    if (chatId) {
+      const companyToOpen = companies.find(
+        (company) => String(company.id) === chatId
+      );
+      if (companyToOpen) {
+        openChat(companyToOpen);
+      }
+    }
+  }, [chatId]);
 
   return (
     <div className="py-[20px] relative min-h-screen px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center">
@@ -47,13 +60,12 @@ const Messages: React.FC = () => {
         </div>
       </div>
 
-      {/* Messages List */}
       <div className="flex flex-col w-full">
         {companies.map((company: Company) => (
           <div
             key={company.id ?? company.name}
             onClick={() => openChat(company)}
-            className="py-[20px] px-[10px] border-b border-[#00000033] cursor-pointer w-full flex items-center justify-between hover:bg-[#00000008]"
+            className="py-[20px] px-[10px] border-b border-[#00000033] hover:bg-[#00000008] cursor-pointer w-full flex items-center justify-between"
           >
             <div className="flex items-center gap-[27px]">
               <div className="w-[71px] aspect-square relative overflow-hidden rounded-[10px]">

@@ -47,7 +47,7 @@ const SideBar = () => {
       },
       {
           page: "Notification",
-          link: "notification",
+          link: "notifications",
           icon: BiBell
       },
      
