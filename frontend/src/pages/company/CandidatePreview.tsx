@@ -59,7 +59,7 @@ const CandidatePreview = () => {
 
         {/* Candidate Photo and Basic Info */}
         <div className="flex flex-col md:flex-row gap-[24px] items-start">
-          <div className="relative h-[200px] w-[200px] flex-shrink-0 overflow-hidden rounded-[16px]">
+          <div className="relative h-[200px] w-[200px] shrink-0 overflow-hidden rounded-[16px]">
             <img
               src={candidate.image}
               alt={candidate.name}
@@ -81,8 +81,8 @@ const CandidatePreview = () => {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-[8px]">
-                <div className="flex items-center gap-[8px] rounded-full bg-[#1B7700] px-[14px] py-[8px]">
-                  <span className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-white text-[14px] font-semibold text-[#1B7700]">
+                <div className="flex items-center gap-[8px] rounded-full bg-button px-[14px] py-[8px]">
+                  <span className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-white text-[14px] font-semibold text-button">
                     {candidate.rank}
                   </span>
                   <span className="text-[16px] font-semibold text-white">

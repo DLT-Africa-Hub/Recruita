@@ -71,7 +71,7 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
               <span className="flex h-[28px] w-[28px] items-center justify-center rounded-full bg-button text-[14px] font-semibold text-white">
                 {candidate.rank}
               </span>
-              <span className="text-[16px] font-semibold text-[#1B7700]">
+              <span className="text-[16px] font-semibold text-button">
                 {matchPercentage}% match
               </span>
             </div>
