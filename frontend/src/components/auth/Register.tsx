@@ -20,10 +20,10 @@ const Register = () => {
     }
   };
 
-  const handleContinue = () => {
-    setIsModalOpen(false);
-    navigate('/role');
-  };
+  // const handleContinue = () => {
+  //   setIsModalOpen(false);
+  //   navigate('/role');
+  // };
 
   return (
    <>

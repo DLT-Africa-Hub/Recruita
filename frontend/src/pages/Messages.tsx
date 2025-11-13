@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BsSearch } from 'react-icons/bs';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { companies } from '../data/companies';
 import ChatModal from '../components/message/ChatModal';
 
