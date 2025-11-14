@@ -22,7 +22,8 @@ const GraduateDashboard = () => {
   const availableCompanies = useMemo(() => getRandom(companies, 4), []);
   const contractCompanies = useMemo(() => getRandom(companies, 4), []);
 
-  const handleButtonClick = (companyName: string, buttonText: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleButtonClick = (_companyName: string, _buttonText: string) => {
     // Handle button click action
   };
 

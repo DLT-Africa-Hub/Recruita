@@ -10,7 +10,8 @@ const CompanyJobs = () => {
     navigate('/jobs/new');
   };
 
-  const handleViewMatches = (job: CompanyJob) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleViewMatches = (_job: CompanyJob) => {
     // TODO: Navigate to matched candidates for this job
   };
 
