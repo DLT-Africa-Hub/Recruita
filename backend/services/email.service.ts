@@ -16,5 +16,3 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
     );
   }
 }
-
-

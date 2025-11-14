@@ -66,7 +66,6 @@ app.get(`${API_PREFIX}/health`, (_req, res) => {
 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-
 app.use(`${API_PREFIX}/auth`, authRoutes);
 app.use(`${API_PREFIX}/graduates`, graduateRoutes);
 app.use(`${API_PREFIX}/companies`, companyRoutes);
@@ -78,5 +77,3 @@ app.use(errorHandler);
 
 export { app };
 export default app;
-
-

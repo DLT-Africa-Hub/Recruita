@@ -35,5 +35,3 @@ export const sanitizeRequest: RequestHandler = mongoSanitize({
 });
 
 export const mitigateXss: RequestHandler = xssClean();
-
-

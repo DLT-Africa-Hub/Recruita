@@ -72,5 +72,3 @@ TokenSchema.methods.isActive = function (this: TokenDocument): boolean {
 TokenSchema.index({ user: 1, type: 1, expiresAt: -1 });
 
 export default mongoose.model<IToken, TokenModel>('Token', TokenSchema);
-
-

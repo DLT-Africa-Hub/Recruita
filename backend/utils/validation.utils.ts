@@ -8,8 +8,14 @@ import mongoose from 'mongoose';
 type RequestStringValue = string | number | boolean | null | undefined;
 type RequestIdValue = string | number | null | undefined;
 type RequestNumericValue = string | number | null | undefined;
-type RequestArrayValue = (string | number | boolean | object | null)[] | null | undefined;
-type RequestObjectValue = Record<string, string | number | boolean | object | null | undefined> | null | undefined;
+type RequestArrayValue =
+  | (string | number | boolean | object | null)[]
+  | null
+  | undefined;
+type RequestObjectValue =
+  | Record<string, string | number | boolean | object | null | undefined>
+  | null
+  | undefined;
 
 /**
  * Validate required string field
@@ -25,7 +31,9 @@ export const validateRequiredString = (
   }
 
   if (typeof value !== 'string' || value.trim().length === 0) {
-    res.status(400).json({ message: `${fieldName} must be a non-empty string` });
+    res
+      .status(400)
+      .json({ message: `${fieldName} must be a non-empty string` });
     return null;
   }
 
@@ -45,7 +53,9 @@ export const validateOptionalString = (
   }
 
   if (typeof value !== 'string' || value.trim().length === 0) {
-    res.status(400).json({ message: `${fieldName} must be a non-empty string or null` });
+    res
+      .status(400)
+      .json({ message: `${fieldName} must be a non-empty string or null` });
     return null;
   }
 
@@ -193,12 +203,16 @@ export const validateSalary = (
   const salaryObj = salary as SalaryInput;
 
   if (typeof salaryObj.min !== 'number' || salaryObj.min < 0) {
-    res.status(400).json({ message: 'Salary min must be a non-negative number' });
+    res
+      .status(400)
+      .json({ message: 'Salary min must be a non-negative number' });
     return null;
   }
 
   if (typeof salaryObj.max !== 'number' || salaryObj.max < 0) {
-    res.status(400).json({ message: 'Salary max must be a non-negative number' });
+    res
+      .status(400)
+      .json({ message: 'Salary max must be a non-negative number' });
     return null;
   }
 
@@ -217,7 +231,10 @@ export const validateSalary = (
 /**
  * Validate skills array
  */
-export const validateSkills = (skills: RequestArrayValue, res: Response): string[] | null => {
+export const validateSkills = (
+  skills: RequestArrayValue,
+  res: Response
+): string[] | null => {
   if (!skills) {
     res.status(400).json({ message: 'At least one skill is required' });
     return null;
@@ -233,7 +250,12 @@ export const validateSkills = (skills: RequestArrayValue, res: Response): string
     return null;
   }
 
-  if (!skills.every((skill: string | number | boolean | object | null) => typeof skill === 'string' && skill.trim().length > 0)) {
+  if (
+    !skills.every(
+      (skill: string | number | boolean | object | null) =>
+        typeof skill === 'string' && skill.trim().length > 0
+    )
+  ) {
     res.status(400).json({ message: 'All skills must be non-empty strings' });
     return null;
   }
@@ -278,4 +300,3 @@ export const deleteUndefined = <T extends Record<string, unknown>>(
   }
   return cleaned;
 };
-

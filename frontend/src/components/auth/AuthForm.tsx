@@ -17,7 +17,7 @@ interface AuthFormProps {
   buttonText: string;
   linkText: string;
   linkPath: string;
-  error:string;
+  error: string;
 }
 
 const AuthForm: React.FC<AuthFormProps> = ({
@@ -28,22 +28,32 @@ const AuthForm: React.FC<AuthFormProps> = ({
   buttonText,
   linkText,
   linkPath,
-  error
+  error,
 }) => {
   return (
     <div className="flex items-center justify-center h-screen w-full font-inter bg-form bg-cover bg-center ">
-        <div className="absolute inset-0 bg-white/50"></div>
+      <div className="absolute inset-0 bg-white/50"></div>
       <div className="flex flex-col items-center justify-center gap-[20px] z-10  lg:pt-[124px] py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px]">
-        <form onSubmit={onSubmit} className="flex flex-col gap-[24px] justify-between h-full w-full max-w-[400px]">
+        <form
+          onSubmit={onSubmit}
+          className="flex flex-col gap-[24px] justify-between h-full w-full max-w-[400px]"
+        >
           <div className="w-full flex flex-col text-left md:text-center">
             <p className="font-semibold text-[32px] text-[#1C1C1C]">{title}</p>
-            <p className="font-normal text-[18px] text-[#1C1C1CBF]">{subtitle}</p>
+            <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+              {subtitle}
+            </p>
           </div>
 
           <div className="flex flex-col gap-[20px]">
             {fields.map((field, index) => (
-              <div key={index} className="w-full flex flex-col gap-[10px] max-w-[542px]">
-                <label className="text-[#1C1C1CBF] text-[18px] font-normal">{field.label}</label>
+              <div
+                key={index}
+                className="w-full flex flex-col gap-[10px] max-w-[542px]"
+              >
+                <label className="text-[#1C1C1CBF] text-[18px] font-normal">
+                  {field.label}
+                </label>
                 <input
                   type={field.type}
                   name={field.name}
@@ -54,7 +64,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
                 />
               </div>
             ))}
-            <p className='text-center text-red-500'>{error}</p>
+            <p className="text-center text-red-500">{error}</p>
           </div>
 
           <div className="flex flex-col gap-[10px]">

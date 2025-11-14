@@ -13,7 +13,9 @@ describe('email.service', () => {
 
   it('logs email contents when not in test environment', async () => {
     process.env.NODE_ENV = 'development';
-    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    const infoSpy = jest
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined);
 
     await sendEmail({
       to: 'test@example.com',
@@ -22,7 +24,7 @@ describe('email.service', () => {
     });
 
     expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[Email] To: test@example.com'),
+      expect.stringContaining('[Email] To: test@example.com')
     );
 
     infoSpy.mockRestore();
@@ -30,7 +32,9 @@ describe('email.service', () => {
 
   it('does not log in test environment', async () => {
     process.env.NODE_ENV = 'test';
-    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => undefined);
+    const infoSpy = jest
+      .spyOn(console, 'info')
+      .mockImplementation(() => undefined);
 
     await sendEmail({
       to: 'test@example.com',
@@ -42,6 +46,3 @@ describe('email.service', () => {
     infoSpy.mockRestore();
   });
 });
-
-
-

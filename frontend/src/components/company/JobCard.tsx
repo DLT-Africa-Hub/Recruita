@@ -85,4 +85,3 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
 };
 
 export default JobCard;
-

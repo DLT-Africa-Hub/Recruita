@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { GraduateForm } from "../../../constants/type";
-import { countryCodes } from "../../../utils/material.utils";
+import React, { useState, useEffect, useMemo } from 'react';
+import { GraduateForm } from '../../../constants/type';
+import { countryCodes } from '../../../utils/material.utils';
 
 interface Props {
   form: GraduateForm;
@@ -8,22 +8,17 @@ interface Props {
   onNext: () => void;
 }
 
-  
-
-const experienceLevels = ["Junior", "Intermediate", "Senior"];
-const experienceYears = ["0–1 year", "1–3 years", "3–5 years", "5+ years"];
+const experienceLevels = ['Junior', 'Intermediate', 'Senior'];
+const experienceYears = ['0–1 year', '1–3 years', '3–5 years', '5+ years'];
 
 const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
- 
-  const [countryCode, setCountryCode] = useState("+234");
-  const [localPhone, setLocalPhone] = useState("");
+  const [countryCode, setCountryCode] = useState('+234');
+  const [localPhone, setLocalPhone] = useState('');
 
- 
   useEffect(() => {
-    const combined = `${countryCode}${localPhone.replace(/\s+/g, "")}`;
+    const combined = `${countryCode}${localPhone.replace(/\s+/g, '')}`;
     onChange({ phoneNo: combined });
   }, [countryCode, localPhone]);
-
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -32,16 +27,21 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
     onChange({ [name]: value });
   };
 
-  
   const isFormComplete = useMemo(() => {
     return (
-      form.firstName.trim() !== "" &&
-      form.lastName.trim() !== "" &&
-      form.rank.trim() !== "" &&
-      form.yearsOfExperience.trim() !== "" &&
-      localPhone.trim() !== ""
+      form.firstName.trim() !== '' &&
+      form.lastName.trim() !== '' &&
+      form.rank.trim() !== '' &&
+      form.yearsOfExperience.trim() !== '' &&
+      localPhone.trim() !== ''
     );
-  }, [form.firstName, form.lastName, form.rank, form.yearsOfExperience, localPhone]);
+  }, [
+    form.firstName,
+    form.lastName,
+    form.rank,
+    form.yearsOfExperience,
+    localPhone,
+  ]);
 
   return (
     <div className="flex items-center justify-center w-full flex-col gap-[30px] font-inter">
@@ -106,7 +106,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             >
               {countryCodes.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.flag} 
+                  {c.flag}
                 </option>
               ))}
             </select>
@@ -159,21 +159,19 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
             ))}
           </select>
         </div>
-
-       
       </form>
-       {/* Continue Button */}
-       <button
-         onClick={onNext}
-          disabled={!isFormComplete}
-          className={`md:w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 w-full ${
-            isFormComplete
-              ? "bg-button text-[#F8F8F8]"
-              : "bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed"
-          }`}
-        >
-          Continue
-        </button>
+      {/* Continue Button */}
+      <button
+        onClick={onNext}
+        disabled={!isFormComplete}
+        className={`md:w-[400px] rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 w-full ${
+          isFormComplete
+            ? 'bg-button text-[#F8F8F8]'
+            : 'bg-[#1c770092] text-[#F8F8F8] cursor-not-allowed'
+        }`}
+      >
+        Continue
+      </button>
     </div>
   );
 };

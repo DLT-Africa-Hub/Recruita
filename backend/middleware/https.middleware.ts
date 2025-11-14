@@ -1,11 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
 
-export const enforceHttps = (req: Request, res: Response, next: NextFunction): void => {
+export const enforceHttps = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
   const xForwardedProto = req.headers['x-forwarded-proto'];
   const forwarded = Array.isArray(xForwardedProto)
     ? xForwardedProto[0]
     : xForwardedProto;
-  const isForwardedSecure = typeof forwarded === 'string' && forwarded.includes('https');
+  const isForwardedSecure =
+    typeof forwarded === 'string' && forwarded.includes('https');
 
   if (req.secure || isForwardedSecure) {
     next();
@@ -25,5 +30,3 @@ export const enforceHttps = (req: Request, res: Response, next: NextFunction): v
     message: 'HTTPS is required for this resource',
   });
 };
-
-

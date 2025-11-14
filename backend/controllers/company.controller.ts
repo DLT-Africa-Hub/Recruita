@@ -28,7 +28,10 @@ import { createNotification } from '../services/notification.service';
  * Get company profile
  * GET /api/companies/profile
  */
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -52,7 +55,10 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
  * Create company profile
  * POST /api/companies/profile
  */
-export const createProfile = async (req: Request, res: Response): Promise<void> => {
+export const createProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -60,30 +66,51 @@ export const createProfile = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { companyName, industry, companySize, description, website, location } = req.body;
+  const { companyName, industry, companySize, description, website, location } =
+    req.body;
 
-  const validatedName = validateRequiredString(companyName, 'Company name', res);
+  const validatedName = validateRequiredString(
+    companyName,
+    'Company name',
+    res
+  );
   if (!validatedName) return;
 
   const validatedIndustry = validateRequiredString(industry, 'Industry', res);
   if (!validatedIndustry) return;
 
-  const validatedSize = validateNumericRange(companySize, 1, 100000, 'Company size', res);
+  const validatedSize = validateNumericRange(
+    companySize,
+    1,
+    100000,
+    'Company size',
+    res
+  );
   if (validatedSize === null) return;
 
-  const validatedDescription = validateRequiredString(description, 'Description', res);
+  const validatedDescription = validateRequiredString(
+    description,
+    'Description',
+    res
+  );
   if (!validatedDescription) return;
 
-  const validatedWebsite = website ? validateOptionalString(website, 'Website', res) : null;
+  const validatedWebsite = website
+    ? validateOptionalString(website, 'Website', res)
+    : null;
   if (website && validatedWebsite === null) return;
 
-  const validatedLocation = location ? validateOptionalString(location, 'Location', res) : null;
+  const validatedLocation = location
+    ? validateOptionalString(location, 'Location', res)
+    : null;
   if (location && validatedLocation === null) return;
 
   const existingCompany = await Company.findOne({ userId }).lean();
 
   if (existingCompany) {
-    res.status(409).json({ message: 'Company profile already exists. Use PUT to update.' });
+    res
+      .status(409)
+      .json({ message: 'Company profile already exists. Use PUT to update.' });
     return;
   }
 
@@ -111,7 +138,10 @@ export const createProfile = async (req: Request, res: Response): Promise<void> 
  * Update company profile
  * PUT /api/companies/profile
  */
-export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+export const updateProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -126,7 +156,8 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { companyName, industry, companySize, description, website, location } = req.body;
+  const { companyName, industry, companySize, description, website, location } =
+    req.body;
 
   if (companyName !== undefined) {
     const validated = validateRequiredString(companyName, 'Company name', res);
@@ -141,7 +172,13 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 
   if (companySize !== undefined) {
-    const validated = validateNumericRange(companySize, 1, 100000, 'Company size', res);
+    const validated = validateNumericRange(
+      companySize,
+      1,
+      100000,
+      'Company size',
+      res
+    );
     if (validated === null) return;
     company.companySize = validated;
   }
@@ -191,8 +228,16 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
-    req.body;
+  const {
+    title,
+    jobType,
+    preferedRank,
+    description,
+    requirements,
+    location,
+    salary,
+    status,
+  } = req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
   if (!validatedTitle) return;
@@ -213,7 +258,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   );
   if (!validatedPreferedRank) return;
 
-  const validatedDescription = validateRequiredString(description, 'Description', res);
+  const validatedDescription = validateRequiredString(
+    description,
+    'Description',
+    res
+  );
   if (!validatedDescription) return;
 
   if (!requirements) {
@@ -224,14 +273,21 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   const validatedSkills = validateSkills(requirements.skills, res);
   if (!validatedSkills) return;
 
-  const validatedLocation = location ? validateOptionalString(location, 'Location', res) : null;
+  const validatedLocation = location
+    ? validateOptionalString(location, 'Location', res)
+    : null;
   if (location && validatedLocation === null) return;
 
   const validatedSalary = validateSalary(salary, res);
   if (salary !== undefined && validatedSalary === null) return;
 
   const validatedStatus = status
-    ? validateOptionalEnum(status, ['active', 'closed', 'draft'] as const, 'Status', res)
+    ? validateOptionalEnum(
+        status,
+        ['active', 'closed', 'draft'] as const,
+        'Status',
+        res
+      )
     : null;
   if (status && validatedStatus === null) return;
 
@@ -309,7 +365,12 @@ export const getJobs = async (req: Request, res: Response): Promise<void> => {
   if (!pagination) return;
 
   const validatedStatus = status
-    ? validateOptionalEnum(status as string, ['active', 'closed', 'draft'] as const, 'Status', res)
+    ? validateOptionalEnum(
+        status as string,
+        ['active', 'closed', 'draft'] as const,
+        'Status',
+        res
+      )
     : null;
   if (status && validatedStatus === null) return;
 
@@ -410,8 +471,16 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
-    req.body;
+  const {
+    title,
+    jobType,
+    preferedRank,
+    description,
+    requirements,
+    location,
+    salary,
+    status,
+  } = req.body;
   let needsEmbeddingUpdate = false;
 
   if (title !== undefined) {
@@ -474,7 +543,12 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
   }
 
   if (status !== undefined) {
-    const validated = validateEnum(status, ['active', 'closed', 'draft'] as const, 'Status', res);
+    const validated = validateEnum(
+      status,
+      ['active', 'closed', 'draft'] as const,
+      'Status',
+      res
+    );
     if (!validated) return;
     job.status = validated;
   }
@@ -550,7 +624,9 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
 
   await Promise.all([
     Match.deleteMany({ jobId: new mongoose.Types.ObjectId(validatedJobId) }),
-    Application.deleteMany({ jobId: new mongoose.Types.ObjectId(validatedJobId) }),
+    Application.deleteMany({
+      jobId: new mongoose.Types.ObjectId(validatedJobId),
+    }),
     Job.deleteOne({ _id: new mongoose.Types.ObjectId(validatedJobId) }),
   ]);
 
@@ -561,7 +637,10 @@ export const deleteJob = async (req: Request, res: Response): Promise<void> => {
  * Get matches for a specific job
  * GET /api/companies/jobs/:jobId/matches
  */
-export const getJobMatches = async (req: Request, res: Response): Promise<void> => {
+export const getJobMatches = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -595,7 +674,12 @@ export const getJobMatches = async (req: Request, res: Response): Promise<void> 
   if (!pagination) return;
 
   const validatedStatus = status
-    ? validateOptionalEnum(status as string, ['pending', 'accepted', 'rejected'] as const, 'Status', res)
+    ? validateOptionalEnum(
+        status as string,
+        ['pending', 'accepted', 'rejected'] as const,
+        'Status',
+        res
+      )
     : null;
   if (status && validatedStatus === null) return;
 
@@ -646,7 +730,10 @@ export const getJobMatches = async (req: Request, res: Response): Promise<void> 
  * Accept or reject a match
  * PUT /api/companies/jobs/:jobId/matches/:matchId
  */
-export const updateMatchStatus = async (req: Request, res: Response): Promise<void> => {
+export const updateMatchStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -657,7 +744,11 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
   const validatedJobId = validateObjectId(req.params.jobId, 'Job ID', res);
   if (!validatedJobId) return;
 
-  const validatedMatchId = validateObjectId(req.params.matchId, 'Match ID', res);
+  const validatedMatchId = validateObjectId(
+    req.params.matchId,
+    'Match ID',
+    res
+  );
   if (!validatedMatchId) return;
 
   const validatedStatus = validateEnum(
@@ -709,7 +800,8 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
       await createNotification({
         userId: graduate.userId,
         type: 'match',
-        title: validatedStatus === 'accepted' ? 'Match accepted' : 'Match rejected',
+        title:
+          validatedStatus === 'accepted' ? 'Match accepted' : 'Match rejected',
         message: `${company.companyName} ${validatedStatus === 'accepted' ? 'accepted' : 'rejected'} your match for ${job.title}`,
         relatedId: matchId,
         relatedType: 'match',
@@ -725,7 +817,10 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
       });
     }
   } catch (notificationError) {
-    console.error('Failed to notify graduate about match status change:', notificationError);
+    console.error(
+      'Failed to notify graduate about match status change:',
+      notificationError
+    );
   }
 
   const updatedMatch = await Match.findById(matchId)
@@ -749,7 +844,10 @@ export const updateMatchStatus = async (req: Request, res: Response): Promise<vo
  * Get all applications for company
  * GET /api/companies/applications
  */
-export const getApplications = async (req: Request, res: Response): Promise<void> => {
+export const getApplications = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const userId = req.user?.userId;
 
   if (!userId) {
@@ -771,18 +869,30 @@ export const getApplications = async (req: Request, res: Response): Promise<void
 
   const validatedStatus = status
     ? validateOptionalEnum(
-      status as string,
-      ['pending', 'reviewed', 'shortlisted', 'interviewed', 'accepted', 'rejected', 'withdrawn'] as const,
-      'Status',
-      res
-    )
+        status as string,
+        [
+          'pending',
+          'reviewed',
+          'shortlisted',
+          'interviewed',
+          'accepted',
+          'rejected',
+          'withdrawn',
+        ] as const,
+        'Status',
+        res
+      )
     : null;
   if (status && validatedStatus === null) return;
 
-  const validatedJobId = jobId ? validateObjectId(jobId as string, 'Job ID', res) : null;
+  const validatedJobId = jobId
+    ? validateObjectId(jobId as string, 'Job ID', res)
+    : null;
   if (jobId && !validatedJobId) return;
 
-  const companyJobs = await Job.find({ companyId: company._id }).select('_id').lean();
+  const companyJobs = await Job.find({ companyId: company._id })
+    .select('_id')
+    .lean();
 
   const companyJobIds = companyJobs.map((job) => job._id);
 

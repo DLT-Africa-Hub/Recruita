@@ -21,7 +21,10 @@ const rankBadgeStyles: Record<CandidateProfile['status'], string> = {
   pending: 'bg-[#5D1B77]',
 };
 
-const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onPreview }) => {
+const CandidateCard: React.FC<CandidateCardProps> = ({
+  candidate,
+  onPreview,
+}) => {
   const handlePreview = () => {
     onPreview?.(candidate);
   };
@@ -41,8 +44,12 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onPreview }) =
 
       <div className="flex items-start justify-between gap-[10px]">
         <div className="flex flex-col gap-[4px]">
-          <p className="font-semibold text-[20px] text-[#1C1C1C]">{candidate.name}</p>
-          <p className="font-sf text-[14px] text-[#1C1C1CBF]">{candidate.role}</p>
+          <p className="font-semibold text-[20px] text-[#1C1C1C]">
+            {candidate.name}
+          </p>
+          <p className="font-sf text-[14px] text-[#1C1C1CBF]">
+            {candidate.role}
+          </p>
         </div>
         <div
           className={`flex items-center gap-[8px] rounded-full px-[14px] py-[6px] text-[12px] font-medium ${statusStyles[candidate.status]}`}
@@ -58,13 +65,18 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onPreview }) =
 
       <div className="flex flex-col gap-[12px] text-[13px] text-[#1C1C1CBF]">
         <div className="flex items-center justify-between">
-          <span className="font-medium text-[#1C1C1CE5]">{candidate.experience}</span>
+          <span className="font-medium text-[#1C1C1CE5]">
+            {candidate.experience}
+          </span>
           <span className="h-[18px] w-px bg-[#1C1C1C1A]" />
           <span className="text-right">{candidate.location}</span>
         </div>
         <div className="flex flex-wrap items-center gap-[12px] text-[12px] font-medium text-[#1C1C1CE5]">
           {candidate.skills.map((skill) => (
-            <span key={skill} className="flex items-center justify-center rounded-full border border-fade bg-[#F8F8F8] px-[14px] py-[6px]">
+            <span
+              key={skill}
+              className="flex items-center justify-center rounded-full border border-fade bg-[#F8F8F8] px-[14px] py-[6px]"
+            >
               {skill}
             </span>
           ))}
@@ -84,4 +96,3 @@ const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, onPreview }) =
 };
 
 export default CandidateCard;
-

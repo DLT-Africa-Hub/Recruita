@@ -7,7 +7,10 @@ interface ProtectedRouteProps {
   allowedRoles: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles,
+}) => {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
@@ -22,4 +25,3 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 };
 
 export default ProtectedRoute;
-

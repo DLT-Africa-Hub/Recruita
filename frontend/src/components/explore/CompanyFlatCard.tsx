@@ -38,50 +38,50 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
         </div>
       </div>
 
-      <div className='flex flex-col flex-grow'>
-      <div className="flex   gap-[81.5px]">
-        <div className="flex flex-col gap-[5px]">
-          <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
-            {company.name}
-          </p>
-          <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">
-            {company.role}
-          </p>
+      <div className="flex flex-col flex-grow">
+        <div className="flex   gap-[81.5px]">
+          <div className="flex flex-col gap-[5px]">
+            <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
+              {company.name}
+            </p>
+            <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">
+              {company.role}
+            </p>
+          </div>
+          <div className="flex items-center  h-[49px]  bg-[#1B770033] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
+            {company.match}% match
+          </div>
         </div>
-        <div className="flex items-center  h-[49px]  bg-[#1B770033] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
-          {company.match}% match
-        </div>
-      </div>
 
-      <div className='flex items-center justify-center gap-[47px]'>
-        <div className="flex w-full items-center justify-between">
-          <p className="text-left w-full font-semibold text-[16px]">
-            {company.contract}
-          </p>
-          <div className="h-[20px] bg-black w-0.5" />
-          <p className="text-center  font-semibold w-full">
-            {company.location}
-          </p>
-          <div className="h-[20px] bg-black w-0.5" />
-          <p className="text-center font-semibold w-full">
-            {company.wage} {company.wageType}
-          </p>
+        <div className="flex items-center justify-center gap-[47px]">
+          <div className="flex w-full items-center justify-between">
+            <p className="text-left w-full font-semibold text-[16px]">
+              {company.contract}
+            </p>
+            <div className="h-[20px] bg-black w-0.5" />
+            <p className="text-center  font-semibold w-full">
+              {company.location}
+            </p>
+            <div className="h-[20px] bg-black w-0.5" />
+            <p className="text-center font-semibold w-full">
+              {company.wage} {company.wageType}
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              handleButtonClick(
+                company.id,
+                buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
+              )
+            }
+            className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 "
+          >
+            <CiMail
+              className={`text-[24px] ${buttonText === 'Preview' && 'hidden'}`}
+            />
+            {buttonText}
+          </button>
         </div>
-        <button
-          onClick={() =>
-            handleButtonClick(
-              company.id,
-              buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
-            )
-          }
-          className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 "
-        >
-          <CiMail
-            className={`text-[24px] ${buttonText === 'Preview' && 'hidden'}`}
-          />
-          {buttonText}
-        </button>
-      </div>
       </div>
     </div>
   );

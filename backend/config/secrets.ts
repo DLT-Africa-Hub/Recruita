@@ -3,7 +3,10 @@ import { z } from 'zod';
 
 dotenv.config();
 
-const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean => {
+const parseBoolean = (
+  value: string | undefined,
+  defaultValue: boolean
+): boolean => {
   if (value === undefined) {
     return defaultValue;
   }
@@ -20,7 +23,9 @@ const parseBoolean = (value: string | undefined, defaultValue: boolean): boolean
   return defaultValue;
 };
 
-const parseTrustProxy = (value: string | undefined): boolean | string | number => {
+const parseTrustProxy = (
+  value: string | undefined
+): boolean | string | number => {
   if (value === undefined) {
     return false;
   }
@@ -48,7 +53,9 @@ const jwtSecretFromEnv =
   process.env.JWT_SECRET ||
   process.env.ACCESS_TOKEN_SECRET;
 
-const parsePositiveIntOrUndefined = (value: string | undefined): number | undefined => {
+const parsePositiveIntOrUndefined = (
+  value: string | undefined
+): number | undefined => {
   if (!value) {
     return undefined;
   }
@@ -67,7 +74,10 @@ const configSchema = z.object({
       required_error:
         'JWT_ACCESS_SECRET (or JWT_SECRET/ACCESS_TOKEN_SECRET) environment variable is required',
     })
-    .min(32, 'JWT access secret must be at least 32 characters long for security'),
+    .min(
+      32,
+      'JWT access secret must be at least 32 characters long for security'
+    ),
   enforceHttps: z.boolean(),
   trustProxy: z.union([z.boolean(), z.string(), z.number()]),
 });
@@ -96,16 +106,16 @@ const aiConfigSchema = z.object({
     .string()
     .url('AI_SERVICE_URL must be a valid URL')
     .default('http://localhost:8000'),
-  requestTimeoutMs: z
-    .number()
-    .int()
-    .positive()
-    .default(5000),
+  requestTimeoutMs: z.number().int().positive().default(5000),
   maxRetries: z.number().int().min(0).max(5).default(2),
   initialBackoffMs: z.number().int().min(0).default(200),
   backoffMultiplier: z.number().positive().default(2),
   maxBackoffMs: z.number().int().positive().default(2000),
-  cacheTtlMs: z.number().int().positive().default(15 * 60 * 1000),
+  cacheTtlMs: z
+    .number()
+    .int()
+    .positive()
+    .default(15 * 60 * 1000),
   cacheMaxEntries: z.number().int().positive().default(500),
   rateLimit: z.object({
     maxConcurrent: z.number().int().positive().default(3),
@@ -138,27 +148,35 @@ const parseMsEnv = (value: string | undefined, fallback: number): number => {
 const parsedAiConfig = aiConfigSchema.parse({
   serviceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
   requestTimeoutMs: parseMsEnv(process.env.AI_SERVICE_TIMEOUT_MS, 5000),
-  maxRetries: parsePositiveIntOrUndefined(process.env.AI_SERVICE_MAX_RETRIES) ?? 2,
+  maxRetries:
+    parsePositiveIntOrUndefined(process.env.AI_SERVICE_MAX_RETRIES) ?? 2,
   initialBackoffMs: parseMsEnv(process.env.AI_SERVICE_RETRY_DELAY_MS, 200),
   backoffMultiplier:
     Number.parseFloat(process.env.AI_SERVICE_RETRY_MULTIPLIER || '') || 2,
   maxBackoffMs: parseMsEnv(process.env.AI_SERVICE_MAX_BACKOFF_MS, 2000),
   cacheTtlMs: parseMsEnv(process.env.AI_SERVICE_CACHE_TTL_MS, 15 * 60 * 1000),
   cacheMaxEntries:
-    parsePositiveIntOrUndefined(process.env.AI_SERVICE_CACHE_MAX_ENTRIES) ?? 500,
+    parsePositiveIntOrUndefined(process.env.AI_SERVICE_CACHE_MAX_ENTRIES) ??
+    500,
   rateLimit: {
     maxConcurrent:
-      parsePositiveIntOrUndefined(process.env.AI_SERVICE_RATE_LIMIT_MAX_CONCURRENCY) ?? 3,
+      parsePositiveIntOrUndefined(
+        process.env.AI_SERVICE_RATE_LIMIT_MAX_CONCURRENCY
+      ) ?? 3,
     requestsPerInterval:
-      parsePositiveIntOrUndefined(process.env.AI_SERVICE_RATE_LIMIT_REQUESTS_PER_INTERVAL) ?? 60,
-    intervalMs: parseMsEnv(process.env.AI_SERVICE_RATE_LIMIT_INTERVAL_MS, 60_000),
+      parsePositiveIntOrUndefined(
+        process.env.AI_SERVICE_RATE_LIMIT_REQUESTS_PER_INTERVAL
+      ) ?? 60,
+    intervalMs: parseMsEnv(
+      process.env.AI_SERVICE_RATE_LIMIT_INTERVAL_MS,
+      60_000
+    ),
   },
   metricsEnabled: parseBoolean(process.env.AI_SERVICE_METRICS_ENABLED, true),
   match: {
     batchSize:
       parsePositiveIntOrUndefined(process.env.AI_MATCH_BATCH_SIZE) ?? 10,
-    maxJobs:
-      parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_JOBS) ?? 50,
+    maxJobs: parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_JOBS) ?? 50,
     maxGraduates:
       parsePositiveIntOrUndefined(process.env.AI_MATCH_MAX_GRADUATES) ?? 50,
     minScore: (() => {
@@ -206,4 +224,3 @@ export const aiConfig = {
     maxResults: parsedAiConfig.match.maxResults,
   },
 };
-

@@ -35,4 +35,3 @@ router.get('/health', getHealthStatus);
 router.get('/db-stats', getDatabaseStats);
 
 export default router;
-

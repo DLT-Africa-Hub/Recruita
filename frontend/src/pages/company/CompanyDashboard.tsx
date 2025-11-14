@@ -29,7 +29,7 @@ const CompanyDashboard = () => {
     <div style={containerStyle}>
       <h1>Company Dashboard</h1>
       <p>TODO: Implement company profile, job posting, and match review</p>
-      
+
       {/* TODO: Profile Section */}
       {/* TODO: Job Posting Form */}
       {/* TODO: Jobs List */}
@@ -45,4 +45,3 @@ const containerStyle: React.CSSProperties = {
 };
 
 export default CompanyDashboard;
-

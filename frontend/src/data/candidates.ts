@@ -24,7 +24,8 @@ export const companyCandidates: CandidateProfile[] = [
     experience: '5+ yrs',
     location: 'Remote • Lagos, NG',
     skills: ['React', 'Node.Js', 'Typescript'],
-    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 2,
@@ -36,7 +37,8 @@ export const companyCandidates: CandidateProfile[] = [
     experience: '4 yrs',
     location: 'Hybrid • Nairobi, KE',
     skills: ['React', 'Node.Js', 'Typescript'],
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 3,
@@ -48,7 +50,8 @@ export const companyCandidates: CandidateProfile[] = [
     experience: '3 yrs',
     location: 'Remote • Accra, GH',
     skills: ['React', 'Node.Js', 'Typescript'],
-    image: 'https://images.unsplash.com/photo-1493666438817-866a91353ca9?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1493666438817-866a91353ca9?auto=format&fit=crop&w=800&q=80',
   },
   {
     id: 4,
@@ -60,7 +63,7 @@ export const companyCandidates: CandidateProfile[] = [
     experience: '6 yrs',
     location: 'Onsite • Kigali, RW',
     skills: ['React', 'Node.Js', 'Typescript'],
-    image: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=800&q=80',
+    image:
+      'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=800&q=80',
   },
 ];
-

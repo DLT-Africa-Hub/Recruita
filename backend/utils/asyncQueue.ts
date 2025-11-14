@@ -28,7 +28,10 @@ export class AsyncTaskQueue {
           await task();
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error(`[AsyncTaskQueue:${this.name}] Task execution failed`, error);
+          console.error(
+            `[AsyncTaskQueue:${this.name}] Task execution failed`,
+            error
+          );
         }
       }
     } finally {
@@ -36,5 +39,3 @@ export class AsyncTaskQueue {
     }
   }
 }
-
-

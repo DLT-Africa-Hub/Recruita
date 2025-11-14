@@ -118,4 +118,3 @@ const CompanyJobForm = () => {
 };
 
 export default CompanyJobForm;
-

@@ -2,7 +2,11 @@ import request from 'supertest';
 import app from '../../app';
 import Session from '../../models/Session.model';
 import User from '../../models/User.model';
-import { connectTestDb, clearDatabase, disconnectTestDb } from '../utils/testDb';
+import {
+  connectTestDb,
+  clearDatabase,
+  disconnectTestDb,
+} from '../utils/testDb';
 
 describe('Authentication API flow', () => {
   beforeAll(async () => {
@@ -80,6 +84,3 @@ describe('Authentication API flow', () => {
     expect(users[0].email).toBe('graduate@example.com');
   });
 });
-
-
-

@@ -4,7 +4,14 @@ export interface IApplication extends Document {
   graduateId: mongoose.Types.ObjectId;
   jobId: mongoose.Types.ObjectId;
   matchId?: mongoose.Types.ObjectId;
-  status: 'pending' | 'reviewed' | 'shortlisted' | 'interviewed' | 'accepted' | 'rejected' | 'withdrawn';
+  status:
+    | 'pending'
+    | 'reviewed'
+    | 'shortlisted'
+    | 'interviewed'
+    | 'accepted'
+    | 'rejected'
+    | 'withdrawn';
   coverLetter?: string;
   resume?: string;
   appliedAt: Date;
@@ -33,7 +40,15 @@ const ApplicationSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'reviewed', 'shortlisted', 'interviewed', 'accepted', 'rejected', 'withdrawn'],
+      enum: [
+        'pending',
+        'reviewed',
+        'shortlisted',
+        'interviewed',
+        'accepted',
+        'rejected',
+        'withdrawn',
+      ],
       default: 'pending',
       required: true,
     },
@@ -71,4 +86,3 @@ ApplicationSchema.index({ graduateId: 1, status: 1 });
 ApplicationSchema.index({ appliedAt: -1 });
 
 export default mongoose.model<IApplication>('Application', ApplicationSchema);
-

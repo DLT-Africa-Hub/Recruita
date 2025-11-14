@@ -85,7 +85,10 @@ const buildUrlWithToken = (path: string, token: string): string => {
   return `${trimmedBase}${normalizedPath}?token=${token}`;
 };
 
-const isValidHexToken = (value: unknown, expectedLength: number): value is string => {
+const isValidHexToken = (
+  value: unknown,
+  expectedLength: number
+): value is string => {
   if (typeof value !== 'string') {
     return false;
   }
@@ -303,7 +306,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const password = normalizePasswordInput(req.body?.password);
 
     if (!email || !password || !role) {
-      res.status(400).json({ message: 'Email, password, and role are required' });
+      res
+        .status(400)
+        .json({ message: 'Email, password, and role are required' });
       return;
     }
 
@@ -340,9 +345,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     await sendEmailVerificationMessage(user, verificationToken);
 
-    res.status(201).json(
-      buildAuthPayload(user, session, refreshToken, 'User registered successfully')
-    );
+    res
+      .status(201)
+      .json(
+        buildAuthPayload(
+          user,
+          session,
+          refreshToken,
+          'User registered successfully'
+        )
+      );
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -496,7 +508,10 @@ export const logoutAll = async (req: Request, res: Response): Promise<void> => {
  * Get active sessions for the current user
  * GET /api/auth/sessions
  */
-export const getSessions = async (req: Request, res: Response): Promise<void> => {
+export const getSessions = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Unauthorized' });
@@ -619,7 +634,10 @@ export const requestEmailVerification = async (
  * Verify email via token
  * POST /api/auth/verify-email
  */
-export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+export const verifyEmail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { token } = req.body;
     if (!isValidHexToken(token, USER_TOKEN_HEX_LENGTH)) {
@@ -704,7 +722,10 @@ export const requestPasswordReset = async (
  * Reset password via token
  * POST /api/auth/reset-password
  */
-export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+export const resetPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { token } = req.body as { token?: unknown };
     const password = normalizePasswordInput(req.body?.password);
@@ -757,4 +778,3 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-

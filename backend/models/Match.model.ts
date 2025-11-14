@@ -44,4 +44,3 @@ const MatchSchema: Schema = new Schema(
 MatchSchema.index({ graduateId: 1, jobId: 1 }, { unique: true });
 
 export default mongoose.model<IMatch>('Match', MatchSchema);
-

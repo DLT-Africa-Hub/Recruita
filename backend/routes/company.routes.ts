@@ -13,7 +13,10 @@ import {
   getApplications,
 } from '../controllers/company.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
-import { strictLimiter, veryStrictLimiter } from '../middleware/rateLimit.middleware';
+import {
+  strictLimiter,
+  veryStrictLimiter,
+} from '../middleware/rateLimit.middleware';
 
 const router = Router();
 
@@ -35,7 +38,10 @@ router.put('/profile', veryStrictLimiter, updateProfile);
 router.post('/jobs', veryStrictLimiter, createJob);
 router.put('/jobs/:jobId', veryStrictLimiter, updateJob);
 router.delete('/jobs/:jobId', veryStrictLimiter, deleteJob);
-router.put('/jobs/:jobId/matches/:matchId', veryStrictLimiter, updateMatchStatus);
+router.put(
+  '/jobs/:jobId/matches/:matchId',
+  veryStrictLimiter,
+  updateMatchStatus
+);
 
 export default router;
-

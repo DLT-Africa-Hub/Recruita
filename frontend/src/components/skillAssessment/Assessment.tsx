@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 interface Question {
   question: string;
@@ -13,39 +13,39 @@ const Assessment: React.FC = () => {
 
   const questions: Question[] = [
     {
-      question: "What does HTML stand for?",
+      question: 'What does HTML stand for?',
       options: [
-        "Hyper Text Markup Language",
-        "HighText Machine Language",
-        "Hyperlink and Text Markup Language",
-        "Home Tool Markup Language",
+        'Hyper Text Markup Language',
+        'HighText Machine Language',
+        'Hyperlink and Text Markup Language',
+        'Home Tool Markup Language',
       ],
-      answer: "Hyper Text Markup Language",
+      answer: 'Hyper Text Markup Language',
     },
     {
-      question: "Which of the following is a JavaScript framework?",
-      options: ["Laravel", "React", "Django", "Flask"],
-      answer: "React",
+      question: 'Which of the following is a JavaScript framework?',
+      options: ['Laravel', 'React', 'Django', 'Flask'],
+      answer: 'React',
     },
     {
-      question: "What is the default port for HTTP?",
-      options: ["8080", "443", "80", "3000"],
-      answer: "80",
+      question: 'What is the default port for HTTP?',
+      options: ['8080', '443', '80', '3000'],
+      answer: '80',
     },
     {
-      question: "Which of these is used to style a webpage?",
-      options: ["CSS", "HTML", "Python", "C++"],
-      answer: "CSS",
+      question: 'Which of these is used to style a webpage?',
+      options: ['CSS', 'HTML', 'Python', 'C++'],
+      answer: 'CSS',
     },
     {
-      question: "What does SQL stand for?",
+      question: 'What does SQL stand for?',
       options: [
-        "Structured Query Language",
-        "Simple Query Language",
-        "Standard Question Language",
-        "System Query Language",
+        'Structured Query Language',
+        'Simple Query Language',
+        'Standard Question Language',
+        'System Query Language',
       ],
-      answer: "Structured Query Language",
+      answer: 'Structured Query Language',
     },
   ];
 
@@ -100,39 +100,47 @@ const Assessment: React.FC = () => {
       <div className="flex justify-between items-center h-full pb-20 md:justify-center w-full flex-col md:gap-[70px] font-inter">
         <div className="flex flex-col w-full h-full justify-between lg:gap-[40px] items-center">
           <div className="flex flex-col w-full  max-w-[226px]  gap-2.5 text-left md:text-center">
-          {passed
-                  ? (<img src="/congrats.png" className="object-cover w-full h-full " alt="pass symbol" />)
-                  : (<img src="/fail.png" className="object-cover w-full h-full " alt="fail symbol" />)}
-            
-            
+            {passed ? (
+              <img
+                src="/congrats.png"
+                className="object-cover w-full h-full "
+                alt="pass symbol"
+              />
+            ) : (
+              <img
+                src="/fail.png"
+                className="object-cover w-full h-full "
+                alt="fail symbol"
+              />
+            )}
           </div>
 
           <div className="flex flex-col gap-5 w-full max-w-[542px] text-center">
-          {passed
-                  ? (
-                  <div className="flex flex-col gap-2.5">
-                      <p className="text-[#1C1C1C] text-[32px] font-semibold">
-                        Congratulations!
-                      </p>
-                      <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-                        You passed the assessment and you got {score.percentage}% of the total score
-                      </p>
-                  </div>
-                  )
-                  : (
-                    <div className="flex flex-col gap-2.5">
-                    <p className="text-[#1C1C1C] text-[32px] font-semibold">
-                    Almost there!
-                    </p>
-                    <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-                    You got {score.percentage}%, you need 60% to pass. But don’t worry you can try again
-                    </p>
-                </div>
-                  )}
+            {passed ? (
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[#1C1C1C] text-[32px] font-semibold">
+                  Congratulations!
+                </p>
+                <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+                  You passed the assessment and you got {score.percentage}% of
+                  the total score
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[#1C1C1C] text-[32px] font-semibold">
+                  Almost there!
+                </p>
+                <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+                  You got {score.percentage}%, you need 60% to pass. But don’t
+                  worry you can try again
+                </p>
+              </div>
+            )}
           </div>
 
           <button className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium">
-                    {passed ? "Go to Dashboard":"Try gain"}
+            {passed ? 'Go to Dashboard' : 'Try gain'}
           </button>
         </div>
       </div>
@@ -176,13 +184,13 @@ const Assessment: React.FC = () => {
               onClick={() => handleSelectOption(option)}
               className={`flex items-center border-[1px] p-5 gap-2.5 rounded-xl w-full max-w-[542px] justify-start transition-all duration-200 ${
                 isSelected
-                  ? "border-button bg-[#F0F5FF]"
-                  : "border-fade bg-white"
+                  ? 'border-button bg-[#F0F5FF]'
+                  : 'border-fade bg-white'
               }`}
             >
               <div
                 className={`rounded-full h-5 w-5 p-1 border-[1px] flex items-center justify-center ${
-                  isSelected ? "border-button" : "border-fade"
+                  isSelected ? 'border-button' : 'border-fade'
                 }`}
               >
                 {isSelected && (
@@ -202,8 +210,8 @@ const Assessment: React.FC = () => {
           disabled={step === 0}
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 flex-1 ${
             step === 0
-              ? "bg-fade text-[#F8F8F8] cursor-not-allowed border-[1px] border-transparent"
-              : "border-[1px] border-button text-button bg-white hover:bg-[#F0F4F9]"
+              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed border-[1px] border-transparent'
+              : 'border-[1px] border-button text-button bg-white hover:bg-[#F0F4F9]'
           }`}
         >
           Previous
@@ -214,11 +222,11 @@ const Assessment: React.FC = () => {
           disabled={!selectedOption}
           className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 flex-1 ${
             !selectedOption
-              ? "bg-fade text-[#F8F8F8] cursor-not-allowed"
-              : "bg-button text-[#F8F8F8] hover:bg-[#A9B9D3]"
+              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed'
+              : 'bg-button text-[#F8F8F8] hover:bg-[#A9B9D3]'
           }`}
         >
-          {isLastQuestion ? "Submit" : "Next"}
+          {isLastQuestion ? 'Submit' : 'Next'}
         </button>
       </div>
     </div>

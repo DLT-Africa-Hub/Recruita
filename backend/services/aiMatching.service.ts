@@ -57,11 +57,15 @@ type LeanJobEmbedding = {
   updatedAt?: Date;
 };
 
-const toObjectId = (value: mongoose.Types.ObjectId | string): mongoose.Types.ObjectId =>
+const toObjectId = (
+  value: mongoose.Types.ObjectId | string
+): mongoose.Types.ObjectId =>
   typeof value === 'string' ? new mongoose.Types.ObjectId(value) : value;
 
 const isVector = (value: unknown): value is number[] =>
-  Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'number');
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((item) => typeof item === 'number');
 
 const scoreToPercentage = (score: number): number => Math.round(score * 100);
 
@@ -114,7 +118,9 @@ const computeWorkExperienceStats = (
       continue;
     }
 
-    const endRaw = experience.endDate ? new Date(experience.endDate) : new Date();
+    const endRaw = experience.endDate
+      ? new Date(experience.endDate)
+      : new Date();
     if (Number.isNaN(endRaw.getTime()) || endRaw < start) {
       continue;
     }
@@ -130,7 +136,9 @@ const computeWorkExperienceStats = (
   }
 
   const totalYears =
-    totalMilliseconds > 0 ? Number((totalMilliseconds / MS_PER_YEAR).toFixed(2)) : undefined;
+    totalMilliseconds > 0
+      ? Number((totalMilliseconds / MS_PER_YEAR).toFixed(2))
+      : undefined;
   const latestYear = latest ? latest.getUTCFullYear() : undefined;
   return { totalYears, latestYear };
 };
@@ -152,7 +160,9 @@ const extractExperienceYears = (value?: string): number | undefined => {
   return Number(parsed.toFixed(2));
 };
 
-const buildGraduateMetadata = (graduate: LeanGraduateEmbedding): GraduateMatchMetadata => {
+const buildGraduateMetadata = (
+  graduate: LeanGraduateEmbedding
+): GraduateMatchMetadata => {
   const metadata: GraduateMatchMetadata = {};
 
   const skills = sanitizeStringArray(graduate.skills);
@@ -162,15 +172,21 @@ const buildGraduateMetadata = (graduate: LeanGraduateEmbedding): GraduateMatchMe
 
   if (graduate.education) {
     const parts = [
-      typeof graduate.education.degree === 'string' ? graduate.education.degree.trim() : null,
-      typeof graduate.education.field === 'string' ? graduate.education.field.trim() : null,
+      typeof graduate.education.degree === 'string'
+        ? graduate.education.degree.trim()
+        : null,
+      typeof graduate.education.field === 'string'
+        ? graduate.education.field.trim()
+        : null,
     ].filter((value): value is string => !!value && value.length > 0);
     if (parts.length > 0) {
       metadata.education = parts.join(' ');
     }
   }
 
-  const { totalYears, latestYear } = computeWorkExperienceStats(graduate.workExperiences);
+  const { totalYears, latestYear } = computeWorkExperienceStats(
+    graduate.workExperiences
+  );
   if (typeof totalYears === 'number') {
     metadata.experienceYears = totalYears;
   }
@@ -250,10 +266,14 @@ export const queueGraduateMatching = (
 
     try {
       const graduateMetadata = buildGraduateMetadata(graduate);
-      const matches = await findMatches(graduate.assessmentData.embedding, jobEmbeddings, {
-        graduateMetadata,
-        matchOptions: buildMatchOptions(),
-      });
+      const matches = await findMatches(
+        graduate.assessmentData.embedding,
+        jobEmbeddings,
+        {
+          graduateMetadata,
+          matchOptions: buildMatchOptions(),
+        }
+      );
 
       const topScoreRaw = matches.matches.reduce(
         (max, match) => Math.max(max, match.score),
@@ -305,11 +325,10 @@ export const queueGraduateMatching = (
       );
     } catch (error) {
       if (error instanceof AIServiceError) {
-        console.error(
-          'AI matching error (graduate-driven):',
-          error.message,
-          { graduateId: graduate._id.toHexString(), statusCode: error.statusCode }
-        );
+        console.error('AI matching error (graduate-driven):', error.message, {
+          graduateId: graduate._id.toHexString(),
+          statusCode: error.statusCode,
+        });
       } else {
         console.error('Unexpected matching error (graduate-driven):', error);
       }
@@ -317,7 +336,9 @@ export const queueGraduateMatching = (
   });
 };
 
-export const queueJobMatching = (jobId: mongoose.Types.ObjectId | string): void => {
+export const queueJobMatching = (
+  jobId: mongoose.Types.ObjectId | string
+): void => {
   const id = toObjectId(jobId);
   matchQueue.enqueue(async () => {
     const job = await Job.findById(id)
@@ -331,7 +352,9 @@ export const queueJobMatching = (jobId: mongoose.Types.ObjectId | string): void 
     const graduates = await Graduate.find({
       'assessmentData.embedding.0': { $exists: true },
     })
-      .select('_id skills education workExperiences updatedAt assessmentData.embedding')
+      .select(
+        '_id skills education workExperiences updatedAt assessmentData.embedding'
+      )
       .limit(aiConfig.match.maxGraduates)
       .lean<LeanGraduateEmbedding[]>();
 
@@ -350,12 +373,18 @@ export const queueJobMatching = (jobId: mongoose.Types.ObjectId | string): void 
 
       try {
         const graduateMetadata = buildGraduateMetadata(graduate);
-        const matches = await findMatches(graduate.assessmentData.embedding, [jobEmbedding], {
-          graduateMetadata,
-          matchOptions,
-        });
+        const matches = await findMatches(
+          graduate.assessmentData.embedding,
+          [jobEmbedding],
+          {
+            graduateMetadata,
+            matchOptions,
+          }
+        );
 
-        const match = matches.matches.find((item) => item.id === job._id.toHexString());
+        const match = matches.matches.find(
+          (item) => item.id === job._id.toHexString()
+        );
         if (!match) {
           continue;
         }
@@ -380,15 +409,11 @@ export const queueJobMatching = (jobId: mongoose.Types.ObjectId | string): void 
         );
       } catch (error) {
         if (error instanceof AIServiceError) {
-          console.error(
-            'AI matching error (job-driven):',
-            error.message,
-            {
-              jobId: job._id.toHexString(),
-              graduateId: graduate._id.toHexString(),
-              statusCode: error.statusCode,
-            }
-          );
+          console.error('AI matching error (job-driven):', error.message, {
+            jobId: job._id.toHexString(),
+            graduateId: graduate._id.toHexString(),
+            statusCode: error.statusCode,
+          });
         } else {
           console.error('Unexpected matching error (job-driven):', error);
         }
@@ -396,5 +421,3 @@ export const queueJobMatching = (jobId: mongoose.Types.ObjectId | string): void 
     }
   });
 };
-
-

@@ -17,7 +17,9 @@ const Login = () => {
       await login(email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(
+        err.response?.data?.message || 'Login failed. Please try again.'
+      );
     }
   };
 
@@ -30,8 +32,22 @@ const Login = () => {
       linkPath="/register"
       onSubmit={handleSubmit}
       fields={[
-        { label: 'Email', name: 'email', type: 'email', placeholder: 'John@example.com', value: email, onChange: e => setEmail(e.target.value) },
-        { label: 'Password', name: 'password', type: 'password', placeholder: 'password', value: password, onChange: e => setPassword(e.target.value) },
+        {
+          label: 'Email',
+          name: 'email',
+          type: 'email',
+          placeholder: 'John@example.com',
+          value: email,
+          onChange: (e) => setEmail(e.target.value),
+        },
+        {
+          label: 'Password',
+          name: 'password',
+          type: 'password',
+          placeholder: 'password',
+          value: password,
+          onChange: (e) => setPassword(e.target.value),
+        },
       ]}
       error={error}
     />

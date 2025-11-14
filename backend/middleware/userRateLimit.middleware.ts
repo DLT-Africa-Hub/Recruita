@@ -20,7 +20,8 @@ const deriveRateLimitKey = (req: Request): string => {
     }
   }
 
-  const ip = typeof req.ip === 'string' && req.ip.length > 0 ? req.ip : '127.0.0.1';
+  const ip =
+    typeof req.ip === 'string' && req.ip.length > 0 ? req.ip : '127.0.0.1';
 
   return `ip:${ipKeyGenerator(ip)}`;
 };
@@ -37,5 +38,3 @@ export const userRateLimiter = rateLimit({
     message: 'Too many requests. Please slow down.',
   },
 });
-
-

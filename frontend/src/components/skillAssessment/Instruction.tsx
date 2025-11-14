@@ -43,7 +43,6 @@ const Instruction: React.FC<InstructionProps> = ({ onStart }) => {
           Take test to grade your skill
         </p>
       </div>
-      
 
       <div className="flex flex-col w-full max-w-[542px]">
         {guides.map((guide) => (
