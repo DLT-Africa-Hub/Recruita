@@ -20,11 +20,6 @@ const Register = () => {
     }
   };
 
-  const handleContinue = () => {
-    setIsModalOpen(false);
-    navigate('/role');
-  };
-
   return (
    <>
      <AuthForm
