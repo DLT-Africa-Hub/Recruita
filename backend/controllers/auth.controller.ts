@@ -77,7 +77,7 @@ const PASSWORD_RESET_TTL_MS = resolveTtlMs(
 );
 
 const CLIENT_BASE_URL =
-  process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5173';
+  process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5174';
 
 const buildUrlWithToken = (path: string, token: string): string => {
   const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');

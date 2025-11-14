@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Assessment from '../../components/skillAssessment/Assessment';
 import Instruction from '../../components/skillAssessment/Instruction';
 
-
 const SkillAssessment: React.FC = () => {
   const [showAssessment, setShowAssessment] = useState(false);
 

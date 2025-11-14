@@ -291,13 +291,13 @@ class AIServiceClient {
   private readonly httpAgent = new http.Agent({
     keepAlive: true,
     maxSockets: aiConfig.rateLimit.maxConcurrent * 4,
-    timeout: aiConfig.requestTimeoutMs,
+    timeout: aiConfig.requestTimeoutMs + 5000, // Add buffer for agent timeout
   });
 
   private readonly httpsAgent = new https.Agent({
     keepAlive: true,
     maxSockets: aiConfig.rateLimit.maxConcurrent * 4,
-    timeout: aiConfig.requestTimeoutMs,
+    timeout: aiConfig.requestTimeoutMs + 5000, // Add buffer for agent timeout
   });
 
   private readonly http = axios.create({
@@ -309,6 +309,11 @@ class AIServiceClient {
     httpAgent: this.httpAgent,
     httpsAgent: this.httpsAgent,
   });
+
+  constructor() {
+    // Log the configured timeout for debugging
+    console.log(`[AIServiceClient] Configured timeout: ${aiConfig.requestTimeoutMs}ms`);
+  }
 
   async fetchEmbedding(text: string): Promise<number[]> {
     const response = await this.post<EmbedResponse>('/embed', { text });

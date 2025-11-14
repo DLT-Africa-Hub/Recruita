@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import GraduateDashboard from './pages/talent/GraduateDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import AssessmentGuard from './components/AssessmentGuard';
 import AccountType from './pages/AccountType';
 import Layout from './components/layout/Layout';
 import CompanyPreview from './pages/talent/CompanyPreview';
@@ -20,17 +21,20 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
-      
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<AuthPage mode='login'/>} />
-          <Route path="/register" element={<AuthPage mode='register' />} />
+          <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/register" element={<AuthPage mode="register" />} />
           <Route
             path="/graduate/*"
             element={
-              <Layout>
-                 <GraduateDashboard />
-              </Layout>
+              <ProtectedRoute allowedRoles={['graduate']}>
+                <AssessmentGuard>
+                  <Layout>
+                    <GraduateDashboard />
+                  </Layout>
+                </AssessmentGuard>
+              </ProtectedRoute>
             }
           />
           <Route
@@ -51,25 +55,70 @@ function App() {
           />
           <Route path="/role" element={<AccountType />} />
           <Route path="/onboarding" element={<GraduateOnboarding />} />
-          <Route path="/assessment" element={<SkillAssessment />} />
-          <Route path="/company-preview/:id" element={<CompanyPreview mode='application' />} />
-          <Route path="/contactCompany/:id" element={<CompanyPreview mode='contact'/>} />
-          <Route path="/explore" element={<Layout >
-            <ExploreCompany/>
-          </Layout>} />
-          <Route path="/applications" element={<Layout >
-            <GraduateApplications/>
-          </Layout>} />
-          <Route path="/messages/:id" element={<Layout >
-            <Messages/>
-          </Layout>} />
-          <Route path="/messages" element={<Layout >
-            <Messages/>
-          </Layout>} />
-          <Route path="/notifications" element={<Layout >
-            <Notifications/>
-          </Layout>} />
-          
+          <Route
+            path="/assessment"
+            element={
+              <ProtectedRoute allowedRoles={['graduate']}>
+                <SkillAssessment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company-preview/:id"
+            element={<CompanyPreview mode="application" />}
+          />
+          <Route
+            path="/contactCompany/:id"
+            element={<CompanyPreview mode="contact" />}
+          />
+          <Route
+            path="/explore"
+            element={
+              <ProtectedRoute allowedRoles={['graduate']}>
+                <AssessmentGuard>
+                  <Layout>
+                    <ExploreCompany />
+                  </Layout>
+                </AssessmentGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/applications"
+            element={
+              <ProtectedRoute allowedRoles={['graduate']}>
+                <AssessmentGuard>
+                  <Layout>
+                    <GraduateApplications />
+                  </Layout>
+                </AssessmentGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages/:id"
+            element={
+              <Layout>
+                <Messages />
+              </Layout>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <Layout>
+                <Messages />
+              </Layout>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <Layout>
+                <Notifications />
+              </Layout>
+            }
+          />
         </Routes>
       </div>
     </AuthProvider>
@@ -77,4 +126,3 @@ function App() {
 }
 
 export default App;
-

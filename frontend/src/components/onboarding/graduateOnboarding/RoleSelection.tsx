@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { GraduateForm } from "../../../constants/type";
-import { roles } from "../../../utils/material.utils";
+import { positions } from "../../../utils/material.utils";
 
 
 
@@ -50,13 +50,13 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
 
       {/* Roles List */}
       <div className="flex flex-col gap-2.5 justify-center items-center w-full">
-        {roles.map((role) => {
-          const isSelected = selectedRoles.includes(role);
+        {positions.map((position) => {
+          const isSelected = selectedRoles.includes(position.value);
           return (
             <button
-              key={role}
+              key={position.value}
               type="button"
-              onClick={() => handleSelectRole(role)}
+              onClick={() => handleSelectRole(position.value)}
               className={`flex items-center border-[1px] p-5 gap-2.5 rounded-xl w-full max-w-[542px] justify-start transition-all duration-200 ${
                 isSelected
                   ? "border-button  bg-white"
@@ -72,7 +72,7 @@ const RoleSelection: React.FC<Props> = ({ form, onChange, onNext }) => {
                   <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
-              <p className="text-[#1C1C1C]">{role}</p>
+              <p className="text-[#1C1C1C]">{position.label}</p>
             </button>
           );
         })}

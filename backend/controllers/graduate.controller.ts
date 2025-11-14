@@ -234,13 +234,11 @@ export const createProfile = async (
 
     if (
       typeof firstName !== 'string' ||
-      typeof lastName !== 'string' ||
-      !education ||
-      typeof education !== 'object'
+      typeof lastName !== 'string'
     ) {
       res.status(400).json({
         message:
-          'firstName, lastName, phoneNumber, expLevel, expYears, position, and education { degree, field, institution, graduationYear } are required',
+          'firstName, lastName, phoneNumber, expLevel, expYears, and position are required',
       });
       return;
     }
@@ -275,18 +273,34 @@ export const createProfile = async (
       return;
     }
 
-    const { degree, field, institution, graduationYear } = education;
-    if (
-      typeof degree !== 'string' ||
-      typeof field !== 'string' ||
-      typeof institution !== 'string' ||
-      typeof graduationYear !== 'number'
-    ) {
-      res.status(400).json({
-        message:
-          'Education must include degree, field, institution, and graduationYear',
-      });
-      return;
+    // Validate education if provided (optional)
+    let educationData: {
+      degree: string;
+      field: string;
+      institution: string;
+      graduationYear: number;
+    } | undefined;
+
+    if (education && typeof education === 'object') {
+      const { degree, field, institution, graduationYear } = education;
+      if (
+        typeof degree !== 'string' ||
+        typeof field !== 'string' ||
+        typeof institution !== 'string' ||
+        typeof graduationYear !== 'number'
+      ) {
+        res.status(400).json({
+          message:
+            'If education is provided, it must include degree, field, institution, and graduationYear',
+        });
+        return;
+      }
+      educationData = {
+        degree: degree.trim(),
+        field: field.trim(),
+        institution: institution.trim(),
+        graduationYear,
+      };
     }
 
     const existingPhone = await Graduate.findOne({ phoneNumber: parsedPhone }).lean();
@@ -308,11 +322,11 @@ export const createProfile = async (
           ? profilePictureUrl.trim()
           : undefined,
       skills: sanitizeStringArray(skills),
-      education: {
-        degree: degree.trim(),
-        field: field.trim(),
-        institution: institution.trim(),
-        graduationYear,
+      education: educationData || {
+        degree: 'Not specified',
+        field: 'Not specified',
+        institution: 'Not specified',
+        graduationYear: new Date().getFullYear(),
       },
       interests: sanitizeStringArray(interests),
       socials:
@@ -949,11 +963,15 @@ export const getAssessmentQuestions = async (
     let count: number | undefined;
     if (typeof rawCount === 'string' && rawCount.trim().length > 0) {
       const parsed = Number.parseInt(rawCount, 10);
-      if (Number.isNaN(parsed) || parsed <= 0 || parsed > 20) {
-        res.status(400).json({ message: 'count must be a positive integer up to 20' });
+      if (Number.isNaN(parsed) || parsed <= 0 || parsed > 3) {
+        res.status(400).json({ message: 'count must be a positive integer up to 3' });
         return;
       }
       count = parsed;
+    }
+    // Default to 3 questions if not specified
+    if (!count) {
+      count = 3;
     }
 
     const language =
@@ -970,9 +988,22 @@ export const getAssessmentQuestions = async (
 
     const questions = await generateAssessmentQuestions(graduate.skills, {
       attempt: questionSetVersion,
-      numQuestions: count,
+      numQuestions: count || 3, // Default to 3 questions
       language,
     });
+
+    // Store questions in assessmentData for later scoring
+    if (!graduate.assessmentData) {
+      graduate.assessmentData = {
+        submittedAt: new Date(), // Temporary date, will be updated on submission
+        attempts: 0,
+        needsRetake: false,
+        questionSetVersion: 1,
+      };
+    }
+    // Store questions temporarily (we'll use them when calculating score)
+    (graduate.assessmentData as any).currentQuestions = questions;
+    await graduate.save();
 
     res.json({
       questionSetVersion,
@@ -982,6 +1013,11 @@ export const getAssessmentQuestions = async (
     });
   } catch (error) {
     if (error instanceof AIServiceError) {
+      console.error('AI Service Error:', {
+        message: error.message,
+        statusCode: error.statusCode,
+        cause: error.cause,
+      });
       res.status(error.statusCode ?? 503).json({ message: error.message });
       return;
     }
@@ -1005,6 +1041,62 @@ export const submitAssessment = async (
     if (!graduate) {
       return;
     }
+
+    const { answers } = req.body as { answers?: string[] | unknown };
+    
+    if (!answers) {
+      res.status(400).json({ message: 'Answers array is required' });
+      return;
+    }
+
+    if (!Array.isArray(answers)) {
+      res.status(400).json({ 
+        message: 'Answers must be an array',
+        received: typeof answers,
+        value: answers
+      });
+      return;
+    }
+
+    if (answers.length === 0) {
+      res.status(400).json({ message: 'Answers array cannot be empty' });
+      return;
+    }
+
+    // Filter out any empty or invalid answers
+    const validAnswers = answers.filter((answer): answer is string => 
+      typeof answer === 'string' && answer.trim().length > 0
+    );
+
+    if (validAnswers.length === 0) {
+      res.status(400).json({ message: 'At least one valid answer is required' });
+      return;
+    }
+
+    // Get the questions that were asked (we need to fetch them again or store them)
+    // For now, we'll calculate score based on the answers provided
+    // The questions should match the order of answers
+    const questionSetVersion =
+      typeof graduate.assessmentData?.questionSetVersion === 'number'
+        ? graduate.assessmentData.questionSetVersion
+        : 1;
+
+    // Get stored questions from assessmentData for scoring
+    const storedQuestions = (graduate.assessmentData as any)?.currentQuestions as 
+      Array<{ question: string; options: string[]; answer: string; skill?: string }> | undefined;
+
+    // Calculate score using valid answers
+    let correctAnswers = 0;
+    let score: number | undefined = undefined;
+    if (storedQuestions && Array.isArray(storedQuestions) && storedQuestions.length === validAnswers.length) {
+      storedQuestions.forEach((q, index) => {
+        if (validAnswers[index] === q.answer) {
+          correctAnswers++;
+        }
+      });
+      score = Math.round((correctAnswers / storedQuestions.length) * 100);
+    }
+    const passed = score !== undefined && score >= 60;
 
     const {
       summary,
@@ -1030,20 +1122,17 @@ export const submitAssessment = async (
       additionalContext
     );
 
-    let embedding: number[];
+    // Make embedding optional - if it fails due to quota, continue without it
+    let embedding: number[] | undefined;
     try {
       embedding = await generateProfileEmbedding(profileText);
     } catch (embeddingError) {
       if (embeddingError instanceof AIServiceError) {
-        res
-          .status(embeddingError.statusCode ?? 503)
-          .json({ message: embeddingError.message });
-        return;
+        console.warn('Embedding generation failed (quota exceeded or service unavailable):', embeddingError.message);
+        // Continue without embedding - assessment can still be saved
+      } else {
+        console.error('Unexpected embedding generation error:', embeddingError);
       }
-
-      console.error('Unexpected embedding generation error:', embeddingError);
-      res.status(500).json({ message: 'Failed to generate assessment embedding' });
-      return;
     }
 
     let feedback: string | undefined;
@@ -1114,28 +1203,30 @@ export const submitAssessment = async (
 
     const previousData = graduate.assessmentData;
     const attempts = (previousData?.attempts ?? 0) + 1;
-    const questionSetVersion =
-      typeof previousData?.questionSetVersion === 'number'
-        ? previousData.questionSetVersion
-        : 1;
 
     graduate.assessmentData = {
       submittedAt: new Date(),
-      embedding,
+      embedding: embedding || previousData?.embedding, // Keep previous embedding if new one failed
       feedback,
       attempts,
-      needsRetake: false,
-      lastScore: undefined,
+      needsRetake: score !== undefined && !passed, // Set needsRetake based on score
+      lastScore: score,
       questionSetVersion,
     };
+    // Remove temporary questions storage
+    delete (graduate.assessmentData as any).currentQuestions;
 
     await graduate.save();
+
+    console.log(`✅ Assessment submitted successfully for user ${userId}. Score: ${score ?? 'N/A'}%, Passed: ${passed}`);
 
     queueGraduateMatching(graduate._id);
 
     res.json({
       message: 'Assessment submitted successfully',
       assessmentData: graduate.assessmentData,
+      score,
+      passed,
     });
   } catch (error) {
     console.error('Assessment submission error:', error);
