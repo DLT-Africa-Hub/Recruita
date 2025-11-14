@@ -11,7 +11,7 @@ export interface GraduateForm {
     };
     phoneNo?: string;
     portfolio?: string;
-    yearsOfExperience?:string;
+    yearsOfExperience?: string;
     rank?: string;
     createdAt: Date;
     updatedAt: Date;

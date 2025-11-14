@@ -29,6 +29,10 @@ from openai import (
     OpenAIError,
     RateLimitError,
 )
+from dotenv import load_dotenv
+
+# Load environment variables before accessing them
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

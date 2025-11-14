@@ -100,7 +100,7 @@ const aiConfigSchema = z.object({
     .number()
     .int()
     .positive()
-    .default(5000),
+    .default(60000), // Increased default to 60 seconds for OpenAI API calls
   maxRetries: z.number().int().min(0).max(5).default(2),
   initialBackoffMs: z.number().int().min(0).default(200),
   backoffMultiplier: z.number().positive().default(2),
@@ -135,9 +135,12 @@ const parseMsEnv = (value: string | undefined, fallback: number): number => {
   return parsed;
 };
 
+const timeoutValue = parseMsEnv(process.env.AI_SERVICE_TIMEOUT_MS, 60000);
+console.log(`[Config] AI_SERVICE_TIMEOUT_MS env: ${process.env.AI_SERVICE_TIMEOUT_MS}, parsed: ${timeoutValue}ms`);
+
 const parsedAiConfig = aiConfigSchema.parse({
   serviceUrl: process.env.AI_SERVICE_URL || 'http://localhost:8000',
-  requestTimeoutMs: parseMsEnv(process.env.AI_SERVICE_TIMEOUT_MS, 5000),
+  requestTimeoutMs: timeoutValue, // Increased to 60 seconds for OpenAI API calls
   maxRetries: parsePositiveIntOrUndefined(process.env.AI_SERVICE_MAX_RETRIES) ?? 2,
   initialBackoffMs: parseMsEnv(process.env.AI_SERVICE_RETRY_DELAY_MS, 200),
   backoffMultiplier:
