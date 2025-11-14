@@ -1,8 +1,14 @@
-import { useMemo } from 'react';
-import CompanyCard, { Company } from '../../components/explore/CompanyCard';
+import {  useMemo } from 'react';
+import CompanyCard, {Company} from '../../components/explore/CompanyCard';
 import { companies } from '../../data/companies';
 
+
+
+
 const GraduateDashboard = () => {
+
+
+
   const getRandom = (arr: Company[], n: number) => {
     const copy = [...arr];
     for (let i = copy.length - 1; i > 0; i--) {
@@ -12,58 +18,51 @@ const GraduateDashboard = () => {
     return copy.slice(0, n);
   };
 
+
   const availableCompanies = useMemo(() => getRandom(companies, 4), []);
   const contractCompanies = useMemo(() => getRandom(companies, 4), []);
 
-  const handleButtonClick = (_companyName: string, _buttonText: string) => {
-    // TODO: Implement button click functionality
+  const handleButtonClick = (companyName: string, buttonText: string) => {
+    console.log(`${buttonText} clicked for ${companyName}`);
   };
 
   return (
-    <div className="py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center ">
-      <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
-        <p className="font-medium text-[22px] text-[#1C1C1C]">
+    <div className='py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center '>
+
+      
+    <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
+      <p className='font-medium text-[22px] text-[#1C1C1C]'>
           Available Opportunites
         </p>
-
-        <div className="grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full">
-          {availableCompanies.map((company, index) => (
-            <CompanyCard
-              key={index}
-              company={company}
-              buttonText="Preview"
-              onButtonClick={() =>
-                handleButtonClick(
-                  company.name,
-                  index === 0 ? 'Preview' : 'Get in Touch'
-                )
-              }
-            />
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
-        <p className="font-medium text-[22px] text-[#1C1C1C]">
-          Contract offers
-        </p>
-
-        <div className="grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full">
-          {contractCompanies.map((company, index) => (
-            <CompanyCard
-              key={index}
-              company={company}
-              buttonText="Get in Touch"
-              onButtonClick={() =>
-                handleButtonClick(
-                  company.name,
-                  index === 0 ? 'Preview' : 'Get in Touch'
-                )
-              }
-            />
-          ))}
-        </div>
+     
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full'>
+        {availableCompanies.map((company, index) => (
+          <CompanyCard
+            key={index}
+            company={company}
+            buttonText="Preview"
+            onButtonClick={() => handleButtonClick(company.name, index === 0 ? "Preview" : "Get in Touch")}
+          />
+        ))}
       </div>
     </div>
+    <div className='flex flex-col gap-[20px] w-full md:gap-[30px]'>
+      <p className='font-medium text-[22px] text-[#1C1C1C]'>
+          Contract offers
+        </p>
+     
+      <div className='grid grid-cols-1    md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8  w-full'>
+        {contractCompanies.map((company, index) => (
+          <CompanyCard
+            key={index}
+            company={company}
+            buttonText="Get in Touch"
+            onButtonClick={() => handleButtonClick(company.name, index === 0 ? "Preview" : "Get in Touch")}
+          />
+        ))}
+      </div>
+    </div>
+  </div>
   );
 };
 

@@ -112,9 +112,7 @@ const ExplorePreview = () => {
               {company.contract}
             </p>
             <div className="h-[20px] bg-black w-0.5" />
-            <p className="text-center w-full font-semibold">
-              {company.location}
-            </p>
+            <p className="text-center w-full font-semibold">{company.location}</p>
             <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold">
               {company.wage} {company.wageType}
@@ -147,3 +145,4 @@ const ExplorePreview = () => {
 };
 
 export default ExplorePreview;
+

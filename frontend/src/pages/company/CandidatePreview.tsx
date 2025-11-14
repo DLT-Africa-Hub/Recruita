@@ -8,9 +8,9 @@ const CandidatePreview = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const candidate = companyCandidates.find((c) => c.id === Number(id)) as
-    | CandidateProfile
-    | undefined;
+  const candidate = companyCandidates.find(
+    (c) => c.id === Number(id)
+  ) as CandidateProfile | undefined;
 
   if (!candidate) {
     return (
@@ -165,3 +165,4 @@ const CandidatePreview = () => {
 };
 
 export default CandidatePreview;
+

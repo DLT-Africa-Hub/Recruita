@@ -26,11 +26,8 @@ const AdminDashboard = () => {
   return (
     <div style={containerStyle}>
       <h1>Admin Dashboard</h1>
-      <p>
-        TODO: Implement user management, job management, match monitoring, and
-        AI stats
-      </p>
-
+      <p>TODO: Implement user management, job management, match monitoring, and AI stats</p>
+      
       {/* TODO: Stats Overview */}
       {/* TODO: Users Management */}
       {/* TODO: Jobs Management */}
@@ -47,3 +44,4 @@ const containerStyle: React.CSSProperties = {
 };
 
 export default AdminDashboard;
+

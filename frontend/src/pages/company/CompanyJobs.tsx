@@ -10,8 +10,8 @@ const CompanyJobs = () => {
     navigate('/jobs/new');
   };
 
-  const handleViewMatches = (_job: CompanyJob) => {
-    // TODO: Implement view matches functionality
+  const handleViewMatches = (job: CompanyJob) => {
+    console.log('View matches for job:', job);
   };
 
   return (

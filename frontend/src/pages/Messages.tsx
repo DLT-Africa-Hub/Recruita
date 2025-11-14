@@ -15,9 +15,10 @@ const Messages: React.FC = () => {
   const [activeChat, setActiveChat] = useState<Company | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
+  
   const { id } = useParams<{ id?: string }>();
 
-  const chatId = id;
+  const chatId = id
 
   const openChat = (company: Company) => {
     setActiveChat(company);
@@ -27,6 +28,8 @@ const Messages: React.FC = () => {
   const closeChat = () => {
     setIsOpen(false);
   };
+
+ 
 
   // Check URL param on mount
   useEffect(() => {

@@ -144,3 +144,4 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
 };
 
 export default CandidatePreviewModal;
+

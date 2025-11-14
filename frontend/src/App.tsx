@@ -26,15 +26,16 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
+      
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<AuthPage mode="login" />} />
-          <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/login" element={<AuthPage mode='login'/>} />
+          <Route path="/register" element={<AuthPage mode='register' />} />
           <Route
             path="/graduate/*"
             element={
               <Layout>
-                <GraduateDashboard />
+                 <GraduateDashboard />
               </Layout>
             }
           />
@@ -58,14 +59,8 @@ function App() {
           <Route path="/onboarding" element={<GraduateOnboarding />} />
           <Route path="/company/onboarding" element={<CompanyOnboarding />} />
           <Route path="/assessment" element={<SkillAssessment />} />
-          <Route
-            path="/company-preview/:id"
-            element={<CompanyPreview mode="application" />}
-          />
-          <Route
-            path="/contactCompany/:id"
-            element={<CompanyPreview mode="contact" />}
-          />
+          <Route path="/company-preview/:id" element={<CompanyPreview mode='application' />} />
+          <Route path="/contactCompany/:id" element={<CompanyPreview mode='contact'/>} />
           <Route
             path="/candidates"
             element={
@@ -98,14 +93,9 @@ function App() {
               </Layout>
             }
           />
-          <Route
-            path="/explore"
-            element={
-              <Layout>
-                <ExploreCompany />
-              </Layout>
-            }
-          />
+          <Route path="/explore" element={<Layout >
+            <ExploreCompany/>
+          </Layout>} />
           <Route
             path="/explore-preview/:id"
             element={
@@ -114,38 +104,19 @@ function App() {
               </Layout>
             }
           />
-          <Route
-            path="/applications"
-            element={
-              <Layout>
-                <GraduateApplications />
-              </Layout>
-            }
-          />
-          <Route
-            path="/messages/:id"
-            element={
-              <Layout>
-                <Messages />
-              </Layout>
-            }
-          />
-          <Route
-            path="/messages"
-            element={
-              <Layout>
-                <Messages />
-              </Layout>
-            }
-          />
-          <Route
-            path="/notifications"
-            element={
-              <Layout>
-                <Notifications />
-              </Layout>
-            }
-          />
+          <Route path="/applications" element={<Layout >
+            <GraduateApplications/>
+          </Layout>} />
+          <Route path="/messages/:id" element={<Layout >
+            <Messages/>
+          </Layout>} />
+          <Route path="/messages" element={<Layout >
+            <Messages/>
+          </Layout>} />
+          <Route path="/notifications" element={<Layout >
+            <Notifications/>
+          </Layout>} />
+          
         </Routes>
       </div>
     </AuthProvider>
@@ -153,3 +124,4 @@ function App() {
 }
 
 export default App;
+

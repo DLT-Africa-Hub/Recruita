@@ -46,12 +46,7 @@ const CompanyOnboarding = () => {
 
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      formData.companyName &&
-      formData.industry &&
-      formData.companySize &&
-      formData.location
-    ) {
+    if (formData.companyName && formData.industry && formData.companySize && formData.location) {
       setStep(2);
     }
   };
@@ -59,6 +54,7 @@ const CompanyOnboarding = () => {
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.preferredRank) {
+      console.log('Company onboarding data:', formData);
       // TODO: Submit to API and navigate to dashboard
       navigate('/company');
     }
@@ -69,7 +65,7 @@ const CompanyOnboarding = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-form bg-cover bg-center px-[20px] py-[40px] font-inter">
       <div className="absolute inset-0 bg-white/50"></div>
-
+      
       <div className="relative z-10 w-full max-w-[600px]">
         {/* Progress Header */}
         <div className="mb-[32px] flex items-center gap-[12px]">
@@ -95,10 +91,7 @@ const CompanyOnboarding = () => {
 
         {/* Step 1: Company Profile */}
         {step === 1 && (
-          <form
-            onSubmit={handleStep1Submit}
-            className="flex flex-col gap-[24px]"
-          >
+          <form onSubmit={handleStep1Submit} className="flex flex-col gap-[24px]">
             <div className="mb-[8px] text-center">
               <h1 className="mb-[8px] text-[32px] font-semibold text-[#1C1C1C]">
                 Company Profile
@@ -194,10 +187,7 @@ const CompanyOnboarding = () => {
 
         {/* Step 2: Preferred Rank Selection */}
         {step === 2 && (
-          <form
-            onSubmit={handleStep2Submit}
-            className="flex flex-col gap-[24px]"
-          >
+          <form onSubmit={handleStep2Submit} className="flex flex-col gap-[24px]">
             <div className="mb-[8px] text-center">
               <h1 className="mb-[8px] text-[32px] font-semibold text-[#1C1C1C]">
                 Select your preferred rank
