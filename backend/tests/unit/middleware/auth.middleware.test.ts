@@ -62,7 +62,9 @@ describe('auth.middleware - authenticate', () => {
     await authenticate(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Invalid or expired session' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Invalid or expired session',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -95,6 +97,3 @@ describe('auth.middleware - authenticate', () => {
     expect(next).toHaveBeenCalled();
   });
 });
-
-
-

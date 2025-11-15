@@ -1,12 +1,9 @@
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
-import {  BsSend } from "react-icons/bs";
+import { BsSend } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
 import React from 'react';
-import { CiMail } from "react-icons/ci";
-
-
-
+import { CiMail } from 'react-icons/ci';
 
 export interface Company {
   name: string;
@@ -23,11 +20,12 @@ export interface Company {
 }
 
 interface CompanyPreviewProps {
-    mode :string;
-  }
+  mode: string;
+}
 
-
-const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) => {
+const CompanyPreview: React.FC<CompanyPreviewProps> = ({
+  mode = 'application',
+}) => {
   const { id } = useParams();
 
   const companies: Company[] = [
@@ -219,37 +217,35 @@ const CompanyPreview: React.FC<CompanyPreviewProps>= ({ mode = "application" }) 
             <p className="text-center w-full font-semibold text-[16px]">
               {company.contract}
             </p>
-            <div className='h-[20px] bg-black w-0.5'/>
+            <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold ">
               {company.location}
             </p>
-            <div className='h-[20px] bg-black w-0.5'/>
+            <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold ">
               {company.wage} {company.wageType}
             </p>
           </div>
 
-         {
-            mode === "application" ? (
-                <div className='flex flex-col md:flex-row w-full gap-[15px] items-center justify-center'>
-                <button className='w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer '>
-                   <HiOutlineChatBubbleLeftRight className='text-[24px]'/>
-                   <p className='text-[16px] font-medium'>Chat</p>
-                </button>
-                <button className='w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer'>
-                    <BsSend className='text-[24px]'/>
-                    <p className='text-[16px] font-medium' >Apply</p>
-                </button>
-              </div>
-            ):(
-                <div className='flex flex-col md:flex-row w-full gap-[15px] items-center justify-center'>
-                     <button className='w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer'>
-                    <CiMail className='text-[24px]'/>
-                    <p className='text-[16px] font-medium' >Get in Touch</p>
-                </button>
-                </div>
-            )
-         }
+          {mode === 'application' ? (
+            <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
+              <button className="w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer ">
+                <HiOutlineChatBubbleLeftRight className="text-[24px]" />
+                <p className="text-[16px] font-medium">Chat</p>
+              </button>
+              <button className="w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer">
+                <BsSend className="text-[24px]" />
+                <p className="text-[16px] font-medium">View CV</p>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
+              <button className="w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer">
+                <CiMail className="text-[24px]" />
+                <p className="text-[16px] font-medium">Get in Touch</p>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

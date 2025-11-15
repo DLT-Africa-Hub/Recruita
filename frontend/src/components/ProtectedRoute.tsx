@@ -7,7 +7,10 @@ interface ProtectedRouteProps {
   allowedRoles: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles,
+}) => {
   const { isAuthenticated, user } = useAuth();
 
   // Also check localStorage as fallback (in case context hasn't updated yet)
@@ -30,4 +33,3 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
 };
 
 export default ProtectedRoute;
-

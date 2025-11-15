@@ -33,7 +33,10 @@ const mapUserResponse = (user: IUser) => ({
   updatedAt: user.updatedAt,
 });
 
-export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+export const getAllUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { page, limit, skip } = parsePaginationParams(req);
     const filters: FilterQuery<IUser> = {};
@@ -50,7 +53,7 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
 
     const search = sanitizeQueryString(req.query.q ?? req.query.search);
     if (search) {
-    const regex = new RegExp(escapeRegExp(search), 'i');
+      const regex = new RegExp(escapeRegExp(search), 'i');
       filters.$or = [{ email: regex }];
     }
 
@@ -73,7 +76,10 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const searchUsers = async (req: Request, res: Response): Promise<void> => {
+export const searchUsers = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   const search = sanitizeQueryString(req.query.q ?? req.query.search);
   if (!search) {
     res.fail('Query parameter "q" is required', 400);
@@ -83,7 +89,10 @@ export const searchUsers = async (req: Request, res: Response): Promise<void> =>
   await getAllUsers(req, res);
 };
 
-export const getUserById = async (req: Request, res: Response): Promise<void> => {
+export const getUserById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { userId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -91,7 +100,9 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const user = await User.findById(userId).select('-password').lean<IUser | null>();
+    const user = await User.findById(userId)
+      .select('-password')
+      .lean<IUser | null>();
     if (!user) {
       res.fail('User not found', 404);
       return;
@@ -104,7 +115,10 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const updateUser = async (req: Request, res: Response): Promise<void> => {
+export const updateUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { userId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -181,7 +195,10 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+export const deleteUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { userId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -202,7 +219,10 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
+export const getAllJobs = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { page, limit, skip } = parsePaginationParams(req);
     const filters: FilterQuery<IJob> = {};
@@ -236,7 +256,10 @@ export const getAllJobs = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-export const getAllMatches = async (req: Request, res: Response): Promise<void> => {
+export const getAllMatches = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { page, limit, skip } = parsePaginationParams(req);
     const filters: FilterQuery<IMatch> = {};
@@ -276,7 +299,10 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-export const getAIStats = async (_req: Request, res: Response): Promise<void> => {
+export const getAIStats = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const [
       totalMatches,
@@ -295,7 +321,9 @@ export const getAIStats = async (_req: Request, res: Response): Promise<void> =>
           },
         },
       ]),
-      Graduate.countDocuments({ 'assessmentData.embedding.0': { $exists: true } }),
+      Graduate.countDocuments({
+        'assessmentData.embedding.0': { $exists: true },
+      }),
       Graduate.countDocuments({
         'assessmentData.feedback': { $exists: true, $nin: [null, ''] },
       }),
@@ -321,7 +349,10 @@ export const getAIStats = async (_req: Request, res: Response): Promise<void> =>
   }
 };
 
-export const getSystemStats = async (_req: Request, res: Response): Promise<void> => {
+export const getSystemStats = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const [
       totalUsers,
@@ -374,7 +405,10 @@ export const getUserActivityLogs = async (
         User.find().sort({ createdAt: -1 }).limit(5).lean<IUser[]>(),
         Job.find().sort({ createdAt: -1 }).limit(5).lean<IJob[]>(),
         Match.find().sort({ updatedAt: -1 }).limit(5).lean<IMatch[]>(),
-        Application.find().sort({ updatedAt: -1 }).limit(5).lean<IApplication[]>(),
+        Application.find()
+          .sort({ updatedAt: -1 })
+          .limit(5)
+          .lean<IApplication[]>(),
       ]);
 
     const logs = [
@@ -397,7 +431,11 @@ export const getUserActivityLogs = async (
         action: 'updated',
         timestamp: match.updatedAt,
         summary: `Match ${match._id?.toString()} status ${match.status}`,
-        metadata: { matchId: match._id, graduateId: match.graduateId, jobId: match.jobId },
+        metadata: {
+          matchId: match._id,
+          graduateId: match.graduateId,
+          jobId: match.jobId,
+        },
       })),
       ...recentApplications.map((application) => ({
         type: 'application',
@@ -424,7 +462,10 @@ export const getUserActivityLogs = async (
   }
 };
 
-export const getHealthStatus = async (_req: Request, res: Response): Promise<void> => {
+export const getHealthStatus = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const memory = process.memoryUsage();
     res.success({
@@ -450,7 +491,10 @@ export const getHealthStatus = async (_req: Request, res: Response): Promise<voi
   }
 };
 
-export const getDatabaseStats = async (_req: Request, res: Response): Promise<void> => {
+export const getDatabaseStats = async (
+  _req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const db = mongoose.connection.db;
     if (!db) {
@@ -465,4 +509,3 @@ export const getDatabaseStats = async (_req: Request, res: Response): Promise<vo
     res.fail('Internal server error', 500);
   }
 };
-

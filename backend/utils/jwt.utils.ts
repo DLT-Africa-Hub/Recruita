@@ -4,7 +4,7 @@ import { securityConfig } from '../config/secrets';
 
 const ACCESS_TOKEN_SECRET = securityConfig.jwt.accessSecret;
 const ACCESS_TOKEN_EXPIRE: StringValue | number =
-  (process.env.JWT_ACCESS_EXPIRE as StringValue | undefined) || '15m';
+  (process.env.JWT_ACCESS_EXPIRE as StringValue | undefined) || '24h';
 
 export interface AccessTokenPayload {
   userId: string;
@@ -27,4 +27,3 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
 export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, ACCESS_TOKEN_SECRET) as AccessTokenPayload;
 }
-

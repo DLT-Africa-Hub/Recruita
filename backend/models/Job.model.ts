@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IJob extends Document {
   companyId: mongoose.Types.ObjectId;
   title: string;
-  jobType: "Full time" | "Part time" | "Contract" | "Internship";
+  jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship';
   description: string;
   requirements: {
     skills: string[];
@@ -14,7 +14,7 @@ export interface IJob extends Document {
     max: number;
     currency: string;
   };
-  preferedRank: "A" | "B" | "C" | "D" | "A and B" | "B and C" | "C and D";
+  preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
   status: 'active' | 'closed' | 'draft';
   embedding?: number[];
   matches?: {
@@ -107,4 +107,3 @@ JobSchema.index({ createdAt: -1 });
 JobSchema.index({ companyId: 1, status: 1 }); // Compound index for company jobs by status
 
 export default mongoose.model<IJob>('Job', JobSchema);
-

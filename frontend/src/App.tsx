@@ -1,21 +1,30 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Home from './pages/Home';
-import GraduateDashboard from './pages/talent/GraduateDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-import AssessmentGuard from './components/AssessmentGuard';
-import AccountType from './pages/AccountType';
-import Layout from './components/layout/Layout';
-import CompanyPreview from './pages/talent/CompanyPreview';
-import AuthPage from './pages/AuthPage';
-import Messages from './pages/Messages';
-import Notifications from './pages/Notifications';
-import GraduateOnboarding from './pages/talent/GraduateOnboarding';
-import SkillAssessment from './pages/talent/SkillAssessment';
-import ExploreCompany from './pages/talent/ExploreCompany';
-import GraduateApplications from './pages/talent/GraduateApplications';
-import CompanyDashboard from './pages/CompanyDashboard';
+import {
+  Home,
+  GraduateDashboard,
+  CompanyDashboard,
+  CompanyCandidates,
+  CompanyJobs,
+  CompanyJobForm,
+  JobRankSelector,
+  CompanyOnboarding,
+  AdminDashboard,
+  ProtectedRoute,
+  AssessmentGuard,
+  AccountType,
+  Layout,
+  ExploreCompany,
+  GraduateApplications,
+  CompanyPreview,
+  CandidatePreview,
+  ExplorePreview,
+  AuthPage,
+  Messages,
+  Notifications,
+  GraduateOnboarding,
+  SkillAssessment,
+} from './index';
 
 function App() {
   return (
@@ -55,6 +64,7 @@ function App() {
           />
           <Route path="/role" element={<AccountType />} />
           <Route path="/onboarding" element={<GraduateOnboarding />} />
+
           <Route
             path="/assessment"
             element={
@@ -103,6 +113,16 @@ function App() {
               </Layout>
             }
           />
+          <Route path="/company/onboarding" element={<CompanyOnboarding />} />
+
+          <Route
+            path="/candidates"
+            element={
+              <Layout>
+                <CompanyCandidates />
+              </Layout>
+            }
+          />
           <Route
             path="/messages"
             element={
@@ -111,11 +131,53 @@ function App() {
               </Layout>
             }
           />
+
+          <Route
+            path="/candidate-preview/:id"
+            element={
+              <Layout>
+                <CandidatePreview />
+              </Layout>
+            }
+          />
           <Route
             path="/notifications"
             element={
               <Layout>
                 <Notifications />
+              </Layout>
+            }
+          />
+
+          <Route
+            path="/jobs"
+            element={
+              <Layout>
+                <CompanyJobs />
+              </Layout>
+            }
+          />
+          <Route
+            path="/jobs/new"
+            element={
+              <Layout>
+                <CompanyJobForm />
+              </Layout>
+            }
+          />
+          <Route
+            path="/jobs/rank-selector"
+            element={
+              <Layout>
+                <JobRankSelector />
+              </Layout>
+            }
+          />
+          <Route
+            path="/explore-preview/:id"
+            element={
+              <Layout>
+                <ExplorePreview />
               </Layout>
             }
           />

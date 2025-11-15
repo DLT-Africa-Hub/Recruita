@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PiGraduationCap, PiBuildingApartmentLight } from 'react-icons/pi';
 import { useAuth } from '../context/AuthContext';
+
 
 interface Role {
   role: string;
@@ -80,6 +82,8 @@ const AccountType: React.FC = () => {
     }
   };
 
+
+
   return (
     <div className="flex flex-col relative items-center justify-center h-screen bg-form bg-cover bg-center  md:py-[80px] md:px-[150px] font-inter">
       <div className="absolute inset-0 bg-white/50"></div>
@@ -99,7 +103,7 @@ const AccountType: React.FC = () => {
               <div
                 key={role.role}
                 onClick={() => handleSelect(role.role)}
-                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border-[1px]
+                className={`px-[25.5px] pt-[20px] pb-[32px] flex gap-[15px] md:items-center cursor-pointer transition-all duration-200 border
                   ${
                     isSelected
                       ? 'bg-[#EFFFE2] border-[#01732bd4]'
@@ -165,6 +169,7 @@ const AccountType: React.FC = () => {
           }`}
           disabled={!selectedRole || isLoading}
           onClick={handleContinue}
+
         >
           {isLoading ? 'Registering...' : 'Continue'}
         </button>

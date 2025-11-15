@@ -22,6 +22,7 @@ const Register = () => {
     setIsModalOpen(true);
   };
 
+
   const handleConsent = () => {
     setIsModalOpen(false);
     navigate('/role');

@@ -18,8 +18,10 @@ export interface PaginationMeta {
 }
 
 export const parsePaginationParams = (req: Request): PaginationParams => {
-  const pageRaw = typeof req.query.page === 'string' ? req.query.page : `${DEFAULT_PAGE}`;
-  const limitRaw = typeof req.query.limit === 'string' ? req.query.limit : `${DEFAULT_LIMIT}`;
+  const pageRaw =
+    typeof req.query.page === 'string' ? req.query.page : `${DEFAULT_PAGE}`;
+  const limitRaw =
+    typeof req.query.limit === 'string' ? req.query.limit : `${DEFAULT_LIMIT}`;
 
   let page = Number.parseInt(pageRaw, 10);
   let limit = Number.parseInt(limitRaw, 10);
@@ -51,5 +53,3 @@ export const buildPaginationMeta = (
   totalPages: Math.max(1, Math.ceil(totalItems / limit)),
   totalItems,
 });
-
-

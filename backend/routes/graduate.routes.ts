@@ -51,4 +51,3 @@ router.get('/applications', getApplications);
 router.put('/applications/:applicationId', updateApplicationStatus);
 
 export default router;
-

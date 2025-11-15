@@ -44,15 +44,24 @@ const Home = () => {
       <div style={featuresStyle}>
         <div style={featureCardStyle}>
           <h3>For Graduates</h3>
-          <p>Complete your profile, take AI assessments, and get matched with relevant job opportunities.</p>
+          <p>
+            Complete your profile, take AI assessments, and get matched with
+            relevant job opportunities.
+          </p>
         </div>
         <div style={featureCardStyle}>
           <h3>For Companies</h3>
-          <p>Post job openings and let AI automatically match you with the best candidates.</p>
+          <p>
+            Post job openings and let AI automatically match you with the best
+            candidates.
+          </p>
         </div>
         <div style={featureCardStyle}>
           <h3>AI-Powered Matching</h3>
-          <p>Advanced algorithms analyze skills and requirements to find the perfect match.</p>
+          <p>
+            Advanced algorithms analyze skills and requirements to find the
+            perfect match.
+          </p>
         </div>
       </div>
     </div>
@@ -125,4 +134,3 @@ const featureCardStyle: React.CSSProperties = {
 };
 
 export default Home;
-

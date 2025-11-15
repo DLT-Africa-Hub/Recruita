@@ -89,17 +89,22 @@ const parsePhoneNumber = (value: unknown): number | null => {
   return null;
 };
 
-const validateExperienceLevel = (value: unknown): value is typeof EXPERIENCE_LEVELS extends Set<infer T> ? T : never =>
+const validateExperienceLevel = (
+  value: unknown
+): value is typeof EXPERIENCE_LEVELS extends Set<infer T> ? T : never =>
   typeof value === 'string' && EXPERIENCE_LEVELS.has(value as never);
 
-const validatePosition = (value: unknown): value is typeof POSITION_OPTIONS extends Set<infer T> ? T : never =>
+const validatePosition = (
+  value: unknown
+): value is typeof POSITION_OPTIONS extends Set<infer T> ? T : never =>
   typeof value === 'string' && POSITION_OPTIONS.has(value as never);
 
 type PopulatedJobLean = {
   _id: mongoose.Types.ObjectId;
   title?: string;
-  companyId?: mongoose.Types.ObjectId;
+  companyId?: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId; companyName: string };
   location?: string;
+  jobType?: string;
   requirements?: {
     skills?: string[];
     education?: string;
@@ -175,7 +180,10 @@ const buildProfileSummary = (
   return lines.join('\n');
 };
 
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
+export const getProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
     if (!userId) {
@@ -303,9 +311,15 @@ export const createProfile = async (
       };
     }
 
-    const existingPhone = await Graduate.findOne({ phoneNumber: parsedPhone }).lean();
+    const existingPhone = await Graduate.findOne({
+      phoneNumber: parsedPhone,
+    }).lean();
     if (existingPhone) {
-      res.status(400).json({ message: 'Phone number is already associated with another graduate' });
+      res
+        .status(400)
+        .json({
+          message: 'Phone number is already associated with another graduate',
+        });
       return;
     }
 
@@ -332,59 +346,58 @@ export const createProfile = async (
       socials:
         typeof socials === 'object' && socials !== null
           ? {
-            github:
-              typeof socials.github === 'string'
-                ? socials.github.trim()
-                : undefined,
-            twitter:
-              typeof socials.twitter === 'string'
-                ? socials.twitter.trim()
-                : undefined,
-            linkedin:
-              typeof socials.linkedin === 'string'
-                ? socials.linkedin.trim()
-                : undefined,
-          }
+              github:
+                typeof socials.github === 'string'
+                  ? socials.github.trim()
+                  : undefined,
+              twitter:
+                typeof socials.twitter === 'string'
+                  ? socials.twitter.trim()
+                  : undefined,
+              linkedin:
+                typeof socials.linkedin === 'string'
+                  ? socials.linkedin.trim()
+                  : undefined,
+            }
           : undefined,
-      portfolio:
-        typeof portfolio === 'string' ? portfolio.trim() : undefined,
+      portfolio: typeof portfolio === 'string' ? portfolio.trim() : undefined,
       workExperiences: Array.isArray(workExperiences)
         ? workExperiences
-          .map((exp) => {
-            if (!exp || typeof exp !== 'object') {
-              return null;
-            }
-            const { company, title, startDate, endDate, description } = exp;
-            if (
-              typeof company !== 'string' ||
-              typeof title !== 'string' ||
-              !startDate
-            ) {
-              return null;
-            }
-            const parsedStart = new Date(startDate);
-            if (Number.isNaN(parsedStart.getTime())) {
-              return null;
-            }
-            let parsedEnd: Date | undefined;
-            if (endDate) {
-              const end = new Date(endDate);
-              if (!Number.isNaN(end.getTime())) {
-                parsedEnd = end;
+            .map((exp) => {
+              if (!exp || typeof exp !== 'object') {
+                return null;
               }
-            }
-            return {
-              company: company.trim(),
-              title: title.trim(),
-              startDate: parsedStart,
-              endDate: parsedEnd,
-              description:
-                typeof description === 'string'
-                  ? description.trim()
-                  : undefined,
-            };
-          })
-          .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
+              const { company, title, startDate, endDate, description } = exp;
+              if (
+                typeof company !== 'string' ||
+                typeof title !== 'string' ||
+                !startDate
+              ) {
+                return null;
+              }
+              const parsedStart = new Date(startDate);
+              if (Number.isNaN(parsedStart.getTime())) {
+                return null;
+              }
+              let parsedEnd: Date | undefined;
+              if (endDate) {
+                const end = new Date(endDate);
+                if (!Number.isNaN(end.getTime())) {
+                  parsedEnd = end;
+                }
+              }
+              return {
+                company: company.trim(),
+                title: title.trim(),
+                startDate: parsedStart,
+                endDate: parsedEnd,
+                description:
+                  typeof description === 'string'
+                    ? description.trim()
+                    : undefined,
+              };
+            })
+            .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
         : [],
     });
 
@@ -478,7 +491,9 @@ export const updateProfile = async (
     if (phoneNumber !== undefined) {
       const parsedPhone = parsePhoneNumber(phoneNumber);
       if (parsedPhone === null) {
-        res.status(400).json({ message: 'phoneNumber must be a valid numeric value' });
+        res
+          .status(400)
+          .json({ message: 'phoneNumber must be a valid numeric value' });
         return;
       }
 
@@ -491,7 +506,10 @@ export const updateProfile = async (
         if (existingWithPhone) {
           res
             .status(400)
-            .json({ message: 'Phone number is already associated with another graduate' });
+            .json({
+              message:
+                'Phone number is already associated with another graduate',
+            });
           return;
         }
 
@@ -501,7 +519,9 @@ export const updateProfile = async (
 
     if (expLevel !== undefined) {
       if (!validateExperienceLevel(expLevel)) {
-        res.status(400).json({ message: 'expLevel must be one of entry, mid, or senior' });
+        res
+          .status(400)
+          .json({ message: 'expLevel must be one of entry, mid, or senior' });
         return;
       }
       graduate.expLevel = expLevel;
@@ -577,8 +597,13 @@ export const updateProfilePicture = async (
     }
 
     const { profilePictureUrl } = req.body;
-    if (typeof profilePictureUrl !== 'string' || profilePictureUrl.trim() === '') {
-      res.status(400).json({ message: 'profilePictureUrl must be a non-empty string' });
+    if (
+      typeof profilePictureUrl !== 'string' ||
+      profilePictureUrl.trim() === ''
+    ) {
+      res
+        .status(400)
+        .json({ message: 'profilePictureUrl must be a non-empty string' });
       return;
     }
 
@@ -618,7 +643,9 @@ export const replaceSkills = async (
 
     const sanitizedSkills = sanitizeStringArray(skills);
     if (sanitizedSkills.length === 0) {
-      res.status(400).json({ message: 'skills must contain at least one value' });
+      res
+        .status(400)
+        .json({ message: 'skills must contain at least one value' });
       return;
     }
 
@@ -955,7 +982,9 @@ export const getAssessmentQuestions = async (
     }
 
     if (!graduate.skills || graduate.skills.length === 0) {
-      res.status(400).json({ message: 'Graduate profile must include at least one skill' });
+      res
+        .status(400)
+        .json({ message: 'Graduate profile must include at least one skill' });
       return;
     }
 
@@ -963,8 +992,10 @@ export const getAssessmentQuestions = async (
     let count: number | undefined;
     if (typeof rawCount === 'string' && rawCount.trim().length > 0) {
       const parsed = Number.parseInt(rawCount, 10);
+
       if (Number.isNaN(parsed) || parsed <= 0 || parsed > 3) {
         res.status(400).json({ message: 'count must be a positive integer up to 3' });
+
         return;
       }
       count = parsed;
@@ -975,7 +1006,8 @@ export const getAssessmentQuestions = async (
     }
 
     const language =
-      typeof req.query.language === 'string' && req.query.language.trim().length > 0
+      typeof req.query.language === 'string' &&
+      req.query.language.trim().length > 0
         ? req.query.language.trim()
         : undefined;
 
@@ -1023,7 +1055,9 @@ export const getAssessmentQuestions = async (
     }
 
     console.error('Assessment question generation error:', error);
-    res.status(500).json({ message: 'Failed to generate assessment questions' });
+    res
+      .status(500)
+      .json({ message: 'Failed to generate assessment questions' });
   }
 };
 
@@ -1155,21 +1189,23 @@ export const submitAssessment = async (
         };
 
         const templateOverrides =
-          feedbackTemplateOverrides && typeof feedbackTemplateOverrides === 'object'
+          feedbackTemplateOverrides &&
+          typeof feedbackTemplateOverrides === 'object'
             ? Object.fromEntries(
-              Object.entries(
-                feedbackTemplateOverrides as Record<string, unknown>
+                Object.entries(
+                  feedbackTemplateOverrides as Record<string, unknown>
+                )
+                  .filter((entry): entry is [string, string] => {
+                    const [, value] = entry;
+                    return typeof value === 'string' && value.trim().length > 0;
+                  })
+                  .map(([key, value]) => [key, value.trim()])
               )
-                .filter((entry): entry is [string, string] => {
-                  const [, value] = entry;
-                  return typeof value === 'string' && value.trim().length > 0;
-                })
-                .map(([key, value]) => [key, value.trim()])
-            )
             : undefined;
 
         const language =
-          typeof feedbackLanguage === 'string' && feedbackLanguage.trim().length >= 2
+          typeof feedbackLanguage === 'string' &&
+          feedbackLanguage.trim().length >= 2
             ? feedbackLanguage.trim()
             : undefined;
 
@@ -1185,7 +1221,9 @@ export const submitAssessment = async (
           {
             language,
             additionalContext:
-              typeof additionalContext === 'string' ? additionalContext : undefined,
+              typeof additionalContext === 'string'
+                ? additionalContext
+                : undefined,
             templateOverrides,
           }
         );
@@ -1256,10 +1294,16 @@ export const getMatches = async (
     }
 
     const matchesRaw = await Match.find(matchQuery)
-      .populate<{ jobId: mongoose.Types.ObjectId | PopulatedJobLean }>(
-        'jobId',
-        'title companyId location requirements salary status createdAt updatedAt'
-      )
+      .populate<{
+        jobId: mongoose.Types.ObjectId | PopulatedJobLean;
+      }>({
+        path: 'jobId',
+        select: 'title companyId location requirements salary status jobType createdAt updatedAt',
+        populate: {
+          path: 'companyId',
+          select: 'companyName',
+        },
+      })
       .sort({ score: -1, createdAt: -1 })
       .lean();
 
@@ -1273,11 +1317,25 @@ export const getMatches = async (
         if (jobSource instanceof mongoose.Types.ObjectId) {
           job = { id: jobSource.toString() };
         } else if (isPopulatedJob(jobSource)) {
+          // Extract company name if companyId is populated
+          let companyName: string | undefined;
+          if (
+            jobSource.companyId &&
+            typeof jobSource.companyId === 'object' &&
+            'companyName' in jobSource.companyId
+          ) {
+            companyName = (jobSource.companyId as { companyName: string }).companyName;
+          }
+
           job = {
             id: jobSource._id.toHexString(),
             title: jobSource.title,
-            companyId: jobSource.companyId,
+            companyId: jobSource.companyId instanceof mongoose.Types.ObjectId
+              ? jobSource.companyId
+              : jobSource.companyId?._id || jobSource.companyId,
+            companyName,
             location: jobSource.location,
+            jobType: jobSource.jobType,
             requirements: jobSource.requirements,
             salary: jobSource.salary,
             status: jobSource.status,
@@ -1382,7 +1440,9 @@ export const applyToJob = async (
       return;
     }
 
-    const job = await Job.findById(jobId).select('title companyId status').lean();
+    const job = await Job.findById(jobId)
+      .select('title companyId status')
+      .lean();
     if (!job || job.status !== 'active') {
       res.status(404).json({ message: 'Job not found or not active' });
       return;
@@ -1397,7 +1457,9 @@ export const applyToJob = async (
       jobId,
     });
     if (existingApplication) {
-      res.status(409).json({ message: 'Application already exists for this job' });
+      res
+        .status(409)
+        .json({ message: 'Application already exists for this job' });
       return;
     }
 
@@ -1448,7 +1510,10 @@ export const applyToJob = async (
           },
         });
       } catch (error) {
-        console.error('Failed to create company notification for application:', error);
+        console.error(
+          'Failed to create company notification for application:',
+          error
+        );
       }
     }
   } catch (error) {
@@ -1579,7 +1644,10 @@ export const updateApplicationStatus = async (
         }
       }
     } catch (notificationError) {
-      console.error('Failed to notify company about withdrawn application:', notificationError);
+      console.error(
+        'Failed to notify company about withdrawn application:',
+        notificationError
+      );
     }
 
     res.json({

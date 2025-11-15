@@ -4,7 +4,11 @@ import app from '../../app';
 import Notification from '../../models/Notification.model';
 import Graduate from '../../models/Graduate.model';
 import Match from '../../models/Match.model';
-import { connectTestDb, clearDatabase, disconnectTestDb } from '../utils/testDb';
+import {
+  connectTestDb,
+  clearDatabase,
+  disconnectTestDb,
+} from '../utils/testDb';
 
 jest.mock('../../services/aiService', () => {
   const actual = jest.requireActual('../../services/aiService');
@@ -252,5 +256,3 @@ describe('Notification workflows', () => {
     );
   });
 });
-
-

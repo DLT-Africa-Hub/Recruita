@@ -10,4 +10,3 @@ process.env.API_PREFIX = '/api/v1';
 process.env.CORS_ORIGIN = 'http://localhost:5174';
 
 jest.setTimeout(30000);
-
