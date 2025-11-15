@@ -88,7 +88,7 @@ const Notifications: React.FC = () => {
       <button
         key={n.id}
         onClick={() => openNotification(n)}
-        className="w-full text-left py-4 px-2 flex items-center justify-between gap-4 hover:bg-[#00000008] cursor-pointer"
+        className="w-full text-left py-4 px-2 flex items-center border-b border-fade justify-between gap-4 hover:bg-[#00000008] cursor-pointer"
       >
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-[10px] overflow-hidden flex-shrink-0">

@@ -82,7 +82,7 @@ const Messages: React.FC = () => {
                 <p className="text-[#1C1C1C80] font-thin text-[13px] lg:text-[18px]">
                   {company.role}
                 </p>
-                <p className="text-[#1C1C1C80] font-normal text-[13px] lg:text-[18px] truncate max-w-[250px] lg:max-w-[400px]">
+                <p className="text-[#1C1C1C80] font-normal text-[13px] lg:text-[18px] truncate max-w-[150px] lg:max-w-[400px]">
                   {company.name}: What do you think about the project
                 </p>
               </div>

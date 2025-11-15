@@ -1,10 +1,14 @@
 import { HiOutlineChatBubbleLeftRight } from "react-icons/hi2";
-import {  useLocation } from 'react-router-dom';
+import {  Link, useLocation } from 'react-router-dom';
 
 
 interface Page  {
   page: string;
 link: string;
+}
+
+const user = {
+  role: "company"  
 }
 
 const MobileHeader = () => {
@@ -80,7 +84,7 @@ const MobileHeader = () => {
       </div>
 
       <div className="w-full flex flex-col md:flex-row-reverse md:justify-between items-center ">
-        <div className="flex w-full md:w-auto items-center  flex-wrap gap-5 ">
+        {user.role === "gaduate"?(<div className="flex w-full md:w-auto items-center  flex-wrap gap-5 ">
           <div className="flex items-center justify-center rounded-[10px] border border-fade py-[15px] px-[26.5px] gap-[10px]">
                 <p className="font-medium text-[24px] text-[#F8F8F8] w-[50px] h-[50px] rounded-[10px] bg-button flex items-center justify-center">A</p>
 
@@ -105,7 +109,11 @@ const MobileHeader = () => {
                 </div>
           </div>
             
-        </div>
+        </div>):(
+          <Link to="" className=" p-1 border border-button rounded-[10px] text-button  self-end">
+            view jobs
+          </Link>
+        ) }
 
         <p className="hidden md:flex">
           {currentPageName}

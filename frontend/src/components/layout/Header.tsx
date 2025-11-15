@@ -1,6 +1,14 @@
 import React from 'react';
 import { RiHomeSmile2Line } from 'react-icons/ri';
 
+const user = {
+  name: "Ibrahim Aliyu",
+  role: "company", // <-- change to "company" to see company menu
+  email: "anate@gmail",
+  photo:
+    "https://res.cloudinary.com/dispu86tu/image/upload/v1754609041/Confident_Gaze_Against_Blue_Backdrop_r57ue0.png",
+};
+
 const Header = () => {
   return (
     <div className="hidden lg:flex items-center gap-[43px] sticky z-10 top-0 w-full h-[130px] font-inter">
@@ -9,7 +17,7 @@ const Header = () => {
         <p>Talent Match</p>
       </div>
       <div className="flex items-center justify-between px-[30px] py-[50px] bg-[#F8F8F8]  h-full flex-grow border border-[#1B770033]  rounded-bl-[20px]">
-        <p className="font-medium text-[22px] text-[#1c1c1c]">Hi, Oluwaseyi</p>
+        <p className="font-medium text-[22px] text-[#1c1c1c]">{user.name}</p>
 
         <div className="flex w-full md:w-auto items-center  flex-wrap gap-5 ">
           <div className="flex items-center justify-center rounded-[10px] border border-fade py-[15px] px-[26.5px] gap-[10px]">
