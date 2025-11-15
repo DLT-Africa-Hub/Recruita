@@ -42,7 +42,7 @@ export interface MatchJobMetadata {
 }
 
 export interface MatchJobEmbedding {
-    id: string;
+  id: string;
   embedding: number[];
   metadata?: MatchJobMetadata;
 }
@@ -340,7 +340,8 @@ class AIServiceClient {
             skills: payload.graduateMetadata.skills,
             education: payload.graduateMetadata.education,
             experience_years: payload.graduateMetadata.experienceYears,
-            latest_experience_year: payload.graduateMetadata.latestExperienceYear,
+            latest_experience_year:
+              payload.graduateMetadata.latestExperienceYear,
           }
         : undefined,
       options: payload.options
@@ -361,7 +362,9 @@ class AIServiceClient {
     });
   }
 
-  async findMatchesBatch(payload: MatchBatchRequestPayload): Promise<MatchBatchResponse> {
+  async findMatchesBatch(
+    payload: MatchBatchRequestPayload
+  ): Promise<MatchBatchResponse> {
     return this.post<MatchBatchResponse>('/match/batch', {
       graduates: payload.graduates.map((graduate) => ({
         id: graduate.id,
@@ -452,7 +455,10 @@ class AIServiceClient {
       const axiosError = error as AxiosError;
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
 
-      if (this.shouldRetry(axiosError) && attempt < aiConfig.retries.maxAttempts) {
+      if (
+        this.shouldRetry(axiosError) &&
+        attempt < aiConfig.retries.maxAttempts
+      ) {
         const backoff = Math.min(
           aiConfig.retries.initialBackoffMs *
             aiConfig.retries.backoffMultiplier ** (attempt - 1),
@@ -497,9 +503,13 @@ class AIServiceClient {
 
     const status = error.response.status;
     if (status === 400) {
-      return new AIServiceError('AI service rejected the request payload.', 400, {
-        cause: error,
-      });
+      return new AIServiceError(
+        'AI service rejected the request payload.',
+        400,
+        {
+          cause: error,
+        }
+      );
     }
 
     if (status === 401 || status === 403) {
@@ -551,7 +561,9 @@ const feedbackCache = new TTLCache<string, FeedbackResponse>(
 
 const normalizeText = (value: string): string => value.trim();
 
-export async function generateProfileEmbedding(text: string): Promise<number[]> {
+export async function generateProfileEmbedding(
+  text: string
+): Promise<number[]> {
   const normalized = normalizeText(text);
   if (!normalized) {
     throw new AIServiceError('Cannot generate embedding for empty text.', 400);
@@ -571,7 +583,10 @@ export async function generateProfileEmbedding(text: string): Promise<number[]> 
 export async function generateJobEmbedding(text: string): Promise<number[]> {
   const normalized = normalizeText(text);
   if (!normalized) {
-    throw new AIServiceError('Cannot generate embedding for empty job description.', 400);
+    throw new AIServiceError(
+      'Cannot generate embedding for empty job description.',
+      400
+    );
   }
 
   const cacheKey = createCacheKey('job', normalized);
@@ -608,7 +623,11 @@ export async function generateFeedback(
     return cached;
   }
 
-  const feedback = await aiClient.generateFeedback(graduateProfile, jobRequirements, options);
+  const feedback = await aiClient.generateFeedback(
+    graduateProfile,
+    jobRequirements,
+    options
+  );
   feedbackCache.set(cacheKey, feedback);
   return feedback;
 }
@@ -673,7 +692,8 @@ export function getAIServiceMetrics(): Record<
         total: state.total,
         success: state.success,
         failure: state.failure,
-        avgLatencyMs: state.success > 0 ? state.totalLatencyMs / state.success : 0,
+        avgLatencyMs:
+          state.success > 0 ? state.totalLatencyMs / state.success : 0,
         maxLatencyMs: state.maxLatencyMs,
         lastError: state.lastError,
         lastUpdatedAt: state.lastUpdatedAt,
@@ -700,12 +720,12 @@ export async function generateAssessmentQuestions(
   options?: AssessmentQuestionOptions
 ): Promise<AssessmentQuestion[]> {
   if (skills.length === 0) {
-    throw new AIServiceError('At least one skill is required to generate assessment questions.', 400);
+    throw new AIServiceError(
+      'At least one skill is required to generate assessment questions.',
+      400
+    );
   }
 
   const response = await aiClient.generateAssessmentQuestions(skills, options);
   return response.questions;
 }
-
-
-

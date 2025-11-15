@@ -8,7 +8,12 @@ export const notFoundHandler = (req: Request, res: Response): void => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-export const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction): void => {
+export const errorHandler = (
+  err: any,
+  _req: Request,
+  res: Response,
+  _next: NextFunction
+): void => {
   if (err.code === 'EBADCSRFTOKEN') {
     res.status(403).json({
       success: false,
@@ -27,11 +32,12 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
 
   res.status(status).json({
     success: false,
-    message: isServerError ? 'Internal server error' : err.message || 'Internal server error',
-    ...(process.env.NODE_ENV !== 'production' && !isServerError && {
-      stack: err.stack,
-    }),
+    message: isServerError
+      ? 'Internal server error'
+      : err.message || 'Internal server error',
+    ...(process.env.NODE_ENV !== 'production' &&
+      !isServerError && {
+        stack: err.stack,
+      }),
   });
 };
-
-

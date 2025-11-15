@@ -47,5 +47,3 @@ export class TTLCache<K, V> {
     this.store.clear();
   }
 }
-
-

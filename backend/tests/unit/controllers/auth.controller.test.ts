@@ -56,9 +56,8 @@ describe('auth.controller - logout', () => {
     expect(Session.findById).toHaveBeenCalledWith(sessionId.toHexString());
     expect(sessionMock.save).toHaveBeenCalled();
     expect(sessionMock.revokedAt).toBeInstanceOf(Date);
-    expect(res.json).toHaveBeenCalledWith({ message: 'Logged out successfully' });
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Logged out successfully',
+    });
   });
 });
-
-
-

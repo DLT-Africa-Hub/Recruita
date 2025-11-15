@@ -27,8 +27,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
-    if (buttonText === 'Preview') {
-      navigate(`/company-preview/${companyId}`);
+
+    if(buttonText === "Preview"){
+      navigate(`/explore-preview/${companyId}`)
+
     }
     if (buttonText === 'Get in Touch') {
       navigate(`/contactCompany/${companyId}`);

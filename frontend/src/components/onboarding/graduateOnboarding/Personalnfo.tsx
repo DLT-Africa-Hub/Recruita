@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { GraduateForm } from '../../../constants/type';
 import { experienceLevels } from '../../../utils/material.utils';
@@ -5,6 +6,7 @@ import Input from '../../ui/Input';
 import Select from '../../ui/Select';
 import PhoneInput from '../../ui/PhoneInput';
 import Button from '../../ui/Button';
+
 
 interface Props {
   form: GraduateForm;
@@ -30,13 +32,16 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
     onChange({ phoneNo });
   };
 
+
   const isFormComplete = useMemo(() => {
     return (
       form.firstName.trim() !== '' &&
       form.lastName.trim() !== '' &&
+
       (form.rank?.trim() ?? '') !== '' &&
       (form.yearsOfExperience?.trim() ?? '') !== '' &&
       (form.phoneNo?.trim() ?? '') !== ''
+
     );
   }, [
     form.firstName,
@@ -86,6 +91,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           onChange={(e) => handleInputChange('lastName', e.target.value)}
         />
 
+
         <PhoneInput
           label="Phone Number"
           required
@@ -94,6 +100,8 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           countryCode={countryCode}
           onCountryCodeChange={setCountryCode}
         />
+
+  
 
         <Select
           label="Experience Level"
@@ -107,6 +115,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           }))}
           placeholder="Select level"
         />
+
 
         <Select
           label="Years of Experience"
@@ -127,6 +136,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
           </Button>
         </div>
       </form>
+
     </div>
   );
 };

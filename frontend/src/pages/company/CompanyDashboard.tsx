@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api/auth';
 
 const CompanyDashboard = () => {
-  const [profile, setProfile] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

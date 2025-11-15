@@ -1,4 +1,5 @@
 export const countryCodes = [
+
   { code: "+234", flag: "🇳🇬", country: "Nigeria" },
   { code: "+233", flag: "🇬🇭", country: "Ghana" },
   { code: "+254", flag: "🇰🇪", country: "Kenya" },
@@ -231,3 +232,4 @@ export const rolesToPosition = (roles: string[]): string | undefined => {
   const validPosition = roles.find(role => isValidPosition(role));
   return validPosition || roles[0]; // Fallback to first role if none are valid positions
 };
+

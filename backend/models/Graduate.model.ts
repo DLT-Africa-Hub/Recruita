@@ -24,7 +24,15 @@ export interface IGraduate {
   phoneNumber: number;
   expLevel: 'entry' | 'mid' | 'senior';
   expYears: number;
-  position: 'frontend' | 'backend' | 'fullstack' | 'mobile' | 'devops' | 'data' | 'security' | 'other';
+  position:
+    | 'frontend'
+    | 'backend'
+    | 'fullstack'
+    | 'mobile'
+    | 'devops'
+    | 'data'
+    | 'security'
+    | 'other';
   profilePictureUrl?: string;
   skills: string[];
   education: IEducationDetails;
@@ -86,6 +94,16 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
     },
     position: {
       type: String,
+      enum: [
+        'frontend',
+        'backend',
+        'fullstack',
+        'mobile',
+        'devops',
+        'data',
+        'security',
+        'other',
+      ],
       enum: ['frontend', 'backend', 'fullstack', 'mobile', 'devops', 'data', 'security', 'other'],
       required: true,
     },
@@ -196,5 +214,7 @@ GraduateSchema.index({ rank: 1 });
 GraduateSchema.index({ 'assessmentData.submittedAt': -1 });
 GraduateSchema.index({ createdAt: -1 });
 
-export default mongoose.model<IGraduate, GraduateModel>('Graduate', GraduateSchema);
-
+export default mongoose.model<IGraduate, GraduateModel>(
+  'Graduate',
+  GraduateSchema
+);

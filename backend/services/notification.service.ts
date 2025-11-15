@@ -24,7 +24,9 @@ interface CreateNotificationParams {
 const toObjectId = (value: ObjectIdLike): mongoose.Types.ObjectId =>
   typeof value === 'string' ? new mongoose.Types.ObjectId(value) : value;
 
-const maybeObjectId = (value?: ObjectIdLike): mongoose.Types.ObjectId | undefined => {
+const maybeObjectId = (
+  value?: ObjectIdLike
+): mongoose.Types.ObjectId | undefined => {
   if (!value) {
     return undefined;
   }
@@ -117,5 +119,3 @@ export const markAllNotificationsAsRead = async (
 
   return result.modifiedCount ?? 0;
 };
-
-

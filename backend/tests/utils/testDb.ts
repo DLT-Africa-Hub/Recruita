@@ -33,6 +33,3 @@ export const clearDatabase = async (): Promise<void> => {
     Object.values(collections).map((collection) => collection.deleteMany({}))
   );
 };
-
-
-

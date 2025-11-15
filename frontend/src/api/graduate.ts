@@ -1,3 +1,4 @@
+
 import api from './client';
 
 // Profile Management
@@ -99,8 +100,12 @@ export const graduateApi = {
 
   updateApplicationStatus: async (applicationId: string, status: string) => {
     const response = await api.put(`/graduates/applications/${applicationId}`, { status });
+
   return response.data;
   },
 };
 
+
 export default graduateApi;
+
+

@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { graduateApi } from '../../api/graduate';
+
 
 interface Question {
   question: string;
@@ -21,8 +23,11 @@ const Assessment: React.FC = () => {
   const [timerActive, setTimerActive] = useState(false);
   const navigate = useNavigate();
 
+
   const handleSubmit = useCallback(async () => {
     setTimerActive(false); // Stop timer
+
+ 
 
     // Ensure we have answers for all questions
     const allAnswers: string[] = questions.map((_, index) => {
@@ -237,18 +242,22 @@ const Assessment: React.FC = () => {
                   Almost there!
                 </p>
                 <p className="font-normal text-[18px] text-[#1C1C1CBF]">
+
                   You got {score.percentage}%, you need 60% to pass. But
                   don&apos;t worry you can try again
+
                 </p>
               </div>
             )}
           </div>
+
 
           <button
             onClick={passed ? handleGoToDashboard : handleRetry}
             className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium"
           >
             {passed ? 'Go to Dashboard' : 'Try Again'}
+
           </button>
         </div>
       </div>

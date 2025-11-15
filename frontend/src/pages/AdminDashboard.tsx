@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../api/auth';
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState<any>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

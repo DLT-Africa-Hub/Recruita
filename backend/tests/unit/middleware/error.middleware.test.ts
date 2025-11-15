@@ -42,6 +42,3 @@ describe('error.middleware', () => {
     statusSpy.mockRestore();
   });
 });
-
-
-

@@ -72,7 +72,9 @@ const Login = () => {
         navigate('/graduate', { replace: true });
       }
     } catch (err: any) {
+
       console.error('Login error:', err);
+
       setError(
         err.response?.data?.message || 'Login failed. Please try again.'
       );

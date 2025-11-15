@@ -23,7 +23,8 @@ describe('security.utils', () => {
   });
 
   it('isBcryptHash validates hashed passwords', () => {
-    const fakeHash = '$2a$10$01234567890123456789012345678901234567890123456789012';
+    const fakeHash =
+      '$2a$10$01234567890123456789012345678901234567890123456789012';
     expect(isBcryptHash(fakeHash)).toBe(true);
     expect(BCRYPT_HASH_REGEX.test(fakeHash)).toBe(true);
     expect(isBcryptHash('plain-password')).toBe(false);
@@ -38,6 +39,3 @@ describe('security.utils', () => {
     expect(timingSafeEqualHex(bufferA, bufferC)).toBe(false);
   });
 });
-
-
-

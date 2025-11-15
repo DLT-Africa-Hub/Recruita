@@ -32,6 +32,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
   error,
 }) => {
   return (
+
     <div className="flex items-center justify-center min-h-screen w-full font-inter bg-form bg-cover bg-center">
       <div className="absolute inset-0 bg-white/50"></div>
       <div className="flex flex-col items-center justify-center gap-6 md:gap-8 z-10 py-12 px-5 w-full max-w-[542px] mx-auto">
@@ -41,7 +42,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
           <p className="font-normal text-[18px] text-[#1C1C1CBF]">{subtitle}</p>
         </div>
 
-        {/* Form */}
+
         <form
           onSubmit={onSubmit}
           className="flex flex-col gap-4 w-full"
@@ -64,6 +65,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
                 {error}
               </p>
             )}
+
           </div>
 
           <div className="flex flex-col gap-3 pt-2">

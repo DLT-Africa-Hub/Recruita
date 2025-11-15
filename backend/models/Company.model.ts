@@ -55,4 +55,3 @@ CompanySchema.index({ location: 1 });
 CompanySchema.index({ createdAt: -1 });
 
 export default mongoose.model<ICompany>('Company', CompanySchema);
-

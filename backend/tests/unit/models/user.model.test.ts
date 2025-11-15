@@ -14,7 +14,9 @@ describe('User model validation', () => {
       role: 'graduate',
     });
 
-    await expect(user.validate()).rejects.toThrow('Password must be stored as a bcrypt hash');
+    await expect(user.validate()).rejects.toThrow(
+      'Password must be stored as a bcrypt hash'
+    );
   });
 
   it('accepts valid bcrypt hashes', async () => {
@@ -29,6 +31,3 @@ describe('User model validation', () => {
     await expect(user.validate()).resolves.toBeUndefined();
   });
 });
-
-
-

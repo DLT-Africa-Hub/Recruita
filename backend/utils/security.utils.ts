@@ -32,4 +32,3 @@ export function timingSafeEqualHex(hashA: string, hashB: string): boolean {
 
   return crypto.timingSafeEqual(bufferA, bufferB);
 }
-

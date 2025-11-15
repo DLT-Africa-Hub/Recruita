@@ -107,4 +107,3 @@ const buttonStyle: React.CSSProperties = {
 };
 
 export default Navbar;
-

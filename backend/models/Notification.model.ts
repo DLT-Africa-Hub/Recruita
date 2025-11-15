@@ -63,5 +63,7 @@ NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ type: 1 });
 NotificationSchema.index({ relatedId: 1, relatedType: 1 });
 
-export default mongoose.model<INotification>('Notification', NotificationSchema);
-
+export default mongoose.model<INotification>(
+  'Notification',
+  NotificationSchema
+);

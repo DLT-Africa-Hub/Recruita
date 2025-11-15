@@ -15,9 +15,8 @@ const GraduateDashboard = () => {
   const availableCompanies = useMemo(() => getRandom(companies, 4), []);
   const contractCompanies = useMemo(() => getRandom(companies, 4), []);
 
-  const handleButtonClick = (companyName: string, buttonText: string) => {
-    // Handle button click
-  };
+
+  const handleButtonClick = (companyName: string, buttonText: string) => {};
 
   return (
     <div className="py-[20px] px-[20px] pb-[120px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center ">

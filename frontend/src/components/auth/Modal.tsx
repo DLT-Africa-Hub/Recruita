@@ -1,8 +1,6 @@
 import { ReactNode } from 'react';
 import { CgClose } from 'react-icons/cg';
 
-
-
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,7 +17,7 @@ const Modal = ({ isOpen, onClose, children }: ModalProps) => {
           onClick={onClose}
           className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
         >
-          <CgClose/>
+          <CgClose />
         </button>
         {children}
       </div>

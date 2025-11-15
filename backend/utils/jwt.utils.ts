@@ -27,4 +27,3 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
 export function verifyAccessToken(token: string): AccessTokenPayload {
   return jwt.verify(token, ACCESS_TOKEN_SECRET) as AccessTokenPayload;
 }
-

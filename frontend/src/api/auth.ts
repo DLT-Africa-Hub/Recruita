@@ -1,4 +1,6 @@
+
 import api from './client';
+
 
 export const authApi = {
   login: async (email: string, password: string) => {
@@ -7,10 +9,13 @@ export const authApi = {
   },
 
   register: async (email: string, password: string, role: string) => {
-    const response = await api.post('/auth/register', { email, password, role });
+    const response = await api.post('/auth/register', {
+      email,
+      password,
+      role,
+    });
     return response.data;
   },
 };
 
 export default api;
-
