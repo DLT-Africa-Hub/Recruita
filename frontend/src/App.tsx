@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import GraduateDashboard from './pages/talent/GraduateDashboard';
@@ -15,12 +15,17 @@ import ExploreCompany from './pages/talent/ExploreCompany';
 import GraduateApplications from './pages/talent/GraduateApplications';
 import CompanyPreview from './pages/talent/CompanyPreview';
 import CandidatePreview from './pages/company/CandidatePreview';
-import ExplorePreview from './pages/ExplorePreview';
 import AuthPage from './pages/AuthPage';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
 import GraduateOnboarding from './pages/talent/GraduateOnboarding';
 import SkillAssessment from './pages/talent/SkillAssessment';
+
+// Redirect component for old explore-preview route
+const ExplorePreviewRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/explore?preview=${id}`} replace />;
+};
 
 function App() {
   return (
@@ -98,11 +103,7 @@ function App() {
           </Layout>} />
           <Route
             path="/explore-preview/:id"
-            element={
-              <Layout>
-                <ExplorePreview />
-              </Layout>
-            }
+            element={<ExplorePreviewRedirect />}
           />
           <Route path="/applications" element={<Layout >
             <GraduateApplications/>

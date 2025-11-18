@@ -8,17 +8,24 @@ interface CompanyCardProps {
   company: Company;
   buttonText?: string;
   onButtonClick?: () => void;
+  onPreviewClick?: (companyId: number) => void;
 }
 
 const CompanyFlatCard: React.FC<CompanyCardProps> = ({
   company,
   buttonText = 'Preview',
+  onPreviewClick,
 }) => {
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
     if (buttonText === 'Preview') {
-      navigate(`/explore-preview/${companyId}`);
+      // Use modal callback if provided, otherwise navigate
+      if (onPreviewClick) {
+        onPreviewClick(companyId);
+      } else {
+        navigate(`/explore-preview/${companyId}`);
+      }
     }
     if (buttonText === 'Get in Touch') {
       navigate(`/contactCompany/${companyId}`);
