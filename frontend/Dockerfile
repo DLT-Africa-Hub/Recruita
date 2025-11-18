@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build
 
 # Expose port
-EXPOSE 5173
+EXPOSE 5174
 
 # Start development server (for production, use a proper server like nginx)
 CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]

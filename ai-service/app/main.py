@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from app.embeddings import EmbeddingError, generate_embedding, generate_embeddings_batch
 from app.matcher import compute_matches
+from app.models import GraduateProfile, JobRequirements
 from app.feedback import generate_feedback_text, FeedbackGenerationError
 from app.questions import (
     QuestionGenerationError,
@@ -150,18 +151,6 @@ class AssessmentQuestionRequest(BaseModel):
 
 class AssessmentQuestionResponse(BaseModel):
     questions: List[AssessmentQuestion]
-
-
-class GraduateProfile(BaseModel):
-    skills: List[str]
-    education: str
-    experience: Optional[str] = None
-
-
-class JobRequirements(BaseModel):
-    skills: List[str]
-    education: Optional[str] = None
-    experience: Optional[str] = None
 
 
 class FeedbackRequest(BaseModel):

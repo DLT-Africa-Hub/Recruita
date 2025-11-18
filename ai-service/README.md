@@ -32,11 +32,11 @@ Python FastAPI microservice for AI-powered job matching.
 - `MATCH_MAX_RESULTS`: Maximum number of matches returned (default: 20)
 - `MATCH_WEIGHT_EMBEDDING`, `MATCH_WEIGHT_SKILLS`, `MATCH_WEIGHT_EDUCATION`, `MATCH_WEIGHT_EXPERIENCE`, `MATCH_WEIGHT_FRESHNESS`: Optional weighting overrides for multi-factor scoring
 - `MATCH_FRESHNESS_HALF_LIFE_DAYS`: Half-life (in days) used to compute recency score (default: 30)
-- `FEEDBACK_MODEL`: OpenAI model identifier for feedback generation (default: gpt-4.1-mini)
+- `FEEDBACK_MODEL`: OpenAI model identifier for feedback generation (default: gpt-4o-mini)
 - `FEEDBACK_TEMPERATURE`: Sampling temperature for feedback responses (default: 0.4)
 - `FEEDBACK_MAX_TOKENS`: Maximum tokens for feedback responses (default: 900)
 - `FEEDBACK_DEFAULT_LANGUAGE`: Language code used when none is provided (default: en)
-- `ASSESSMENT_MODEL`: OpenAI model identifier for assessment question generation (default: gpt-4.1-mini)
+- `ASSESSMENT_MODEL`: OpenAI model identifier for assessment question generation (default: gpt-4o-mini)
 - `ASSESSMENT_TEMPERATURE`: Sampling temperature for question generation (default: 0.3)
 - `ASSESSMENT_MAX_TOKENS`: Maximum tokens for assessment generation responses (default: 1000)
 

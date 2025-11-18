@@ -13,11 +13,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, user } = useAuth();
 
-  if (!isAuthenticated) {
+  // Also check localStorage as fallback (in case context hasn't updated yet)
+  const token = localStorage.getItem('token');
+  const storedUser = localStorage.getItem('user');
+  const isAuth = isAuthenticated || (token && storedUser);
+
+  if (!isAuth) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user && !allowedRoles.includes(user.role)) {
+  // Get user from context or localStorage
+  const currentUser = user || (storedUser ? JSON.parse(storedUser) : null);
+
+  if (currentUser && !allowedRoles.includes(currentUser.role)) {
     return <Navigate to="/" replace />;
   }
 

@@ -1,55 +1,132 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { graduateApi } from '../../api/graduate';
+import { LoadingSpinner } from '../../index';
 
 interface Question {
   question: string;
   options: string[];
   answer: string;
+  skill?: string;
 }
 
 const Assessment: React.FC = () => {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(1);
+  const [timeRemaining, setTimeRemaining] = useState(60);
+  const [timerActive, setTimerActive] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const questions: Question[] = [
-    {
-      question: 'What does HTML stand for?',
-      options: [
-        'Hyper Text Markup Language',
-        'HighText Machine Language',
-        'Hyperlink and Text Markup Language',
-        'Home Tool Markup Language',
-      ],
-      answer: 'Hyper Text Markup Language',
-    },
-    {
-      question: 'Which of the following is a JavaScript framework?',
-      options: ['Laravel', 'React', 'Django', 'Flask'],
-      answer: 'React',
-    },
-    {
-      question: 'What is the default port for HTTP?',
-      options: ['8080', '443', '80', '3000'],
-      answer: '80',
-    },
-    {
-      question: 'Which of these is used to style a webpage?',
-      options: ['CSS', 'HTML', 'Python', 'C++'],
-      answer: 'CSS',
-    },
-    {
-      question: 'What does SQL stand for?',
-      options: [
-        'Structured Query Language',
-        'Simple Query Language',
-        'Standard Question Language',
-        'System Query Language',
-      ],
-      answer: 'Structured Query Language',
-    },
-  ];
+  const handleSubmit = useCallback(async () => {
+    setTimerActive(false);
 
-  const totalSteps = questions.length;
+    const allAnswers: string[] = questions.map((_, index) => {
+      const answer = answers[index];
+      return answer && typeof answer === 'string' ? answer.trim() : '';
+    });
+
+    const unansweredCount = allAnswers.filter((a) => a === '').length;
+    if (unansweredCount > 0) {
+      setError(
+        `Please answer all ${questions.length} questions before submitting. ${unansweredCount} question(s) remaining.`
+      );
+      return;
+    }
+
+    if (allAnswers.length === 0) {
+      setError('No answers to submit. Please answer the questions first.');
+      return;
+    }
+
+    try {
+      await graduateApi.submitAssessment({ answers: allAnswers });
+
+      queryClient.invalidateQueries({
+        queryKey: ['graduateProfile', 'assessment'],
+      });
+      setShowResults(true);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          'Failed to submit assessment. Please try again.'
+      );
+    }
+  }, [answers, questions]);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [attempt]);
+
+  useEffect(() => {
+    if (!timerActive || showResults || questions.length === 0) return;
+
+    const timer = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          setTimerActive(false);
+          // Auto submit when time runs out
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timerActive, showResults, questions.length, handleSubmit]);
+
+  const fetchQuestions = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication required. Please log in again.');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      const response = await graduateApi.getAssessmentQuestions();
+      const transformedQuestions: Question[] = response.questions.map(
+        (q: any) => ({
+          question: q.question,
+          options: q.options,
+          answer: q.answer,
+          skill: q.skill,
+        })
+      );
+      setQuestions(transformedQuestions);
+      setAnswers([]);
+      setStep(0);
+      setShowResults(false);
+        setTimeRemaining(60);
+      setTimerActive(true);
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message ||
+        'Failed to load questions. Please try again.';
+      setError(errorMessage);
+
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      }
+
+      setQuestions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSelectOption = (option: string) => {
     const updatedAnswers = [...answers];
@@ -69,8 +146,13 @@ const Assessment: React.FC = () => {
     }
   };
 
-  const handleSubmit = () => {
-    setShowResults(true);
+  const handleRetry = () => {
+    setAttempt((prev) => prev + 1);
+    fetchQuestions();
+  };
+
+  const handleGoToDashboard = () => {
+    navigate('/graduate');
   };
 
   const calculateScore = () => {
@@ -87,11 +169,33 @@ const Assessment: React.FC = () => {
     };
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-full">
+        <LoadingSpinner message="Loading questions..." size="lg" />
+      </div>
+    );
+  }
+
+  if (error && questions.length === 0) {
+    return (
+      <div className="flex flex-col justify-center items-center h-full gap-4">
+        <p className="text-red-500 text-[18px]">{error}</p>
+        <button
+          onClick={fetchQuestions}
+          className="bg-button text-white p-[18px] rounded-[10px]"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const totalSteps = questions.length;
   const currentQuestion = questions[step];
   const selectedOption = answers[step];
   const isLastQuestion = step === totalSteps - 1;
 
-  // Results Screen
   if (showResults) {
     const score = calculateScore();
     const passed = score.percentage >= 60;
@@ -132,15 +236,18 @@ const Assessment: React.FC = () => {
                   Almost there!
                 </p>
                 <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-                  You got {score.percentage}%, you need 60% to pass. But don’t
-                  worry you can try again
+                  You got {score.percentage}%, you need 60% to pass. But
+                  don&apos;t worry you can try again
                 </p>
               </div>
             )}
           </div>
 
-          <button className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium">
-            {passed ? 'Go to Dashboard' : 'Try gain'}
+          <button
+            onClick={passed ? handleGoToDashboard : handleRetry}
+            className="bg-button w-full max-w-[400px] py-[18px] rounded-[10px] text-[#F8F8F8] text-[16px] font-medium"
+          >
+            {passed ? 'Go to Dashboard' : 'Try Again'}
           </button>
         </div>
       </div>
@@ -148,13 +255,33 @@ const Assessment: React.FC = () => {
   }
 
   return (
-    <div className="flex justify-between items-center h-full pb-20 md:justify-center w-full flex-col md:gap-[70px] font-inter">
-      {/* ✅ Progress Bar */}
-      <div className="w-full flex flex-col gap-[30px]">
+    <div className="flex justify-between items-start h-full pb-20 md:justify-center w-full flex-col md:gap-8 font-inter px-5 overflow-y-auto">
+      {error && (
+        <div className="text-red-500 text-sm text-center max-w-[542px] w-full mt-4">
+          {error}
+        </div>
+      )}
+
+      <div className="w-full flex flex-col gap-6 max-w-[542px] mx-auto mt-6">
         <div className="flex flex-col md:items-center gap-2.5 w-full">
-          <p className="text-left text-[#1C1C1CBF] text-[18px] font-normal">
-            Question {step + 1} of {totalSteps}
-          </p>
+          <div className="flex justify-between items-center w-full">
+            <p className="text-left text-[#1C1C1CBF] text-[18px] font-normal">
+              Question {step + 1} of {totalSteps}
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-[#1C1C1CBF] text-[16px] font-medium">
+                Time:
+              </span>
+              <span
+                className={`text-[18px] font-semibold ${
+                  timeRemaining <= 10 ? 'text-red-500' : 'text-[#1C1C1C]'
+                }`}
+              >
+                {Math.floor(timeRemaining / 60)}:
+                {String(timeRemaining % 60).padStart(2, '0')}
+              </span>
+            </div>
+          </div>
 
           <div className="h-[10px] w-full md:w-[542px] bg-[#D9D9D9] rounded-full overflow-hidden">
             <div
@@ -166,15 +293,19 @@ const Assessment: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
-          <h2 className="font-semibold text-[32px] text-[#1C1C1C]">
+        <div className="flex flex-col w-full gap-2.5 text-left md:text-center max-w-[542px] mx-auto">
+          <h2 className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed wrap-break-word">
             {currentQuestion.question}
           </h2>
+          {currentQuestion.skill && (
+            <p className="text-[14px] text-[#1C1C1CBF] font-normal">
+              Skill: {currentQuestion.skill}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* ✅ Options */}
-      <div className="flex flex-col gap-2.5 justify-center items-center w-full">
+      <div className="flex flex-col gap-3 justify-center items-center w-full max-w-[542px] mx-auto">
         {currentQuestion.options.map((option) => {
           const isSelected = selectedOption === option;
           return (
@@ -182,14 +313,14 @@ const Assessment: React.FC = () => {
               key={option}
               type="button"
               onClick={() => handleSelectOption(option)}
-              className={`flex items-center border-[1px] p-5 gap-2.5 rounded-xl w-full max-w-[542px] justify-start transition-all duration-200 ${
+              className={`flex items-start border p-4 gap-3 rounded-xl w-full justify-start transition-all duration-200 hover:border-button/50 ${
                 isSelected
                   ? 'border-button bg-[#F0F5FF]'
                   : 'border-fade bg-white'
               }`}
             >
               <div
-                className={`rounded-full h-5 w-5 p-1 border-[1px] flex items-center justify-center ${
+                className={`rounded-full h-5 w-5 p-1 border flex items-center justify-center shrink-0 mt-0.5 ${
                   isSelected ? 'border-button' : 'border-fade'
                 }`}
               >
@@ -197,21 +328,22 @@ const Assessment: React.FC = () => {
                   <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
-              <p className="text-[#1C1C1C]">{option}</p>
+              <p className="text-[#1C1C1C] text-[15px] leading-relaxed wrap-break-word text-left flex-1">
+                {option}
+              </p>
             </button>
           );
         })}
       </div>
 
-      {/* ✅ Navigation Buttons */}
-      <div className="flex justify-between w-full max-w-[542px] gap-4">
+      <div className="flex justify-start w-full max-w-[542px] gap-4 mx-auto">
         <button
           onClick={prevStep}
           disabled={step === 0}
-          className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 flex-1 ${
+          className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             step === 0
-              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed border-[1px] border-transparent'
-              : 'border-[1px] border-button text-button bg-white hover:bg-[#F0F4F9]'
+              ? 'bg-fade text-[#F8F8F8] cursor-not-allowed border border-transparent'
+              : 'border border-button text-button bg-white hover:bg-[#F0F4F9]'
           }`}
         >
           Previous
@@ -220,10 +352,10 @@ const Assessment: React.FC = () => {
         <button
           onClick={isLastQuestion ? handleSubmit : nextStep}
           disabled={!selectedOption}
-          className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 flex-1 ${
+          className={`rounded-[10px] text-[16px] p-[18px] font-medium transition-all duration-200 ${
             !selectedOption
               ? 'bg-fade text-[#F8F8F8] cursor-not-allowed'
-              : 'bg-button text-[#F8F8F8] hover:bg-[#A9B9D3]'
+              : 'bg-button text-[#F8F8F8] hover:bg-button/90'
           }`}
         >
           {isLastQuestion ? 'Submit' : 'Next'}

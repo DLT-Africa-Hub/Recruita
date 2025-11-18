@@ -1,6 +1,7 @@
 import React from 'react';
 import { FcGoogle } from 'react-icons/fc';
 import { Link } from 'react-router-dom';
+import { Input, Button } from '../ui';
 
 interface AuthFormProps {
   title: string;
@@ -31,53 +32,51 @@ const AuthForm: React.FC<AuthFormProps> = ({
   error,
 }) => {
   return (
-    <div className="flex items-center justify-center h-screen w-full font-inter bg-form bg-cover bg-center ">
+
+    <div className="flex items-center justify-center min-h-screen w-full font-inter bg-form bg-cover bg-center">
       <div className="absolute inset-0 bg-white/50"></div>
-      <div className="flex flex-col items-center justify-center gap-[20px] z-10  lg:pt-[124px] py-[45px] w-full h-full max-w-[1058px] lg:h-auto px-[15px] lg:px-[150px] rounded-[20px]">
+      <div className="flex flex-col items-center justify-center gap-6 md:gap-8 z-10 py-12 px-5 w-full max-w-[542px] mx-auto">
+        {/* Header */}
+        <div className="flex flex-col w-full gap-2.5 text-left md:text-center">
+          <h2 className="font-semibold text-[32px] text-[#1C1C1C]">{title}</h2>
+          <p className="font-normal text-[18px] text-[#1C1C1CBF]">{subtitle}</p>
+        </div>
+
+
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-[24px] justify-between h-full w-full max-w-[400px]"
+          className="flex flex-col gap-4 w-full"
         >
-          <div className="w-full flex flex-col text-left md:text-center">
-            <p className="font-semibold text-[32px] text-[#1C1C1C]">{title}</p>
-            <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-              {subtitle}
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-[20px]">
+          <div className="flex flex-col gap-4">
             {fields.map((field, index) => (
-              <div
+              <Input
                 key={index}
-                className="w-full flex flex-col gap-[10px] max-w-[542px]"
-              >
-                <label className="text-[#1C1C1CBF] text-[18px] font-normal">
-                  {field.label}
-                </label>
-                <input
-                  type={field.type}
-                  name={field.name}
-                  placeholder={field.placeholder}
-                  value={field.value}
-                  onChange={field.onChange}
-                  className="h-[62px] border border-[#C8D7EF] rounded-xl w-full px-5 bg-[#FFFFFF] placeholder:text-[#1C1C1C33]"
-                />
-              </div>
+                label={field.label}
+                type={field.type}
+                name={field.name}
+                placeholder={field.placeholder}
+                value={field.value}
+                onChange={field.onChange}
+                required
+                error={error ? ' ' : undefined}
+              />
             ))}
-            <p className="text-center text-red-500">{error}</p>
+            {error && (
+              <p className="text-center text-red-500 text-[14px] font-normal">
+                {error}
+              </p>
+            )}
+
           </div>
 
-          <div className="flex flex-col gap-[10px]">
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-[12px] text-[16px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer"
-            >
+          <div className="flex flex-col gap-3 pt-2">
+            <Button type="submit" fullWidth>
               {buttonText}
-            </button>
+            </Button>
 
             <button
               type="button"
-              className="w-full flex items-center justify-center gap-[12px] text-[16px] border-2 border-button py-[15px] rounded-[10px] text-[#1C1C1C] cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 text-[16px] font-medium border-2 border-button py-3 rounded-[10px] text-[#1C1C1C] hover:bg-button/5 transition-all duration-200"
             >
               <FcGoogle className="text-[24px]" />
               Continue with Google
@@ -85,7 +84,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
 
             <Link
               to={linkPath}
-              className="text-center text-[14px] font-normal underline text-[#1E9500] cursor-pointer"
+              className="text-center text-[14px] font-normal text-[#1E9500] hover:underline transition-all"
             >
               {linkText}
             </Link>

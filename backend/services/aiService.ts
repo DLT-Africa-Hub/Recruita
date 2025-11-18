@@ -291,13 +291,13 @@ class AIServiceClient {
   private readonly httpAgent = new http.Agent({
     keepAlive: true,
     maxSockets: aiConfig.rateLimit.maxConcurrent * 4,
-    timeout: aiConfig.requestTimeoutMs,
+    timeout: aiConfig.requestTimeoutMs + 5000, // Add buffer for agent timeout
   });
 
   private readonly httpsAgent = new https.Agent({
     keepAlive: true,
     maxSockets: aiConfig.rateLimit.maxConcurrent * 4,
-    timeout: aiConfig.requestTimeoutMs,
+    timeout: aiConfig.requestTimeoutMs + 5000, // Add buffer for agent timeout
   });
 
   private readonly http = axios.create({
@@ -309,6 +309,11 @@ class AIServiceClient {
     httpAgent: this.httpAgent,
     httpsAgent: this.httpsAgent,
   });
+
+  constructor() {
+    // Log the configured timeout for debugging
+    console.log(`[AIServiceClient] Configured timeout: ${aiConfig.requestTimeoutMs}ms`);
+  }
 
   async fetchEmbedding(text: string): Promise<number[]> {
     const response = await this.post<EmbedResponse>('/embed', { text });
@@ -497,9 +502,33 @@ class AIServiceClient {
     }
 
     const status = error.response.status;
+    const responseData = error.response.data as any;
+    
+    // FastAPI returns errors in 'detail' field, OpenAI errors may be in 'error.message'
+    const errorMessage = 
+      responseData?.detail || 
+      responseData?.error?.message || 
+      responseData?.message || 
+      '';
+    
+    // Check for quota-related errors in the response
+    const isQuotaError = 
+      errorMessage.toLowerCase().includes('quota') ||
+      errorMessage.toLowerCase().includes('insufficient_quota') ||
+      responseData?.error?.code === 'insufficient_quota';
+    
     if (status === 400) {
+      if (isQuotaError) {
+        return new AIServiceError(
+          'OpenAI API quota has been exceeded. Please check your OpenAI account billing and quota limits.',
+          402, // Payment Required
+          {
+            cause: error,
+          }
+        );
+      }
       return new AIServiceError(
-        'AI service rejected the request payload.',
+        errorMessage || 'AI service rejected the request payload.',
         400,
         {
           cause: error,

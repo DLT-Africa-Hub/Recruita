@@ -7,6 +7,6 @@ process.env.JWT_ACCESS_EXPIRE = '15m';
 process.env.ENFORCE_HTTPS = 'false';
 process.env.CSRF_COOKIE_SECURE = 'false';
 process.env.API_PREFIX = '/api/v1';
-process.env.CORS_ORIGIN = 'http://localhost:5173';
+process.env.CORS_ORIGIN = 'http://localhost:5174';
 
 jest.setTimeout(30000);

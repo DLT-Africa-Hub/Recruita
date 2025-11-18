@@ -54,9 +54,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await authApi.login(email, password);
-      setToken(response.token);
+      // Backend returns 'accessToken', not 'token'
+      const token = response.accessToken || response.token;
+      setToken(token);
       setUser(response.user);
-      localStorage.setItem('token', response.token);
+      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Login error:', error);
@@ -67,9 +69,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (email: string, password: string, role: string) => {
     try {
       const response = await authApi.register(email, password, role);
-      setToken(response.token);
+      // Backend returns 'accessToken', not 'token'
+      const token = response.accessToken || response.token;
+      setToken(token);
       setUser(response.user);
-      localStorage.setItem('token', response.token);
+      localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(response.user));
     } catch (error) {
       console.error('Registration error:', error);

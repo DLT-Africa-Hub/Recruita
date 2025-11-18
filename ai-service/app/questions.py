@@ -24,6 +24,10 @@ from openai import (
     OpenAIError,
     RateLimitError,
 )
+from dotenv import load_dotenv
+
+# Load environment variables before accessing them
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ if not _api_key:
 
 client = OpenAI(api_key=_api_key)
 
-ASSESSMENT_MODEL: Final[str] = os.getenv("ASSESSMENT_MODEL", os.getenv("FEEDBACK_MODEL", "gpt-4.1-mini"))
+ASSESSMENT_MODEL: Final[str] = os.getenv("ASSESSMENT_MODEL", os.getenv("FEEDBACK_MODEL", "gpt-4o-mini"))
 ASSESSMENT_TEMPERATURE: Final[float] = float(os.getenv("ASSESSMENT_TEMPERATURE", "0.3"))
 ASSESSMENT_MAX_TOKENS: Final[int] = int(os.getenv("ASSESSMENT_MAX_TOKENS", "1000"))
 

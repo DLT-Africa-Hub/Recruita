@@ -40,14 +40,32 @@ const GraduateDashboard = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const getRandom = (arr: Company[], n: number) => {
-    const copy = [...arr];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [copy[i], copy[j]] = [copy[j], copy[i]];
+      const cardId =
+        parseInt(job.id?.slice(-8) || match.id.slice(-8), 16) || index + 1;
+
+      return {
+        id: cardId,
+        name: companyName,
+        role: job.title || 'Position',
+        match: matchScore,
+        contract: contractString,
+        location: job.location || 'Location not specified',
+        wageType: salaryType,
+        wage:
+          salaryRange === 'Not specified'
+            ? '—'
+            : salaryRange.replace(/[k$]/g, ''),
+        image: DEFAULT_JOB_IMAGE,
+        jobId: job.id,
+      };
+    },
+    []
+  );
+
+  const { availableOpportunities, contractOffers } = useMemo(() => {
+    if (!matchesData || matchesData.length === 0) {
+      return { availableOpportunities: [], contractOffers: [] };
     }
-    return copy.slice(0, n);
-  };
 
   const availableCompanies = useMemo(() => getRandom(companies, 4), []);
   const contractCompanies = useMemo(() => getRandom(companies, 4), []);
