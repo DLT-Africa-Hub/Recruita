@@ -18,27 +18,27 @@ interface CompanyCardProps {
   company: Company;
   buttonText?: string;
   onButtonClick?: () => void;
+  onPreviewClick?: (companyId: number) => void;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({
-  company,
-  buttonText = 'Preview',
-  onButtonClick,
+const CompanyCard: React.FC<CompanyCardProps> = ({ 
+  company, 
+  buttonText = "Preview",
+  onPreviewClick,
 }) => {
+
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
-    if (onButtonClick) {
-      // Use the provided callback if available
-      onButtonClick();
-      return;
+    if(buttonText === "Preview"){
+      // Use modal callback if provided, otherwise navigate
+      if (onPreviewClick) {
+        onPreviewClick(companyId);
+      } else {
+        navigate(`/explore-preview/${companyId}`);
+      }
     }
-
-    // Fallback to default navigation
-    if (buttonText === 'Preview') {
-      navigate(`/explore-preview/${companyId}`);
-    }
-    if (buttonText === 'Get in Touch') {
+    if(buttonText === "Get in Touch"){
       navigate(`/contactCompany/${companyId}`);
     }
   };
