@@ -13,7 +13,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const {register} = useAuth()
+  const {register} = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGoogleAuth, setIsGoogleAuth] = useState(false); 
@@ -48,7 +48,7 @@ const Register = () => {
     },
   });
 
-  const handleGoogleClick = () => google();
+
 
   
 

@@ -1045,7 +1045,7 @@ export const googleOAuthCallback = async (
     const user = await findOrCreateUserFromGoogle(profile, defaultRole);
 
  
-    const { session, refreshToken } = await createSession({
+    const {  refreshToken } = await createSession({
       userId: user._id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent') ?? undefined,

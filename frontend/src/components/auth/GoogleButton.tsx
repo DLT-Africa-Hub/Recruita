@@ -1,6 +1,4 @@
 import React from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
 import { FcGoogle } from 'react-icons/fc';
 
 type Props = {
