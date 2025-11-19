@@ -34,7 +34,7 @@ const DashboardHeader = () => {
   });
 
   const graduateProfileQuery = useQuery({
-    queryKey: ['graduateProfile'],
+    queryKey: ['graduateProfile', 'header'],
     queryFn: async () => {
       const profileResponse = await graduateApi.getProfile();
       return profileResponse.graduate || profileResponse;
@@ -117,11 +117,27 @@ const DashboardHeader = () => {
     const graduate = graduateProfileQuery.data;
     if (!graduate) return {};
 
-    const rank = graduate.rank?.trim();
+    // Extract rank - handle formats like "A", "A and B", "B and C", etc.
+    let rank: string | undefined;
+    const rankValue = graduate.rank;
+    
+    if (rankValue) {
+      // Handle string rank values
+      const trimmedRank = typeof rankValue === 'string' ? rankValue.trim() : String(rankValue).trim();
+      if (trimmedRank && trimmedRank.length > 0) {
+        // Take the first character if it's a single letter, or the first letter if it's "A and B" format
+        const firstChar = trimmedRank.charAt(0).toUpperCase();
+        // Only use if it's a valid rank letter (A, B, C, D)
+        if (['A', 'B', 'C', 'D'].includes(firstChar)) {
+          rank = firstChar;
+        }
+      }
+    }
+
     const expYears = graduate.expYears;
 
     return {
-      rank: rank ? rank.charAt(0).toUpperCase() : undefined,
+      rank,
       experienceLevel: getExperienceRange(expYears),
     };
   }, [user?.role, graduateProfileQuery.data]);
@@ -166,38 +182,37 @@ const DashboardHeader = () => {
           </p>
         )}
 
-        {user?.role === 'graduate' &&
-          (metrics.rank || metrics.experienceLevel) && (
-            <div className="flex items-center gap-[12px]">
-              {metrics.rank && (
-                <div className="flex items-center justify-center rounded-[10px] border border-fade py-[12px] px-[20px] gap-[10px] bg-white">
-                  <div className="font-semibold text-[18px] text-[#F8F8F8] w-[40px] h-[40px] rounded-[8px] bg-button flex items-center justify-center">
-                    {metrics.rank}
-                  </div>
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-[#1C1C1CBF] font-normal text-[12px]">
-                      Your Rank
-                    </p>
-                    <p className="text-[#1C1C1CE5] font-bold text-[16px]">
-                      {metrics.rank} Rank
-                    </p>
-                  </div>
+        {user?.role === 'graduate' && !loading && graduateProfileQuery.data && (
+          <div className="flex items-center gap-[12px]">
+            {metrics.rank && (
+              <div className="flex items-center justify-center rounded-[10px] border border-fade py-[12px] px-[20px] gap-[10px] bg-white">
+                <div className="font-semibold text-[18px] text-[#F8F8F8] w-[40px] h-[40px] rounded-[8px] bg-button flex items-center justify-center">
+                  {metrics.rank}
                 </div>
-              )}
-              {metrics.experienceLevel && (
-                <div className="flex items-center justify-center rounded-[10px] border border-fade py-[12px] px-[20px] gap-[10px] bg-white">
-                  <div className="flex flex-col items-center justify-center">
-                    <p className="text-[#1C1C1CBF] font-normal text-[12px]">
-                      Experience Level
-                    </p>
-                    <p className="text-[#1C1C1CE5] font-bold text-[16px]">
-                      {metrics.experienceLevel}
-                    </p>
-                  </div>
+                <div className="flex flex-col items-center justify-center">
+                  <p className="text-[#1C1C1CBF] font-normal text-[12px]">
+                    Your Rank
+                  </p>
+                  <p className="text-[#1C1C1CE5] font-bold text-[16px]">
+                    {metrics.rank} Rank
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+            {metrics.experienceLevel && (
+              <div className="flex items-center justify-center rounded-[10px] border border-fade py-[12px] px-[20px] gap-[10px] bg-white">
+                <div className="flex flex-col items-center justify-center">
+                  <p className="text-[#1C1C1CBF] font-normal text-[12px]">
+                    Experience Level
+                  </p>
+                  <p className="text-[#1C1C1CE5] font-bold text-[16px]">
+                    {metrics.experienceLevel}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {user?.role === 'company' && companyStats && !companyStatsLoading && (
           <div className="flex items-center gap-[12px]">

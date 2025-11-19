@@ -32,7 +32,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
     }
   };
   return (
-    <div className="flex items-center gap-[26px] max-w-[878px]  py-[18px] px-[17px] border border-fade rounded-[10px] bg-white">
+    <div className="flex items-center gap-[26px] max-w-[878px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-md transition-all duration-200 group">
       <div className="w-[126px] aspect-square relative overflow-hidden rounded-[10px] ">
         <img
           src={company.image}
@@ -50,11 +50,12 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
           <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
             {company.name}
           </p>
-          <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">
+          <p className="font-sf font-normal text-[16px]   text-[#1C1C1CBF]">
             {company.role}
           </p>
         </div>
-        <div className="flex items-center  h-[49px]  bg-[#1B770033] text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
+        <div className="flex items-center h-[49px] bg-gradient-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] shadow-sm">
+          <span className="text-button mr-1">●</span>
           {company.match}% match
         </div>
       </div>
@@ -65,7 +66,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
             {company.contract}
           </p>
           <div className="h-[20px] bg-black w-0.5" />
-          <p className="text-center  font-semibold w-full">
+          <p className="text-center  font-semibold w-full mx-2">
             {company.location}
           </p>
           <div className="h-[20px] bg-black w-0.5" />
@@ -80,7 +81,7 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
               buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
             )
           }
-          className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 "
+          className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#176300] hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg"
         >
           <CiMail
             className={`text-[24px] ${buttonText === 'Preview' && 'hidden'}`}

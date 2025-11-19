@@ -1,25 +1,31 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Home from './pages/Home';
-import GraduateDashboard from './pages/talent/GraduateDashboard';
-import CompanyDashboard from './pages/company/CompanyDashboard';
-import CompanyCandidates from './pages/company/CompanyCandidates';
-import CompanyJobs from './pages/company/CompanyJobs';
-import CompanyJobForm from './pages/company/CompanyJobForm';
-import CompanyOnboarding from './pages/company/CompanyOnboarding';
-import AdminDashboard from './pages/AdminDashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-import AccountType from './pages/AccountType';
-import Layout from './components/layout/Layout';
-import ExploreCompany from './pages/talent/ExploreCompany';
-import GraduateApplications from './pages/talent/GraduateApplications';
-import CompanyPreview from './pages/talent/CompanyPreview';
-import CandidatePreview from './pages/company/CandidatePreview';
-import AuthPage from './pages/AuthPage';
-import Messages from './pages/Messages';
-import Notifications from './pages/Notifications';
-import GraduateOnboarding from './pages/talent/GraduateOnboarding';
-import SkillAssessment from './pages/talent/SkillAssessment';
+import {
+  Home,
+  GraduateDashboard,
+  GraduateProfile,
+  CompanyDashboard,
+  CompanyProfile,
+  CompanyCandidates,
+  CompanyJobs,
+  CompanyJobForm,
+  JobRankSelector,
+  CompanyOnboarding,
+  AdminDashboard,
+  ProtectedRoute,
+  AssessmentGuard,
+  AccountType,
+  Layout,
+  ExploreCompany,
+  GraduateApplications,
+  CompanyPreview,
+  CandidatePreview,
+  AuthPage,
+  Messages,
+  Notifications,
+  GraduateOnboarding,
+  SkillAssessment,
+} from './index';
 
 // Redirect component for old explore-preview route
 const ExplorePreviewRedirect = () => {
