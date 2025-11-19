@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -22,7 +22,6 @@ import {
   GraduateApplications,
   CompanyPreview,
   CandidatePreview,
-  ExplorePreview,
   AuthPage,
   Messages,
   Notifications,
@@ -30,6 +29,11 @@ import {
   SkillAssessment,
 } from './index';
 
+// Redirect component for old explore-preview route
+const ExplorePreviewRedirect = () => {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/explore?preview=${id}`} replace />;
+};
 
 function App() {
   return (
@@ -209,11 +213,7 @@ function App() {
           />
           <Route
             path="/explore-preview/:id"
-            element={
-              <Layout>
-                <ExplorePreview />
-              </Layout>
-            }
+            element={<ExplorePreviewRedirect />}
           />
         </Routes>
       </div>

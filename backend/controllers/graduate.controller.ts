@@ -1132,6 +1132,21 @@ export const submitAssessment = async (
     }
     const passed = score !== undefined && score >= 60;
 
+    // Calculate rank based on assessment score
+    // A: 90-100%, B: 75-89%, C: 60-74%, D: Below 60%
+    const rankThresholds = [
+      { minScore: 90, rank: 'A' },
+      { minScore: 75, rank: 'B' },
+      { minScore: 60, rank: 'C' },
+      { minScore: 0, rank: 'D' },
+    ] as const;
+
+    const rank =
+      score !== undefined
+        ? rankThresholds.find((threshold) => score >= threshold.minScore)
+            ?.rank
+        : undefined;
+
     const {
       summary,
       additionalContext,
@@ -1253,6 +1268,11 @@ export const submitAssessment = async (
     };
     // Remove temporary questions storage
     delete (graduate.assessmentData as any).currentQuestions;
+
+    // Update rank if score is available
+    if (rank) {
+      graduate.rank = rank;
+    }
 
     await graduate.save();
 
