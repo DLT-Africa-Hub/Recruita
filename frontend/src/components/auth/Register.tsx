@@ -2,49 +2,137 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthForm from './AuthForm';
 import Modal from './Modal';
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
+
 
 const Register = () => {
+  const [role, setRole] = useState<"graduate" | "company">("graduate");
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const {register} = useAuth()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGoogleAuth, setIsGoogleAuth] = useState(false); 
+  const navigate = useNavigate();
+
+  // GOOGLE LOGIN
+  const google = useGoogleLogin({
+    flow: "auth-code",
+    onSuccess: async (codeResponse) => {
+      try {
+        const res = await axios.post(
+          `${import.meta.env.VITE_APP_API_URL}/auth/google/authcode`,
+          {
+            code: codeResponse.code,
+            role,
+          }
+        );
+
+        console.log(res.data);
+        
+        setIsGoogleAuth(true);
+        
+        setIsModalOpen(true);
+      } catch (err) {
+        console.error(err);
+        setError("Google login failed");
+      }
+    },
+    onError: (err) => {
+      console.error('Google login error', err);
+      setError('Google login failed');
+    },
+  });
+
+  const handleGoogleClick = () => google();
+
+  
+
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError("Please fill in all fields");
       return;
     }
-    // Store email and password temporarily for account type selection
-    sessionStorage.setItem('registerEmail', email);
-    sessionStorage.setItem('registerPassword', password);
+
+    setError('');
+  
     setIsModalOpen(true);
+    setIsGoogleAuth(false); 
   };
 
 
-  const handleConsent = () => {
+  const handleModalProceed = async () => {
     setIsModalOpen(false);
-    navigate('/role');
+
+
+    if (isGoogleAuth) {
+  
+      if (role === 'graduate') {
+        navigate('/onboarding');
+      } else {
+        navigate('/company/onboarding');
+      }
+      return;
+    }
+
+
+    setIsLoading(true);
+    setError('');
+    try {
+     
+      const backendRole = role === 'graduate' ? 'graduate' : 'company';
+
+      await register(email, password, backendRole);
+
+     
+      if (backendRole === 'graduate') {
+        navigate('/onboarding');
+      } else {
+        navigate('/company/onboarding');
+      }
+
+
+      setEmail('');
+      setPassword('');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <>
       <AuthForm
-        title="Create Account"
-        subtitle="Join our talent marketplace"
-        buttonText="Continue"
+        mode="register"
+        role={role}
+        setRole={setRole}
+        title={`Create ${role === "graduate" ? "Graduate" : "Company"} Account`}
+        subtitle={
+          role === "graduate"
+            ? "Join our talent marketplace as a graduate"
+            : "Register your company to hire top talents"
+        }
+        buttonText={isLoading ? 'Processing...' : 'Continue'}
         linkText="Already have an account? Login"
         linkPath="/login"
-        onSubmit={handleSubmit}
+        onGoogleClick={google}
         fields={[
           {
             label: 'Email',
             name: 'email',
             type: 'email',
-            placeholder: 'John@example.com',
+            placeholder: role === 'company' ? 'company@example.com' : 'john@example.com',
             value: email,
-            onChange: (e) => setEmail(e.target.value),
+            onChange: (e: any) => setEmail(e.target.value),
           },
           {
             label: 'Password',
@@ -52,44 +140,33 @@ const Register = () => {
             type: 'password',
             placeholder: 'password',
             value: password,
-            onChange: (e) => setPassword(e.target.value),
+            onChange: (e: any) => setPassword(e.target.value),
           },
         ]}
         error={error}
+        onSubmit={handleSubmit}
       />
 
-      {/* Modal Component */}
+      {/* MODAL */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div className="pt-[40px] flex flex-col items-center gap-[30px] lg:gap-[50px] font-inter">
-          <img
-            src="/proceed.png"
-            alt="proceed"
-            className="w-[156px] h-[156px]"
-          />
+        <div className="pt-[40px] flex flex-col items-center gap-[30px] font-inter">
+          <img src="/proceed.png" alt="proceed" className="w-[156px]" />
 
-          <div className="flex flex-col gap-[10px] text-center max-w-[380px]">
-            <p className="text-[32px] font-semibold text-[#1C1C1C]">
-              Before you Proceed
-            </p>
-            <p className="text-[#1C1C1CBF] text-[18px] font-normal">
-              Do you consent to we using your data to better serve you?
-            </p>
-          </div>
+          <p className="text-[32px] font-semibold text-[#1C1C1C]">
+            Before you Proceed
+          </p>
 
-          <div className="w-full max-w-[400px] flex items-center justify-center gap-3">
-            <button
-              onClick={handleConsent}
-              className="w-full bg-button text-white py-4 px-6 rounded-[10px] font-medium text-[16px] hover:bg-[#1B7700] transition-all duration-200"
-            >
-              Yes, proceed
-            </button>
-            <button
-              onClick={handleConsent}
-              className="w-full py-4 px-6 rounded-[10px] border-2 border-[#FF383C] text-[#FF383C] font-medium text-[16px] hover:bg-red-50 transition-all duration-200"
-            >
-              No, cancel
-            </button>
-          </div>
+          <p className="text-[#1C1C1CBF] text-[18px] text-center">
+            Do you consent to us using your data to better serve you?
+          </p>
+
+          <button
+            onClick={handleModalProceed}
+            className="w-full bg-button text-white py-4 rounded-[10px]"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Please wait...' : 'Yes, proceed'}
+          </button>
         </div>
       </Modal>
     </>

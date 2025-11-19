@@ -133,9 +133,9 @@ const GraduateDashboard = () => {
   };
 
   return (
-    <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
+    <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
       {error && (
-        <div className="w-full rounded-[12px] bg-red-50 border border-red-200 p-[16px]">
+        <div className="w-full  rounded-[12px] bg-red-50 border  border-red-200 p-[16px]">
           <p className="text-[14px] text-red-600">{error}</p>
         </div>
       )}
@@ -146,6 +146,7 @@ const GraduateDashboard = () => {
 
       {!loading && (
         <>
+        
           <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
             <p className="font-medium text-[22px] text-[#1C1C1C] mt-4">
               Available Opportunities

@@ -30,6 +30,7 @@ import {
   SkillAssessment,
 } from './index';
 
+
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -146,6 +147,7 @@ function App() {
             }
           />
           <Route path="/company/onboarding" element={<CompanyOnboarding />} />
+        
 
           <Route
             path="/candidates"

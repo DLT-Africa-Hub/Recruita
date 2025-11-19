@@ -905,6 +905,79 @@ export const googleSignIn = async (
   }
 };
 
+export const googleAuthCode = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { code, role } = req.body;
+    
+    if (typeof code !== 'string' || !code.trim()) {
+      res.status(400).json({ message: 'Authorization code is required' });
+      return;
+    }
+
+    // For @react-oauth/google auth-code flow, we need to use a special client
+    // that doesn't require redirect_uri because it's handled client-side
+    const authCodeClient = new OAuth2Client({
+      clientId: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      // Don't set redirectUri - the code was already issued with 'postmessage' as redirect_uri
+    });
+
+    // Exchange code for tokens (specify redirect_uri as 'postmessage' for client-side flow)
+    const { tokens } = await authCodeClient.getToken({
+      code,
+      redirect_uri: 'postmessage', // This is the magic value for @react-oauth/google
+    });
+    
+    if (!tokens.id_token) {
+      res.status(400).json({ message: 'Missing id_token from Google' });
+      return;
+    }
+
+    // Verify the ID token
+    const ticket = await googleClientForVerify.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: GOOGLE_CLIENT_ID || undefined,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      res.status(400).json({ message: 'Invalid Google token payload' });
+      return;
+    }
+
+    const profile: GoogleProfile = {
+      email: payload.email,
+      emailVerified: !!payload.email_verified,
+      name: payload.name,
+      picture: payload.picture,
+      givenName: payload.given_name,
+      familyName: payload.family_name,
+    };
+
+    // Find or create user
+    const user = await findOrCreateUserFromGoogle(profile, role);
+
+    // Create session
+    const { session, refreshToken } = await createSession({
+      userId: user._id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+
+    await invalidateExistingTokens(user._id, TOKEN_TYPES.EMAIL_VERIFICATION);
+
+    res.json(
+      buildAuthPayload(user, session, refreshToken, 'Signed in with Google')
+    );
+  } catch (error) {
+    console.error('Google auth-code error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 
 export const getGoogleAuthUrl = async (
   _req: Request,

@@ -1,4 +1,3 @@
-// src/components/GoogleLoginButton.tsx
 import React from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
@@ -7,42 +6,14 @@ import { FcGoogle } from 'react-icons/fc';
 type Props = {
   onSuccess: (data: any) => void;
   onError?: (error: any) => void;
+  role?: 'graduate' | 'company' | 'admin';
+  login:any
 };
 
-export const GoogleLoginButton: React.FC<Props> = ({ onSuccess, onError }) => {
-  const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        // tokenResponse has access_token. We need id_token
-        // Use Google API to get id_token
-        const res = await axios.get(
-          'https://www.googleapis.com/oauth2/v3/userinfo',
-          {
-            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-          }
-        );
-
-        const userInfo = res.data; // contains email, name, picture
-        // Backend expects { idToken } from Google Identity
-        const backendRes = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/v1/auth/google`,
-          {
-            idToken: tokenResponse.credential || tokenResponse.access_token, // if id_token available
-            role: 'graduate', // optional
-          }
-        );
-
-        onSuccess(backendRes.data);
-      } catch (error: any) {
-        console.error('Google login error', error);
-        if (onError) onError(error);
-      }
-    },
-    onError: (error) => {
-      console.error('Google login failed', error);
-      if (onError) onError?.(error);
-    },
-  });
+export const GoogleLoginButton: React.FC<Props> = ({ 
+  login
+}) => {
+ 
 
   return (
     <button
