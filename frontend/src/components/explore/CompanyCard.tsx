@@ -18,33 +18,33 @@ interface CompanyCardProps {
   company: Company;
   buttonText?: string;
   onButtonClick?: () => void;
+  onPreviewClick?: (companyId: number) => void;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({
-  company,
-  buttonText = 'Preview',
-  onButtonClick,
+const CompanyCard: React.FC<CompanyCardProps> = ({ 
+  company, 
+  buttonText = "Preview",
+  onPreviewClick,
 }) => {
+
   const navigate = useNavigate();
 
   const handleButtonClick = (companyId: number, buttonText: string) => {
-    if (onButtonClick) {
-      // Use the provided callback if available
-      onButtonClick();
-      return;
+    if(buttonText === "Preview"){
+      // Use modal callback if provided, otherwise navigate
+      if (onPreviewClick) {
+        onPreviewClick(companyId);
+      } else {
+        navigate(`/explore-preview/${companyId}`);
+      }
     }
-
-    // Fallback to default navigation
-    if (buttonText === 'Preview') {
-      navigate(`/explore-preview/${companyId}`);
-    }
-    if (buttonText === 'Get in Touch') {
+    if(buttonText === "Get in Touch"){
       navigate(`/contactCompany/${companyId}`);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-between gap-[16px] max-w-[400px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white">
+    <div className="flex flex-col items-center justify-between gap-[16px] max-w-[400px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group">
       <div className="w-full h-[232px] relative">
         <img
           src={company.image}
@@ -64,7 +64,8 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             {company.role}
           </p>
         </div>
-        <div className="flex items-center  h-[49px]  bg-fade text-[#1C1C1CBF] text-[16px]  py-[15px] px-6 rounded-[70px]">
+        <div className="flex items-center h-[49px] bg-gradient-to-r from-button/10 to-button/5 border border-button/20 text-[#1C1C1C] text-[16px] font-semibold py-[15px] px-6 rounded-[70px] shadow-sm">
+          <span className="text-button mr-1">●</span>
           {company.match}% match
         </div>
       </div>
@@ -86,7 +87,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
           )
         }
-        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#A9B9D3]"
+        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#176300] hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg"
       >
         <CiMail
           className={`text-[24px] ${buttonText === 'Preview' && 'hidden'}`}

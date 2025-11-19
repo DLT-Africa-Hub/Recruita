@@ -6,4 +6,5 @@ export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as Textarea } from './Textarea';
 export { default as Congratulations } from './Congratulations';
 export { default as SearchBar } from './SearchBar';
+export { default as JobPreviewModal } from './JobPreviewModal';
 

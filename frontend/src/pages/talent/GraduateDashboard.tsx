@@ -1,9 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import { graduateApi } from '../../api/graduate';
-import { LoadingSpinner } from '../../index';
+import { LoadingSpinner, JobPreviewModal } from '../../index';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -31,7 +30,9 @@ interface Match {
 }
 
 const GraduateDashboard = () => {
-  const navigate = useNavigate();
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedMatchScore, setSelectedMatchScore] = useState<number | undefined>(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const {
     data: matchesData,
@@ -118,6 +119,13 @@ const GraduateDashboard = () => {
     );
   }, [queryError]);
 
+  // Get selected job data from matches
+  const selectedJobData = useMemo(() => {
+    if (!selectedJobId || !matchesData) return null;
+    const match = matchesData.find((m: Match) => m.job?.id === selectedJobId);
+    return match?.job || null;
+  }, [selectedJobId, matchesData]);
+
   const handleButtonClick = (
     company: Company & { jobId?: string },
     buttonText: string
@@ -125,10 +133,34 @@ const GraduateDashboard = () => {
     const jobId = (company as Company & { jobId: string }).jobId;
     if (jobId) {
       if (buttonText === 'Preview') {
-        navigate(`/explore-preview/${jobId}`);
+        // Find the match to get the score
+        const match = matchesData?.find((m: Match) => m.job?.id === jobId);
+        setSelectedMatchScore(match?.score);
+        setSelectedJobId(jobId);
+        setIsModalOpen(true);
       } else if (buttonText === 'Get in Touch') {
-        navigate(`/contactCompany/${jobId}`);
+        // TODO: Handle contact action
+        console.log('Get in Touch clicked for job:', jobId);
       }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedJobId(null);
+    setSelectedMatchScore(undefined);
+  };
+
+  const handleChat = () => {
+    // TODO: Navigate to chat
+    console.log('Chat clicked for job:', selectedJobId);
+  };
+
+  const handleApply = () => {
+    // TODO: Handle application
+    if (selectedJobId) {
+      console.log('Apply clicked for job:', selectedJobId);
+      // You can call graduateApi.applyToJob(selectedJobId) here
     }
   };
 
@@ -217,6 +249,16 @@ const GraduateDashboard = () => {
           </div>
         </>
       )}
+
+      <JobPreviewModal
+        isOpen={isModalOpen}
+        jobId={selectedJobId}
+        jobData={selectedJobData}
+        matchScore={selectedMatchScore}
+        onClose={handleCloseModal}
+        onChat={handleChat}
+        onApply={handleApply}
+      />
     </div>
   );
 };

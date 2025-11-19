@@ -25,3 +25,4 @@ export { default as GraduateOnboarding } from './pages/talent/GraduateOnboarding
 export { default as SkillAssessment } from './pages/talent/SkillAssessment';
 export { default as LoadingSpinner } from './components/ui/LoadingSpinner';
 export { default as SearchBar } from './components/ui/SearchBar';
+export { default as JobPreviewModal } from './components/ui/JobPreviewModal';
