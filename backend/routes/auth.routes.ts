@@ -11,6 +11,11 @@ import {
   verifyEmail,
   requestPasswordReset,
   resetPassword,
+  changePassword,
+  googleSignIn,
+  getGoogleAuthUrl,
+  googleOAuthCallback,
+  googleAuthCode,
 } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validateRequest } from '../middleware/validation.middleware';
@@ -21,6 +26,7 @@ import {
   requestEmailVerificationSchema,
   requestPasswordResetSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from '../validation/auth.validation';
 
 const router = Router();
@@ -59,5 +65,16 @@ router.post(
   validateRequest(resetPasswordSchema),
   resetPassword
 );
+router.post(
+  '/change-password',
+  authenticate,
+  validateRequest(changePasswordSchema),
+  changePassword
+);
+
+router.post('/google/authcode', googleAuthCode); 
+router.post('/google', googleSignIn); 
+router.get('/google/url', getGoogleAuthUrl); 
+router.get('/google/callback', googleOAuthCallback); 
 
 export default router;

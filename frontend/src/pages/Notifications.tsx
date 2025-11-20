@@ -11,29 +11,16 @@ import {
 } from '../utils/job.utils';
 import { LoadingSpinner } from '../index';
 import { SearchBar } from '../components/ui';
-
-interface Company {
-  name: string;
-  image: string;
-}
-
-interface NotificationItem {
-  id: string;
-  type: string;
-  title: string;
-  description: string;
-  company: Company;
-  date: Date;
-  read: boolean;
-  relatedId?: string | null;
-  relatedType?: string | null;
-}
+import NotificationDetailsModal from '../components/notifications/NotificationDetailsModal';
+import { NotificationItem } from '../types/notification';
 
 const Notifications: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
+  const [selectedNotification, setSelectedNotification] = useState<NotificationItem | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const {
     data: notificationsData,
@@ -63,7 +50,11 @@ const Notifications: React.FC = () => {
     if (!notificationsData) return [];
 
     return notificationsData.map((notif: any): NotificationItem => {
-      const date = formatNotificationDate(notif.createdAt);
+      const createdAt =
+        typeof notif.createdAt === 'string'
+          ? new Date(notif.createdAt)
+          : new Date();
+      const displayDate = formatNotificationDate(createdAt);
       const companyName = getCompanyName(notif, user?.role);
 
       return {
@@ -75,7 +66,8 @@ const Notifications: React.FC = () => {
           name: companyName,
           image: DEFAULT_COMPANY_IMAGE,
         },
-        date,
+        createdAt,
+        displayDate,
         read: notif.read || false,
         relatedId: notif.relatedId,
         relatedType: notif.relatedType,
@@ -106,7 +98,7 @@ const Notifications: React.FC = () => {
     const olderList: NotificationItem[] = [];
 
     filtered.forEach((notif: NotificationItem) => {
-      const notifDate = new Date(notif.date);
+      const notifDate = new Date(notif.createdAt);
       notifDate.setHours(0, 0, 0, 0);
 
       if (notifDate.getTime() === today.getTime()) {
@@ -121,38 +113,61 @@ const Notifications: React.FC = () => {
     return { today: todayList, yesterday: yesterdayList, older: olderList };
   }, [filtered]);
 
-  const openNotification = useCallback(
+  const handleNotificationAction = useCallback(
     (notification: NotificationItem) => {
-      if (!notification.read) {
-        markAsReadMutation.mutate(notification.id);
-      }
-
       if (user?.role === 'graduate') {
-        if (notification.type === 'job' && notification.relatedId) {
-          navigate(`/company-preview/${notification.relatedId}`);
-        } else if (notification.type === 'match' && notification.relatedId) {
-          navigate(`/explore-preview/${notification.relatedId}`);
+        if (notification.relatedType === 'job' && notification.relatedId) {
+          navigate(`/explore?preview=${notification.relatedId}`);
+        } else if (notification.relatedType === 'match' && notification.relatedId) {
+          // For match notifications, navigate to explore with the match ID
+          navigate(`/explore?match=${notification.relatedId}`);
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
         } else if (
-          notification.type === 'application' &&
+          notification.relatedType === 'application' &&
           notification.relatedId
         ) {
           navigate(`/applications`);
+        } else if (notification.type === 'match' && notification.relatedId) {
+          // Fallback for match type
+          navigate(`/explore?match=${notification.relatedId}`);
+        } else if (notification.type === 'application' && notification.relatedId) {
+          navigate(`/applications`);
         }
       } else if (user?.role === 'company') {
-        if (notification.type === 'application' && notification.relatedId) {
+        if (notification.relatedType === 'application' && notification.relatedId) {
           navigate(`/candidate-preview/${notification.relatedId}`);
+        } else if (notification.type === 'application' && notification.relatedId) {
+          navigate(`/candidate-preview/${notification.relatedId}`);
+        } else if (notification.relatedType === 'match' && notification.relatedId) {
+          navigate(`/candidates`);
         } else if (notification.type === 'match' && notification.relatedId) {
           navigate(`/candidates`);
         } else if (notification.type === 'message' && notification.relatedId) {
           navigate(`/messages/${notification.relatedId}`);
-        } else if (notification.type === 'job' && notification.relatedId) {
+        } else if (notification.relatedType === 'job' && notification.relatedId) {
+          navigate(`/jobs`);
+        } else if (notification.type === 'job_alert' && notification.relatedId) {
+          navigate(`/jobs`);
+        } else if (notification.type === 'system' && notification.relatedType === 'job' && notification.relatedId) {
           navigate(`/jobs`);
         }
       }
+      setIsDetailsOpen(false);
+      setSelectedNotification(null);
     },
-    [navigate, user?.role, markAsReadMutation]
+    [navigate, user?.role]
+  );
+
+  const handleNotificationClick = useCallback(
+    (notification: NotificationItem) => {
+      if (!notification.read) {
+        markAsReadMutation.mutate(notification.id);
+      }
+      setSelectedNotification(notification);
+      setIsDetailsOpen(true);
+    },
+    [markAsReadMutation]
   );
 
   const renderNotification = useCallback(
@@ -160,7 +175,7 @@ const Notifications: React.FC = () => {
       return (
         <button
           key={n.id}
-          onClick={() => openNotification(n)}
+          onClick={() => handleNotificationClick(n)}
           className="w-full text-left py-4 px-2 flex items-center border-b border-fade justify-between gap-4 hover:bg-[#00000008] cursor-pointer transition-colors"
         >
           <div className="flex items-center gap-4">
@@ -189,7 +204,7 @@ const Notifications: React.FC = () => {
         </button>
       );
     },
-    [openNotification]
+    [handleNotificationClick]
   );
 
   const error = useMemo(() => {
@@ -273,6 +288,15 @@ const Notifications: React.FC = () => {
           )}
         </>
       )}
+      <NotificationDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedNotification(null);
+        }}
+        notification={selectedNotification}
+        onViewAction={handleNotificationAction}
+      />
     </div>
   );
 };

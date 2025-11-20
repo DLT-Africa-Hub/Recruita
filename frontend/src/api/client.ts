@@ -9,8 +9,19 @@ const api = axios.create({
     },
 });
 
+const getSessionToken = (): string | null => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    try {
+        return sessionStorage.getItem('token');
+    } catch {
+        return null;
+    }
+};
+
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
+    const token = getSessionToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,11 +39,19 @@ api.interceptors.response.use(
             // This prevents redirect loops during login flow
             const currentPath = window.location.pathname;
             if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                sessionStorage.removeItem('user');
                 window.location.href = '/login';
             }
         }
+        // Handle email verification required - don't redirect, let frontend handle with modals
+        // The modal will show on dashboard/assessment pages for unverified users
+        // if (error.response?.status === 403 && error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        //     const currentPath = window.location.pathname;
+        //     if (!currentPath.includes('/verify-email')) {
+        //         window.location.href = '/verify-email';
+        //     }
+        // }
         return Promise.reject(error);
     }
 );

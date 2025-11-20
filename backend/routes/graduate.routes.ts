@@ -18,15 +18,21 @@ import {
   applyToJob,
   getApplications,
   updateApplicationStatus,
+  getAvailableJobs,
 } from '../controllers/graduate.controller';
-import { authenticate, authorize } from '../middleware/auth.middleware';
+import {
+  authenticate,
+  authorize,
+  requireEmailVerification,
+} from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and graduate role
 router.use(authenticate);
 router.use(authorize('graduate'));
 
+// Routes that don't require email verification (onboarding and assessment)
 router.get('/profile', getProfile);
 router.post('/profile', createProfile);
 router.put('/profile', updateProfile);
@@ -44,6 +50,11 @@ router.delete('/profile/work-experiences/:experienceId', deleteWorkExperience);
 
 router.get('/assessment/questions', getAssessmentQuestions);
 router.post('/assessment', submitAssessment);
+
+// Routes that require email verification (job matching and applications)
+router.use(requireEmailVerification);
+
+router.get('/jobs', getAvailableJobs);
 router.get('/matches', getMatches);
 router.get('/matches/:matchId', getMatchById);
 router.post('/apply/:jobId', applyToJob);

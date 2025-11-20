@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Graduate from '../models/Graduate.model';
 import Job from '../models/Job.model';
 import Match from '../models/Match.model';
+import Company from '../models/Company.model';
 import { aiConfig } from '../config/secrets';
 import { AsyncTaskQueue } from '../utils/asyncQueue';
 import {
@@ -12,6 +13,7 @@ import {
   MatchJobMetadata,
   MatchOptions,
 } from './aiService';
+import { notifyGraduateMatchedToJob } from './notification.dispatcher';
 
 const matchQueue = new AsyncTaskQueue('ai-matching');
 
@@ -30,12 +32,16 @@ type LeanWorkExperience = {
   endDate?: Date;
 };
 
+type RankLetter = 'A' | 'B' | 'C' | 'D';
+
 type LeanGraduateEmbedding = {
   _id: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId;
   skills?: string[];
   education?: LeanGraduateEducation;
   workExperiences?: LeanWorkExperience[];
   updatedAt?: Date;
+  rank?: string;
   assessmentData?: {
     embedding?: unknown;
     attempts?: number;
@@ -49,6 +55,9 @@ type LeanJobEmbedding = {
   _id: mongoose.Types.ObjectId;
   status?: string;
   embedding?: unknown;
+  companyId?: mongoose.Types.ObjectId;
+  title?: string;
+  preferedRank?: string;
   requirements?: {
     skills?: string[];
     education?: string;
@@ -62,12 +71,74 @@ const toObjectId = (
 ): mongoose.Types.ObjectId =>
   typeof value === 'string' ? new mongoose.Types.ObjectId(value) : value;
 
+const normalizeId = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value instanceof mongoose.Types.ObjectId) {
+    return value.toHexString();
+  }
+  return null;
+};
+
 const isVector = (value: unknown): value is number[] =>
   Array.isArray(value) &&
   value.length > 0 &&
   value.every((item) => typeof item === 'number');
 
 const scoreToPercentage = (score: number): number => Math.round(score * 100);
+
+const VALID_RANKS: RankLetter[] = ['A', 'B', 'C', 'D'];
+
+const normalizeRankLetter = (value?: string | null): RankLetter | undefined => {
+  if (!value || typeof value !== 'string') {
+    return undefined;
+  }
+  const letter = value.trim().charAt(0).toUpperCase();
+  return VALID_RANKS.includes(letter as RankLetter)
+    ? (letter as RankLetter)
+    : undefined;
+};
+
+const parseRankPreference = (
+  preference?: string | null
+): Set<RankLetter> | null => {
+  if (!preference || typeof preference !== 'string') {
+    return null;
+  }
+
+  const parts = preference
+    .split(/(?:\band\b|,|\/)/gi)
+    .map((part) => normalizeRankLetter(part))
+    .filter((value): value is RankLetter => Boolean(value));
+
+  if (parts.length > 0) {
+    return new Set(parts);
+  }
+
+  const fallback = normalizeRankLetter(preference);
+  return fallback ? new Set([fallback]) : null;
+};
+
+const doesRankMeetPreference = (
+  graduateRank?: RankLetter,
+  preferedRank?: string | null
+): boolean => {
+  if (!preferedRank || preferedRank.trim().length === 0) {
+    return true;
+  }
+
+  if (!graduateRank) {
+    return false;
+  }
+
+  const allowed = parseRankPreference(preferedRank);
+  if (!allowed || allowed.size === 0) {
+    return true;
+  }
+
+  return allowed.has(graduateRank);
+};
 
 const sanitizeStringArray = (values?: unknown[]): string[] => {
   if (!Array.isArray(values)) {
@@ -236,7 +307,7 @@ export const queueGraduateMatching = (
   matchQueue.enqueue(async () => {
     const graduate = await Graduate.findById(id)
       .select(
-        '_id skills education workExperiences updatedAt assessmentData.embedding assessmentData.attempts assessmentData.questionSetVersion'
+        '_id userId skills education workExperiences updatedAt rank assessmentData.embedding assessmentData.attempts assessmentData.questionSetVersion'
       )
       .lean<LeanGraduateEmbedding>();
 
@@ -248,21 +319,27 @@ export const queueGraduateMatching = (
       status: 'active',
       embedding: { $exists: true, $type: 'array' },
     })
-      .select('_id embedding requirements updatedAt')
+      .select('_id embedding requirements updatedAt preferedRank')
       .limit(aiConfig.match.maxJobs)
       .lean<LeanJobEmbedding[]>();
 
-    const jobEmbeddings: MatchJobEmbedding[] = jobs
+    const graduateRank = normalizeRankLetter(graduate.rank);
+
+    const eligibleJobs = jobs.filter((job) =>
+      doesRankMeetPreference(graduateRank, job.preferedRank)
+    );
+
+    if (eligibleJobs.length === 0) {
+      return;
+    }
+
+    const jobEmbeddings: MatchJobEmbedding[] = eligibleJobs
       .filter((job) => isVector(job.embedding))
       .map((job) => ({
         id: job._id.toHexString(),
         embedding: job.embedding as number[],
         metadata: buildJobMetadata(job),
       }));
-
-    if (jobEmbeddings.length === 0) {
-      return;
-    }
 
     try {
       const graduateMetadata = buildGraduateMetadata(graduate);
@@ -299,14 +376,20 @@ export const queueGraduateMatching = (
         return;
       }
 
-      await Promise.all(
+      const matchResults = await Promise.all(
         matches.matches
           .filter((match) => mongoose.Types.ObjectId.isValid(match.id))
-          .map((match) =>
-            Match.findOneAndUpdate(
+          .map(async (match) => {
+            const jobId = new mongoose.Types.ObjectId(match.id);
+            const existingMatch = await Match.findOne({
+              graduateId: graduate._id,
+              jobId,
+            }).lean();
+
+            const updatedMatch = await Match.findOneAndUpdate(
               {
                 graduateId: graduate._id,
-                jobId: new mongoose.Types.ObjectId(match.id),
+                jobId,
               },
               {
                 $set: {
@@ -320,9 +403,111 @@ export const queueGraduateMatching = (
                 upsert: true,
                 new: true,
               }
-            )
-          )
+            );
+
+            const normalizedMatchId = normalizeId(updatedMatch?._id);
+            const normalizedJobId = normalizeId(updatedMatch?.jobId);
+
+            return {
+              matchId: normalizedMatchId,
+              jobId: normalizedJobId,
+              isNew: !existingMatch,
+              score: match.score,
+            };
+          })
       );
+
+      const freshMatches = matchResults.filter(
+        ({ matchId, jobId, isNew }) =>
+          Boolean(matchId && jobId) && isNew && graduate.userId
+      );
+
+      if (freshMatches.length > 0) {
+        const jobIds = Array.from(
+          new Set(
+            freshMatches
+              .map(({ jobId }) => jobId)
+              .filter((value): value is string => Boolean(value))
+          )
+        ).map((id) => new mongoose.Types.ObjectId(id));
+
+        const jobs = await Job.find({ _id: { $in: jobIds } })
+          .select('title companyId')
+          .lean();
+        const jobMap = new Map(
+          jobs
+            .map((job) => {
+              const id = normalizeId(job._id);
+              return id ? ([id, job] as const) : null;
+            })
+            .filter(
+              (
+                entry
+              ): entry is [string, (typeof jobs)[number]] => entry !== null
+            )
+        );
+
+        const uniqueCompanyIdStrings = [
+          ...new Set(
+            jobs
+              .map((job) => normalizeId(job.companyId))
+              .filter((value): value is string => Boolean(value))
+          ),
+        ];
+        const companyIds = uniqueCompanyIdStrings.map(
+          (id) => new mongoose.Types.ObjectId(id)
+        );
+
+        const companies = await Company.find({ _id: { $in: companyIds } })
+          .select('companyName')
+          .lean();
+        const companyMap = new Map(
+          companies
+            .map((company) => {
+              const id = normalizeId(company._id);
+              return id ? ([id, company] as const) : null;
+            })
+            .filter(
+              (
+                entry
+              ): entry is [string, (typeof companies)[number]] => entry !== null
+            )
+        );
+
+        for (const { matchId, jobId, score } of freshMatches) {
+          if (!matchId || !jobId) {
+            continue;
+          }
+          const jobKey = jobId;
+          const job = jobMap.get(jobKey);
+          if (!job) {
+            continue;
+          }
+
+          const companyKey = normalizeId(job.companyId);
+          if (!companyKey) {
+            continue;
+          }
+          const company = companyMap.get(companyKey);
+          if (!company || !graduate.userId) {
+            continue;
+          }
+
+          try {
+            await notifyGraduateMatchedToJob({
+              matchId,
+              jobId: jobKey,
+              jobTitle: job.title,
+              companyId: companyKey,
+              companyName: company.companyName,
+              matchScore: score,
+              graduateId: graduate.userId.toString(),
+            });
+          } catch (error) {
+            console.error('Failed to send match notification:', error);
+          }
+        }
+      }
     } catch (error) {
       if (error instanceof AIServiceError) {
         console.error('AI matching error (graduate-driven):', error.message, {
@@ -342,7 +527,7 @@ export const queueJobMatching = (
   const id = toObjectId(jobId);
   matchQueue.enqueue(async () => {
     const job = await Job.findById(id)
-      .select('_id status embedding requirements updatedAt')
+      .select('_id status embedding requirements updatedAt companyId title')
       .lean<LeanJobEmbedding>();
 
     if (!job || job.status !== 'active' || !isVector(job.embedding)) {
@@ -353,7 +538,7 @@ export const queueJobMatching = (
       'assessmentData.embedding.0': { $exists: true },
     })
       .select(
-        '_id skills education workExperiences updatedAt assessmentData.embedding'
+        '_id userId skills education workExperiences updatedAt assessmentData.embedding'
       )
       .limit(aiConfig.match.maxGraduates)
       .lean<LeanGraduateEmbedding[]>();
@@ -389,7 +574,12 @@ export const queueJobMatching = (
           continue;
         }
 
-        await Match.findOneAndUpdate(
+        const existingMatch = await Match.findOne({
+          graduateId: graduate._id,
+          jobId: job._id,
+        }).lean();
+
+        const updatedMatch = await Match.findOneAndUpdate(
           {
             graduateId: graduate._id,
             jobId: job._id,
@@ -407,6 +597,36 @@ export const queueJobMatching = (
             new: true,
           }
         );
+
+        const normalizedMatchId = normalizeId(updatedMatch?._id);
+        const normalizedJobId = normalizeId(updatedMatch?.jobId);
+
+        // Notify graduate about new match
+        if (
+          !existingMatch &&
+          normalizedMatchId &&
+          normalizedJobId &&
+          graduate.userId
+        ) {
+          try {
+            const company = await Company.findById(job.companyId)
+              .select('companyName')
+              .lean();
+            if (company) {
+              await notifyGraduateMatchedToJob({
+                matchId: normalizedMatchId,
+                jobId: normalizedJobId,
+                jobTitle: job.title || 'Job',
+                companyId: normalizeId(job.companyId) ?? '',
+                companyName: company.companyName,
+                matchScore: match.score,
+                graduateId: graduate.userId.toString(),
+              });
+            }
+          } catch (error) {
+            console.error('Failed to send match notification:', error);
+          }
+        }
       } catch (error) {
         if (error instanceof AIServiceError) {
           console.error('AI matching error (job-driven):', error.message, {

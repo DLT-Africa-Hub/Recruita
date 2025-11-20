@@ -1,5 +1,7 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 import {
   Home,
   GraduateDashboard,
@@ -8,8 +10,6 @@ import {
   CompanyProfile,
   CompanyCandidates,
   CompanyJobs,
-  CompanyJobForm,
-  JobRankSelector,
   CompanyOnboarding,
   AdminDashboard,
   ProtectedRoute,
@@ -25,6 +25,10 @@ import {
   Notifications,
   GraduateOnboarding,
   SkillAssessment,
+  ForgotPassword,
+  ResetPassword,
+  EmailVerification,
+  EmailVerificationGuard,
 } from './index';
 
 // Redirect component for old explore-preview route
@@ -35,21 +39,27 @@ const ExplorePreviewRedirect = () => {
 
 function App() {
   return (
-    <AuthProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+       <AuthProvider>
       <div className="App">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<AuthPage mode="login" />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
           <Route
             path="/graduate/*"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateDashboard />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -57,11 +67,13 @@ function App() {
             path="/graduate/profile"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateProfile />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -74,7 +86,9 @@ function App() {
             path="/company/*"
             element={
               <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
                 <CompanyDashboard />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -82,9 +96,11 @@ function App() {
             path="/company/profile"
             element={
               <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
                 <Layout>
                   <CompanyProfile />
                 </Layout>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -92,7 +108,9 @@ function App() {
             path="/admin/*"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
+                <EmailVerificationGuard>
                 <AdminDashboard />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -103,7 +121,9 @@ function App() {
             path="/assessment"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <SkillAssessment />
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -119,11 +139,13 @@ function App() {
             path="/explore"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <ExploreCompany />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -131,11 +153,13 @@ function App() {
             path="/applications"
             element={
               <ProtectedRoute allowedRoles={['graduate']}>
+                <EmailVerificationGuard>
                 <AssessmentGuard>
                   <Layout>
                     <GraduateApplications />
                   </Layout>
                 </AssessmentGuard>
+                </EmailVerificationGuard>
               </ProtectedRoute>
             }
           />
@@ -148,6 +172,7 @@ function App() {
             }
           />
           <Route path="/company/onboarding" element={<CompanyOnboarding />} />
+        
 
           <Route
             path="/candidates"
@@ -192,28 +217,14 @@ function App() {
             }
           />
           <Route
-            path="/jobs/new"
-            element={
-              <Layout>
-                <CompanyJobForm />
-              </Layout>
-            }
-          />
-          <Route
-            path="/jobs/rank-selector"
-            element={
-              <Layout>
-                <JobRankSelector />
-              </Layout>
-            }
-          />
-          <Route
             path="/explore-preview/:id"
             element={<ExplorePreviewRedirect />}
           />
         </Routes>
       </div>
     </AuthProvider>
+    </GoogleOAuthProvider>
+   
   );
 }
 
