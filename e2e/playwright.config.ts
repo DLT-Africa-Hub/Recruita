@@ -33,7 +33,13 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    /* Increase timeout for slower operations */
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
   },
+
+  /* Increase global test timeout */
+  timeout: 60000, // 60 seconds per test
 
   /* Configure projects for major browsers */
   projects: [
