@@ -249,7 +249,6 @@ export const createProfile = async (
       summary
     } = req.body;
 
-    console.log(req.body)
 
     if (
       typeof firstName !== 'string' ||
@@ -418,7 +417,7 @@ export const createProfile = async (
         : [],
     });
 
-    console.log(graduate)
+ 
 
     res.status(201).json({
       message: 'Profile created successfully',
