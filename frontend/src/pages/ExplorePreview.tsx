@@ -3,6 +3,7 @@ import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import { companies } from '../data/companies';
+import { RichTextContent } from '../components/ui';
 
 const ExplorePreview = () => {
   const { id } = useParams();
@@ -86,9 +87,7 @@ const ExplorePreview = () => {
           <p className="font-semibold text-[20px] text-[#1C1C1C]">
             Job Description
           </p>
-          <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
-            {jobDesc}
-          </p>
+          <RichTextContent html={jobDesc} />
         </div>
 
         {/* Skills */}

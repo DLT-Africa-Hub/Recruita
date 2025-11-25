@@ -5,6 +5,7 @@ import { CompanyJob } from '../../data/jobs';
 import { jobStatusLabels } from '../../utils/job.utils';
 import { Badge, ImageWithFallback } from '../ui';
 import type { BadgeVariant } from '../ui/Badge';
+import { getPlainTextFromRichText } from '../../utils/richText';
 
 interface JobCardProps {
   job: CompanyJob & {
@@ -28,11 +29,11 @@ const JobCard: React.FC<JobCardProps> = ({ job, onViewMatches }) => {
     onViewMatches?.(job);
   };
 
-  // Truncate description to 120 characters
+  const plainDescription = getPlainTextFromRichText(job.description || '');
   const truncatedDescription =
-    job.description && job.description.length > 150
-      ? `${job.description.substring(0, 150)}...`
-      : job.description || 'No description provided.';
+    plainDescription && plainDescription.length > 150
+      ? `${plainDescription.substring(0, 150)}...`
+      : plainDescription || 'No description provided.';
 
   return (
     <article className="group flex max-w-[560px] flex-col gap-[18px] rounded-[20px] border border-fade bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)] transition-all hover:shadow-[0_24px_48px_-24px_rgba(47,81,43,0.18)] hover:border-button/20">

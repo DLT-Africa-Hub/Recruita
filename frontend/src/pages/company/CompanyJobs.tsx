@@ -15,6 +15,7 @@ import {
 import { LoadingSpinner } from '../../index';
 import JobCreationModal from '../../components/company/JobCreationModal';
 import { EmptyState } from '../../components/ui';
+import { sanitizeRichText } from '../../utils/richText';
 
 const CompanyJobs = () => {
   const queryClient = useQueryClient();
@@ -37,11 +38,13 @@ const CompanyJobs = () => {
       const duration = formatJobType(job.jobType || 'Full time');
       const salaryType = getSalaryType(job.jobType || 'Full time');
 
+      const sanitizedDescription = sanitizeRichText(job.description || '');
+
       return {
         id: job._id || job.id,
         title: job.title || 'Untitled Job',
         location: job.location || 'Location not specified',
-        description: job.description || 'No description provided.',
+        description: sanitizedDescription,
         duration,
         salaryRange,
         salaryType,
@@ -51,6 +54,7 @@ const CompanyJobs = () => {
         skills: job.requirements?.skills || [],
         preferedRank: job.preferedRank,
         createdAt: job.createdAt,
+        additionalRequirements: job.additionalRequirements || [],
       };
     },
     []
@@ -93,7 +97,7 @@ const CompanyJobs = () => {
   };
 
   const handleViewMatches = (job: CompanyJob) => {
-    setSelectedJobId(job.id as string);
+    setSelectedJobId(job.id ? String(job.id) : null);
     setSelectedJobTitle(job.title);
     setIsMatchesModalOpen(true);
   };

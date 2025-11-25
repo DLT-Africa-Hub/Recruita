@@ -8,6 +8,13 @@ export interface IJob extends Document {
   requirements: {
     skills: string[];
   };
+  additionalRequirements?: {
+    _id?: mongoose.Types.ObjectId;
+    label: string;
+    type: 'text' | 'url' | 'file';
+    isRequired: boolean;
+    helperText?: string;
+  }[];
   location?: string;
   salary?: {
     min: number;
@@ -67,6 +74,30 @@ const JobSchema: Schema = new Schema(
         default: 'USD',
       },
     },
+    additionalRequirements: [
+      {
+        label: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 150,
+        },
+        type: {
+          type: String,
+          enum: ['text', 'url', 'file'],
+          required: true,
+        },
+        isRequired: {
+          type: Boolean,
+          default: true,
+        },
+        helperText: {
+          type: String,
+          trim: true,
+          maxlength: 300,
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ['active', 'closed', 'draft'],

@@ -21,4 +21,6 @@ export { default as FormField } from './FormField';
 export { default as SectionHeader } from './SectionHeader';
 export { default as ImageWithFallback } from './ImageWithFallback';
 export { default as ActionButtonGroup } from './ActionButtonGroup';
+export { default as RichTextEditor } from './RichTextEditor';
+export { default as RichTextContent } from './RichTextContent';
 

@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Input, Select, Textarea, Button } from '../../../../components/ui';
+import { Input, Select, Button, RichTextEditor } from '../../../../components/ui';
 import { skills } from '../../../../utils/material.utils';
+import { richTextHasContent, sanitizeRichText } from '../../../../utils/richText';
 import { HiChevronDown } from 'react-icons/hi2';
+import AdditionalRequirementsEditor, {
+  AdditionalRequirementDraft,
+} from '../../../../components/company/AdditionalRequirementsEditor';
+import { AdditionalRequirement } from '../../../../types/jobs';
 
 interface JobFormData {
   title: string;
@@ -12,11 +17,39 @@ interface JobFormData {
   salaryMax: string;
   description: string;
   skills: string[]; // Changed to array
+  additionalRequirements: AdditionalRequirementDraft[];
 }
 
 interface LocationState {
   formData?: JobFormData;
 }
+
+const createRequirementClientId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const normalizeRequirementDrafts = (
+  requirements?: (Partial<AdditionalRequirementDraft> & Partial<AdditionalRequirement>)[]
+): AdditionalRequirementDraft[] => {
+  if (!Array.isArray(requirements)) {
+    return [];
+  }
+
+  return requirements.map((requirement) => ({
+    clientId:
+      typeof requirement?.clientId === 'string'
+        ? requirement.clientId
+        : createRequirementClientId(),
+    label: requirement?.label || '',
+    type: (requirement?.type as AdditionalRequirementDraft['type']) || 'text',
+    isRequired:
+      typeof requirement?.isRequired === 'boolean' ? requirement.isRequired : true,
+    helperText: requirement?.helperText || '',
+  }));
+};
 
 const CompanyJobForm = () => {
   const navigate = useNavigate();
@@ -29,6 +62,7 @@ const CompanyJobForm = () => {
     salaryMax: '',
     description: '',
     skills: [],
+    additionalRequirements: [],
   });
   const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
   const skillsDropdownRef = useRef<HTMLDivElement>(null);
@@ -44,6 +78,9 @@ const CompanyJobForm = () => {
           .map((skill: string) => skill.trim())
           .filter((skill: string) => skill.length > 0);
       }
+      restoredFormData.additionalRequirements = normalizeRequirementDrafts(
+        restoredFormData.additionalRequirements
+      );
       setFormData(restoredFormData);
     }
   }, [location.state]);
@@ -69,12 +106,26 @@ const CompanyJobForm = () => {
   }, [isSkillsDropdownOpen]);
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
+    }));
+  };
+
+  const handleAdditionalRequirementsChange = (
+    requirements: AdditionalRequirementDraft[]
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      additionalRequirements: requirements,
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -85,7 +136,7 @@ const CompanyJobForm = () => {
       !formData.title ||
       !formData.jobType ||
       !formData.location ||
-      !formData.description ||
+      !richTextHasContent(formData.description) ||
       !formData.skills ||
       formData.skills.length === 0
     ) {
@@ -108,10 +159,18 @@ const CompanyJobForm = () => {
         | 'Contract'
         | 'Internship',
       location: formData.location,
-      description: formData.description,
+      description: sanitizeRichText(formData.description),
       requirements: {
         skills: formData.skills,
       },
+      additionalRequirements: formData.additionalRequirements
+        .filter((requirement) => requirement.label.trim().length > 0)
+        .map<AdditionalRequirement>((requirement) => ({
+          label: requirement.label.trim(),
+          type: requirement.type,
+          isRequired: requirement.isRequired,
+          helperText: requirement.helperText?.trim() || undefined,
+        })),
       salary:
         salaryMin || salaryMax
           ? {
@@ -331,14 +390,17 @@ const CompanyJobForm = () => {
           
         </div>
 
-        <Textarea
+        <RichTextEditor
           label="Job Description"
-          name="description"
-          rows={4}
-          placeholder="Describe the role, responsibilities, and requirements"
           value={formData.description}
-          onChange={handleChange}
+          onChange={handleDescriptionChange}
+          placeholder="Describe the role, responsibilities, and requirements"
           required
+        />
+
+        <AdditionalRequirementsEditor
+          requirements={formData.additionalRequirements}
+          onChange={handleAdditionalRequirementsChange}
         />
 
         <div className="mt-[12px] flex justify-center">

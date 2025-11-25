@@ -18,6 +18,7 @@ import {
   validateSkills,
   validateNumericRange,
   deleteUndefined,
+  validateAdditionalRequirements,
 } from '../utils/validation.utils';
 
 import '../middleware/auth.middleware';
@@ -204,8 +205,17 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
-    req.body;
+  const {
+    title,
+    jobType,
+    preferedRank,
+    description,
+    requirements,
+    location,
+    salary,
+    status,
+    additionalRequirements,
+  } = req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
   if (!validatedTitle) return;
@@ -248,12 +258,24 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     : null;
   if (status && validatedStatus === null) return;
 
+  const validatedAdditionalRequirements = validateAdditionalRequirements(additionalRequirements, res);
+  if (validatedAdditionalRequirements === null) {
+    return;
+  }
+
   const jobText = `
     Title: ${validatedTitle}
     Type: ${validatedJobType}
     Preferred Rank: ${validatedPreferedRank}
     Description: ${validatedDescription}
     Required Skills: ${validatedSkills.join(', ')}
+    Additional Requirements: ${
+      validatedAdditionalRequirements.length > 0
+        ? validatedAdditionalRequirements
+            .map((req) => `${req.label} (${req.type}${req.isRequired ? ', required' : ''})`)
+            .join('; ')
+        : 'None'
+    }
   `;
 
   // Generate embedding - required for AI matching
@@ -285,6 +307,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     requirements: {
       skills: validatedSkills,
     },
+    additionalRequirements: validatedAdditionalRequirements,
     embedding,
     ...deleteUndefined({
       location: validatedLocation,
@@ -484,8 +507,17 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
-    req.body;
+  const {
+    title,
+    jobType,
+    preferedRank,
+    description,
+    requirements,
+    location,
+    salary,
+    status,
+    additionalRequirements,
+  } = req.body;
   let needsEmbeddingUpdate = false;
 
   if (title !== undefined) {
@@ -535,6 +567,15 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     needsEmbeddingUpdate = true;
   }
 
+  if (additionalRequirements !== undefined) {
+    const validatedAdditionalRequirements = validateAdditionalRequirements(additionalRequirements, res);
+    if (validatedAdditionalRequirements === null) {
+      return;
+    }
+    job.additionalRequirements = validatedAdditionalRequirements;
+    needsEmbeddingUpdate = true;
+  }
+
   if (location !== undefined) {
     const validated = validateOptionalString(location, 'Location', res);
     if (validated === null && location !== null) return;
@@ -560,6 +601,15 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
       Preferred Rank: ${job.preferedRank}
       Description: ${job.description}
       Required Skills: ${job.requirements.skills.join(', ')}
+      Additional Requirements: ${
+        job.additionalRequirements && job.additionalRequirements.length > 0
+          ? job.additionalRequirements
+              .map(
+                (req) => `${req.label} (${req.type}${req.isRequired ? ', required' : ''})`
+              )
+              .join('; ')
+          : 'None'
+      }
     `;
 
     try {

@@ -17,6 +17,22 @@ type RequestObjectValue =
   | null
   | undefined;
 
+export const ADDITIONAL_REQUIREMENT_TYPES = ['text', 'url', 'file'] as const;
+
+type AdditionalRequirementInput = {
+  label?: RequestStringValue;
+  type?: RequestStringValue;
+  isRequired?: unknown;
+  helperText?: RequestStringValue;
+};
+
+export interface AdditionalRequirementOutput {
+  label: string;
+  type: (typeof ADDITIONAL_REQUIREMENT_TYPES)[number];
+  isRequired: boolean;
+  helperText?: string;
+}
+
 /**
  * Validate required string field
  */
@@ -261,6 +277,61 @@ export const validateSkills = (
   }
 
   return (skills as string[]).map((s: string) => s.trim());
+};
+
+export const validateAdditionalRequirements = (
+  requirements: RequestArrayValue,
+  res: Response
+): AdditionalRequirementOutput[] | null => {
+  if (requirements === undefined || requirements === null) {
+    return [];
+  }
+
+  if (!Array.isArray(requirements)) {
+    res.status(400).json({ message: 'Additional requirements must be an array' });
+    return null;
+  }
+
+  if (requirements.length > 10) {
+    res.status(400).json({ message: 'A maximum of 10 additional requirements is allowed' });
+    return null;
+  }
+
+  const sanitized: AdditionalRequirementOutput[] = [];
+
+  for (let index = 0; index < requirements.length; index += 1) {
+    const requirement = requirements[index] as AdditionalRequirementInput;
+
+    const label = requirement?.label;
+    if (typeof label !== 'string' || label.trim().length === 0) {
+      res
+        .status(400)
+        .json({ message: `Requirement #${index + 1} must include a non-empty label` });
+      return null;
+    }
+
+    const type = requirement?.type;
+    if (typeof type !== 'string' || !ADDITIONAL_REQUIREMENT_TYPES.includes(type as any)) {
+      res.status(400).json({
+        message: `Requirement "${label}" must specify a valid type (${ADDITIONAL_REQUIREMENT_TYPES.join(', ')})`,
+      });
+      return null;
+    }
+
+    const helperText =
+      typeof requirement?.helperText === 'string' && requirement.helperText.trim().length > 0
+        ? requirement.helperText.trim()
+        : undefined;
+
+    sanitized.push({
+      label: label.trim(),
+      type: type as (typeof ADDITIONAL_REQUIREMENT_TYPES)[number],
+      isRequired: typeof requirement?.isRequired === 'boolean' ? requirement.isRequired : true,
+      helperText,
+    });
+  }
+
+  return sanitized;
 };
 
 /**

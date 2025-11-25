@@ -1,5 +1,7 @@
 export type JobStatus = 'active' | 'paused' | 'closed';
 
+import { AdditionalRequirement } from '../types/jobs';
+
 export interface CompanyJob {
   id: number;
   title: string;
@@ -11,6 +13,7 @@ export interface CompanyJob {
   matchedCount: number;
   status: JobStatus;
   image: string;
+  additionalRequirements?: AdditionalRequirement[];
 }
 
 export const companyJobs: CompanyJob[] = [

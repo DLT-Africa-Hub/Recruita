@@ -8,7 +8,7 @@ import {
 import { useState } from 'react';
 import { Company } from './CompanyCard';
 import BaseModal from '../ui/BaseModal';
-import { ActionButtonGroup } from '../ui';
+import { ActionButtonGroup, RichTextContent } from '../ui';
 
 interface CompanyPreviewModalProps {
   isOpen: boolean;
@@ -30,7 +30,9 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   if (!company) return null;
 
   const jobDesc =
-    'We are seeking a talented Frontend Developer to join our dynamic team. You will be responsible for building and maintaining user-facing features using React and modern JavaScript. You will work closely with our design team to implement responsive, accessible, and performant web applications. The ideal candidate has experience with React, JavaScript, CSS, and HTML, and is passionate about creating exceptional user experiences. You will collaborate with backend developers to integrate APIs and ensure seamless data flow.';
+    company.description ||
+    company.jobDesc ||
+    'We are seeking a talented Frontend Developer to join our dynamic team. You will be responsible for building and maintaining user-facing features using React and modern JavaScript. You will work closely with our design team to implement responsive, accessible, and performant web applications. The ideal candidate has experience with React, JavaScript, CSS, and HTML, and is passionate about creating exceptional user experiences.';
 
   const skills = ['React', 'TypeScript', 'JavaScript'];
 
@@ -137,9 +139,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
             Job Description
           </p>
         </div>
-        <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-          {jobDesc}
-        </p>
+        <RichTextContent html={jobDesc} />
       </div>
 
       {/* Skills */}

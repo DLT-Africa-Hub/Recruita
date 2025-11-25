@@ -1,11 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import LoadingSpinner from './LoadingSpinner';
+import RichTextContent from './RichTextContent';
 import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../../utils/job.utils';
 import api from '../../api/client';
+import graduateApi from '../../api/graduate';
+import ApplyToJobModal from '../talent/ApplyToJobModal';
+import { AdditionalRequirement, AdditionalRequirementResponse } from '../../types/jobs';
 
 interface JobData {
   id: string;
@@ -22,6 +26,7 @@ interface JobData {
   requirements?: {
     skills?: string[];
   };
+  additionalRequirements?: AdditionalRequirement[];
 }
 
 interface JobPreviewModalProps {
@@ -33,6 +38,15 @@ interface JobPreviewModalProps {
   onChat?: () => void;
   onApply?: () => void;
 }
+
+const REQUIREMENT_TYPE_LABELS: Record<NonNullable<AdditionalRequirement['type']>, string> = {
+  text: 'Text response',
+  url: 'Link / URL',
+  file: 'File upload',
+};
+
+const getRequirementKey = (requirement: AdditionalRequirement, index: number) =>
+  requirement.id || requirement._id || `${requirement.label}-${index}`;
 
 const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   isOpen,
@@ -73,6 +87,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 
   // Use preloaded data if available, otherwise use fetched data
   const job = preloadedJobData || fetchedJobData;
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
+  const [applicationSuccess, setApplicationSuccess] = useState<string | null>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -97,6 +114,16 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setIsApplyModalOpen(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setApplicationSuccess(null);
+  }, [jobId]);
+
   if (!isOpen || !jobId) return null;
 
   const skills = job?.requirements?.skills || [];
@@ -108,12 +135,37 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
     onChat?.();
   };
 
-  const handleApply = () => {
-    onApply?.();
+  const handleApplyClick = () => {
+    if (!job?.id) {
+      return;
+    }
+    setIsApplyModalOpen(true);
+  };
+
+  const handleApplicationSubmit = async (payload: {
+    coverLetter: string;
+    resume: string;
+    additionalResponses: AdditionalRequirementResponse[];
+  }) => {
+    if (!job?.id) {
+      return;
+    }
+    setIsSubmittingApplication(true);
+    try {
+      await graduateApi.applyToJob(job.id, payload);
+      setApplicationSuccess('Application submitted successfully.');
+      onApply?.();
+    } catch (error) {
+      console.error('Failed to submit application:', error);
+      throw error;
+    } finally {
+      setIsSubmittingApplication(false);
+    }
   };
 
   return (
-    <div
+    <>
+      <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => {
         // Close when clicking backdrop
@@ -192,10 +244,37 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               <p className="font-semibold text-[20px] text-[#1C1C1C]">
                 Job Description
               </p>
-              <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
-                {job.description || 'No description available.'}
-              </p>
+              <RichTextContent html={job.description} />
             </div>
+
+            {job.additionalRequirements && job.additionalRequirements.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <p className="font-semibold text-[20px] text-[#1C1C1C]">
+                  Additional Requirements
+                </p>
+                <div className="flex flex-col gap-3">
+                  {job.additionalRequirements.map((requirement, index) => (
+                    <div
+                      key={getRequirementKey(requirement, index)}
+                      className="rounded-[12px] border border-fade p-3 flex flex-col gap-1 bg-white"
+                    >
+                      <p className="text-[15px] font-medium text-[#1C1C1C]">
+                        {requirement.label}
+                      </p>
+                      <p className="text-[13px] text-[#1C1C1C80]">
+                        {REQUIREMENT_TYPE_LABELS[requirement.type]} •{' '}
+                        {requirement.isRequired ? 'Required' : 'Optional'}
+                      </p>
+                      {requirement.helperText && (
+                        <p className="text-[14px] text-[#1C1C1CBF]">
+                          {requirement.helperText}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Skills */}
             <div className="flex flex-col gap-[27px]">
@@ -239,18 +318,44 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleApply}
-                  className="w-full flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer transition hover:bg-[#176300]"
+                  onClick={handleApplyClick}
+                  disabled={!job || isSubmittingApplication}
+                  className="w-full flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer transition hover:bg-[#176300] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <BsSend className="text-[24px]" />
-                  <p className="text-[16px] font-medium">Apply</p>
+                  <p className="text-[16px] font-medium">
+                    {isSubmittingApplication ? 'Submitting...' : 'Apply'}
+                  </p>
                 </button>
               </div>
             </div>
+            {applicationSuccess && (
+              <div className="rounded-[12px] border border-green-200 bg-green-50 p-3 text-[14px] text-green-700">
+                {applicationSuccess}
+              </div>
+            )}
           </>
         )}
       </div>
-    </div>
+      </div>
+
+      <ApplyToJobModal
+        isOpen={isApplyModalOpen}
+        job={
+          job?.id
+            ? {
+                id: job.id,
+                title: job.title,
+                companyName: job.companyName,
+                additionalRequirements: job.additionalRequirements,
+              }
+            : null
+        }
+        submitting={isSubmittingApplication}
+        onSubmit={handleApplicationSubmit}
+        onClose={() => setIsApplyModalOpen(false)}
+      />
+    </>
   );
 };
 

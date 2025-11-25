@@ -5,13 +5,18 @@ import {
   Button,
   Input,
   Select,
-  Textarea,
+  RichTextEditor,
 } from '../ui';
+import AdditionalRequirementsEditor, {
+  AdditionalRequirementDraft,
+} from './AdditionalRequirementsEditor';
+import { AdditionalRequirement } from '../../types/jobs';
 import RankSelector, {
   RankOption,
 } from '../onboarding/companyOnboarding/job/RankSelector';
 import { skills } from '../../utils/material.utils';
 import { companyApi } from '../../api/company';
+import { richTextHasContent, sanitizeRichText } from '../../utils/richText';
 
 type JobCreationStep = 'details' | 'rank' | 'success';
 
@@ -23,6 +28,7 @@ interface JobFormData {
   salaryMax: string;
   description: string;
   skills: string[];
+  additionalRequirements: AdditionalRequirementDraft[];
 }
 
 type JobPayload = {
@@ -33,6 +39,7 @@ type JobPayload = {
   requirements: {
     skills: string[];
   };
+  additionalRequirements: AdditionalRequirement[];
   salary?: {
     min?: number;
     max?: number;
@@ -55,6 +62,7 @@ const defaultFormData: JobFormData = {
   salaryMax: '',
   description: '',
   skills: [],
+  additionalRequirements: [],
 };
 
 const JobCreationModal = ({
@@ -109,19 +117,33 @@ const JobCreationModal = ({
   }, [isSkillsDropdownOpen]);
 
   const handleFormChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: value,
+    }));
+  };
+
+  const handleAdditionalRequirementsChange = (
+    requirements: AdditionalRequirementDraft[]
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      additionalRequirements: requirements,
+    }));
   };
 
   const isDetailsValid =
     Boolean(formData.title) &&
     Boolean(formData.jobType) &&
     Boolean(formData.location) &&
-    Boolean(formData.description) &&
+    richTextHasContent(formData.description) &&
     formData.skills.length > 0;
 
   const handleDetailsSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -133,14 +155,24 @@ const JobCreationModal = ({
     const salaryMin = formData.salaryMin ? parseInt(formData.salaryMin, 10) : undefined;
     const salaryMax = formData.salaryMax ? parseInt(formData.salaryMax, 10) : undefined;
 
+    const trimmedAdditionalRequirements = formData.additionalRequirements
+      .filter((req) => req.label.trim().length > 0)
+      .map<AdditionalRequirement>((req) => ({
+        label: req.label.trim(),
+        type: req.type,
+        isRequired: req.isRequired,
+        helperText: req.helperText?.trim() || undefined,
+      }));
+
     const payload: JobPayload = {
       title: formData.title,
       jobType: formData.jobType as JobPayload['jobType'],
       location: formData.location,
-      description: formData.description,
+      description: sanitizeRichText(formData.description),
       requirements: {
         skills: formData.skills,
       },
+      additionalRequirements: trimmedAdditionalRequirements,
       salary:
         salaryMin || salaryMax
           ? {
@@ -407,14 +439,17 @@ const JobCreationModal = ({
         )}
       </div>
 
-      <Textarea
+      <RichTextEditor
         label="Job description"
-        name="description"
-        rows={4}
-        placeholder="Describe the role, responsibilities, and requirements"
         value={formData.description}
-        onChange={handleFormChange}
+        onChange={handleDescriptionChange}
+        placeholder="Describe the role, responsibilities, and requirements"
         required
+      />
+
+      <AdditionalRequirementsEditor
+        requirements={formData.additionalRequirements}
+        onChange={handleAdditionalRequirementsChange}
       />
 
       <div className="flex justify-end gap-3 pt-2">

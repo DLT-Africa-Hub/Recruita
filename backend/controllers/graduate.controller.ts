@@ -5,6 +5,7 @@ import Match from '../models/Match.model';
 import Job from '../models/Job.model';
 import Application from '../models/Application.model';
 import Company from '../models/Company.model';
+import { ADDITIONAL_REQUIREMENT_TYPES } from '../utils/validation.utils';
 import {
   AIServiceError,
   generateAssessmentQuestions,
@@ -121,6 +122,13 @@ type PopulatedJobLean = {
     max?: number;
     currency?: string;
   };
+  additionalRequirements?: {
+    _id?: mongoose.Types.ObjectId;
+    label: string;
+    type: 'text' | 'url' | 'file';
+    isRequired: boolean;
+    helperText?: string;
+  }[];
   status?: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -1416,7 +1424,7 @@ export const getAvailableJobs = async (
     const [jobs, total] = await Promise.all([
       Job.find(jobFilter)
         .select(
-          'title companyId location requirements salary jobType status preferedRank createdAt updatedAt description'
+          'title companyId location requirements salary jobType status preferedRank createdAt updatedAt description additionalRequirements'
         )
         .populate('companyId', 'companyName')
         .sort(sort)
@@ -1474,6 +1482,7 @@ export const getAvailableJobs = async (
         jobType: job.jobType,
         salary: job.salary,
         requirements: job.requirements,
+        additionalRequirements: job.additionalRequirements ?? [],
         matchScore: matchScores.get(job._id.toString()) ?? null,
         preferedRank: job.preferedRank,
         status: job.status,
@@ -1523,7 +1532,8 @@ export const getMatches = async (
         jobId: mongoose.Types.ObjectId | PopulatedJobLean;
       }>({
         path: 'jobId',
-        select: 'title companyId location requirements salary status jobType description createdAt updatedAt',
+        select:
+          'title companyId location requirements salary status jobType description createdAt updatedAt additionalRequirements',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1563,6 +1573,9 @@ export const getMatches = async (
             jobType: jobSource.jobType,
             description: jobSource.description,
             requirements: jobSource.requirements,
+            additionalRequirements: (jobSource as PopulatedJobLean & {
+              additionalRequirements?: unknown;
+            }).additionalRequirements,
             salary: jobSource.salary,
             status: jobSource.status,
             createdAt: jobSource.createdAt,
@@ -1614,7 +1627,7 @@ export const getMatchById = async (
     })
       .populate<{ jobId: mongoose.Types.ObjectId | PopulatedJobLean }>(
         'jobId',
-        'title description companyId location requirements salary status createdAt updatedAt'
+        'title description companyId location requirements salary status createdAt updatedAt additionalRequirements'
       )
       .lean();
 
@@ -1667,7 +1680,7 @@ export const applyToJob = async (
     }
 
     const job = await Job.findById(jobId)
-      .select('title companyId status')
+      .select('title companyId status additionalRequirements')
       .lean();
     if (!job || job.status !== 'active') {
       res.status(404).json({ message: 'Job not found or not active' });
@@ -1694,10 +1707,117 @@ export const applyToJob = async (
       jobId,
     });
 
-    const { coverLetter, resume } = req.body as {
+    const { coverLetter, resume, additionalResponses } = req.body as {
       coverLetter?: string;
       resume?: string;
+      additionalResponses?: {
+        requirementId?: string;
+        value?: string;
+        fileName?: string;
+      }[];
     };
+
+    const jobAdditionalRequirements = Array.isArray(job.additionalRequirements)
+      ? job.additionalRequirements
+      : [];
+
+    const sanitizedAdditionalResponses: {
+      requirementId: mongoose.Types.ObjectId;
+      label: string;
+      type: 'text' | 'url' | 'file';
+      value: string;
+      fileName?: string;
+    }[] = [];
+
+    if (jobAdditionalRequirements.length > 0) {
+      if (
+        additionalResponses !== undefined &&
+        additionalResponses !== null &&
+        !Array.isArray(additionalResponses)
+      ) {
+        res.status(400).json({ message: 'Additional responses must be an array' });
+        return;
+      }
+
+      const responseMap = new Map<string, { value?: string; fileName?: string }>();
+      (additionalResponses || []).forEach((response) => {
+        if (response?.requirementId && typeof response.requirementId === 'string') {
+          responseMap.set(response.requirementId, {
+            value: typeof response.value === 'string' ? response.value : undefined,
+            fileName: typeof response.fileName === 'string' ? response.fileName : undefined,
+          });
+        }
+      });
+
+      for (const requirement of jobAdditionalRequirements) {
+        if (!requirement?._id) {
+          continue;
+        }
+
+        const requirementId = requirement._id.toString();
+        const payload = responseMap.get(requirementId);
+        const rawValue = payload?.value ? payload.value.trim() : '';
+
+        if (!rawValue) {
+          if (requirement.isRequired) {
+            res
+              .status(400)
+              .json({ message: `Please provide "${requirement.label}" to apply for this job.` });
+            return;
+          }
+          continue;
+        }
+
+        let valueToPersist = rawValue;
+        let fileName: string | undefined;
+
+        if (requirement.type === 'text') {
+          if (valueToPersist.length > 5000) {
+            res
+              .status(400)
+              .json({ message: `"${requirement.label}" must be shorter than 5000 characters.` });
+            return;
+          }
+        } else if (requirement.type === 'url') {
+          try {
+            // eslint-disable-next-line no-new
+            new URL(valueToPersist);
+          } catch (urlError) {
+            res
+              .status(400)
+              .json({ message: `"${requirement.label}" must be a valid URL.` });
+            return;
+          }
+        } else if (requirement.type === 'file') {
+          if (!payload?.fileName) {
+            res
+              .status(400)
+              .json({ message: `"${requirement.label}" must include the original file name.` });
+            return;
+          }
+          fileName = payload.fileName.trim().slice(0, 200);
+          if (valueToPersist.length > 15 * 1024 * 1024) {
+            res.status(400).json({
+              message: `"${requirement.label}" attachment is too large. Please keep it under 15MB.`,
+            });
+            return;
+          }
+        } else if (!ADDITIONAL_REQUIREMENT_TYPES.includes(requirement.type as any)) {
+          res.status(400).json({
+            message: `"${requirement.label}" is configured with an unsupported requirement type.`,
+          });
+          return;
+        }
+
+        sanitizedAdditionalResponses.push({
+          requirementId: new mongoose.Types.ObjectId(requirementId),
+          label: requirement.label,
+          type: requirement.type,
+          value: valueToPersist,
+          fileName,
+        });
+      }
+    }
 
     const application = await Application.create({
       graduateId: graduate._id,
@@ -1707,6 +1827,7 @@ export const applyToJob = async (
       coverLetter:
         typeof coverLetter === 'string' ? coverLetter.trim() : undefined,
       resume: typeof resume === 'string' ? resume.trim() : undefined,
+      additionalResponses: sanitizedAdditionalResponses,
     });
 
     const persistedApplicationId = application._id as mongoose.Types.ObjectId;

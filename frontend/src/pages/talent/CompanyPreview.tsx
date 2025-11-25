@@ -4,6 +4,7 @@ import { BsSend } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
 import React from 'react';
 import { CiMail } from 'react-icons/ci';
+import { RichTextContent } from '../../components/ui';
 
 export interface Company {
   name: string;
@@ -199,9 +200,7 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
           <p className="font-semibold text-[20px] text-[#1C1C1C]">
             Job Description
           </p>
-          <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
-            {company.jobDesc}
-          </p>
+          <RichTextContent html={company.jobDesc} />
         </div>
 
         <div className="flex flex-col gap-[27px]">

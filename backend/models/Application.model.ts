@@ -17,6 +17,13 @@ export interface IApplication extends Document {
   appliedAt: Date;
   reviewedAt?: Date;
   notes?: string;
+  additionalResponses?: {
+    requirementId: mongoose.Types.ObjectId;
+    label: string;
+    type: 'text' | 'url' | 'file';
+    value: string;
+    fileName?: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +80,30 @@ const ApplicationSchema: Schema = new Schema(
       type: String,
       required: false,
     },
+    additionalResponses: [
+      {
+        requirementId: {
+          type: Schema.Types.ObjectId,
+          required: true,
+        },
+        label: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: ['text', 'url', 'file'],
+          required: true,
+        },
+        value: {
+          type: String,
+          required: true,
+        },
+        fileName: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

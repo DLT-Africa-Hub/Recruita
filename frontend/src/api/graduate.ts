@@ -1,5 +1,6 @@
 
 import api from './client';
+import { AdditionalRequirementResponse } from '../types/jobs';
 
 // Profile Management
 export const graduateApi = {
@@ -99,8 +100,15 @@ export const graduateApi = {
   },
 
   // Applications
-  applyToJob: async (jobId: string) => {
-    const response = await api.post(`/graduates/apply/${jobId}`);
+  applyToJob: async (
+    jobId: string,
+    data?: {
+      coverLetter?: string;
+      resume?: string;
+      additionalResponses?: AdditionalRequirementResponse[];
+    }
+  ) => {
+    const response = await api.post(`/graduates/apply/${jobId}`, data ?? {});
     return response.data;
   },
 
