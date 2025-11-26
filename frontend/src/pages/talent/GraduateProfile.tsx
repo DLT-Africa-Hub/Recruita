@@ -10,6 +10,7 @@ import ProfilePictureEditor from '../../components/profile/ProfilePictureEditor'
 import { useQueryClient } from '@tanstack/react-query';
 import WorkingExperience from '../../components/profile/WorkingExperience';
 import ResumeModal from '../../components/profile/ResumeModal';
+import cloudinaryApi from '../../api/cloudinary';
 
 const GraduateProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -98,6 +99,18 @@ const GraduateProfile = () => {
     try {
       setIsUploading(true);
 
+      // Store the old profile picture URL before uploading new one
+      const oldProfilePictureUrl = graduate.profilePictureUrl;
+      const isReplacingExistingPicture = 
+        oldProfilePictureUrl && 
+        oldProfilePictureUrl !== DEFAULT_PROFILE_IMAGE &&
+        oldProfilePictureUrl.includes('cloudinary.com');
+
+      console.log('Uploading new profile picture...');
+      if (isReplacingExistingPicture) {
+        console.log('Will delete old picture after upload:', oldProfilePictureUrl);
+      }
+
       const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
       const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
@@ -115,6 +128,7 @@ const GraduateProfile = () => {
       const form = new FormData();
       form.append('file', fileToUpload);
       form.append('upload_preset', UPLOAD_PRESET);
+      form.append('folder', 'graduates/profile-pictures');
 
       const res = await fetch(url, {
         method: 'POST',
@@ -128,15 +142,42 @@ const GraduateProfile = () => {
 
       const data = await res.json();
       const secureUrl: string | undefined = data.secure_url || data.secureUrl || data.url;
+      const publicId: string | undefined = data.public_id || data.publicId;
 
       if (!secureUrl) {
         throw new Error('Cloudinary response did not include secure_url');
       }
 
+      console.log('New profile picture uploaded:', {
+        url: secureUrl,
+        publicId
+      });
+
+      // Update profile picture in database
       await graduateApi.updateProfilePicture(secureUrl);
+
+      // Delete old profile picture from Cloudinary after successful update
+      if (isReplacingExistingPicture) {
+        try {
+          console.log('Deleting old profile picture from Cloudinary...');
+          const deleteResult = await cloudinaryApi.deleteProfilePicture(oldProfilePictureUrl);
+          
+          if (deleteResult.success) {
+            console.log('Successfully deleted old profile picture:', deleteResult.message);
+          } else {
+            console.warn('Failed to delete old profile picture:', deleteResult);
+          }
+        } catch (deleteError: any) {
+          // Log error but don't throw - the new picture is already uploaded and saved
+          console.error('Error deleting old profile picture:', deleteError);
+          console.warn('Continuing despite deletion error - new picture is saved');
+        }
+      }
+
+      // Refresh profile data
       queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
 
-      console.log('Profile picture updated:', secureUrl);
+      console.log('Profile picture update complete!');
     } catch (err: any) {
       console.error('Failed to upload profile picture', err);
       alert(err?.message || 'Failed to upload profile picture');
@@ -169,7 +210,15 @@ const GraduateProfile = () => {
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
               <div className='w-full flex flex-col-reverse gap-[20px] lg:flex-row items-start justify-between'>
                 <div className="flex md:flex-row gap-[12px]">
-                  <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
+                  <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4] relative">
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="animate-spin h-8 w-8 border-4 border-white border-t-transparent rounded-full" />
+                          <p className="text-white text-xs">Uploading...</p>
+                        </div>
+                      </div>
+                    )}
                     <ProfilePictureEditor
                       imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
                       size={150}

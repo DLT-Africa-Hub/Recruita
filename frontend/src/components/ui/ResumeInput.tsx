@@ -1,7 +1,6 @@
-"use client"
-
 import React, { useEffect, useRef, useState } from "react"
-import { Upload, X, File as FileIcon } from "lucide-react"
+import { Upload, X, File as FileIcon, Loader2 } from "lucide-react"
+import cloudinaryApi from "../../api/cloudinary"
 
 export interface UploadedFile {
   fileName: string
@@ -18,15 +17,16 @@ interface LocalFile {
   name: string
   size: number
   status: UploadStatus
-  progress: number // 0-100
+  progress: number 
   url?: string
   publicId?: string
   error?: string
+  isDeleting?: boolean
 }
 
 interface Props {
   onChange?: (files: UploadedFile[]) => void
-  value?: UploadedFile[] // optional initial uploaded files
+  value?: UploadedFile[]
 }
 
 const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
@@ -34,11 +34,11 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
     () =>
       (value || []).map((v, i) => ({
         id: `init-${i}`,
-        // create a placeholder File object (not necessary but keeps shape consistent)
+
         file: new File([new Blob()], v.fileName),
         name: v.fileName,
         size: v.size ?? 0,
-        status: "done",
+        status: "done" as UploadStatus,
         progress: 100,
         url: v.fileUrl,
         publicId: v.publicId,
@@ -47,7 +47,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
-  // Support common env patterns: Vite (import.meta.env) and Next.js (process.env)
+
   const CLOUD_NAME =
     (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME) ||
     process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
@@ -107,7 +107,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
       file: f,
       name: f.name,
       size: f.size,
-      status: "idle",
+      status: "idle" as UploadStatus,
       progress: 0,
     }))
 
@@ -121,7 +121,40 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
 
   const handleClick = () => inputRef.current?.click()
 
-  const removeFile = (id: string) => {
+  const removeFile = async (id: string) => {
+    const fileToRemove = localFiles.find((f) => f.id === id)
+    
+
+    if (fileToRemove && fileToRemove.url && fileToRemove.status === "done") {
+      try {
+    
+        setLocalFiles((prev) =>
+          prev.map((p) => (p.id === id ? { ...p, isDeleting: true } : p))
+        )
+
+        console.log(`Attempting to delete file from Cloudinary: ${fileToRemove.url}`)
+
+      
+        const result = await cloudinaryApi.deleteCV(fileToRemove.url)
+        
+        if (result.success) {
+          console.log(`Successfully deleted ${fileToRemove.name} from Cloudinary:`, result.message)
+        } else {
+          console.warn(`Cloudinary deletion returned success:false for ${fileToRemove.name}:`, result)
+        }
+      } catch (error: any) {
+        console.error("Error deleting file from Cloudinary:", error)
+        
+      
+        if (error.response) {
+          console.error("Error response:", error.response.data)
+        }
+        
+     
+      }
+    }
+
+   
     setLocalFiles((prev) => prev.filter((p) => p.id !== id))
   }
 
@@ -130,7 +163,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
       console.error("Missing Cloudinary config:", { CLOUD_NAME, UPLOAD_PRESET })
       setLocalFiles((prev) =>
         prev.map((p) =>
-          p.id === local.id ? { ...p, status: "error", error: "Missing Cloudinary config" } : p
+          p.id === local.id ? { ...p, status: "error" as UploadStatus, error: "Missing Cloudinary config" } : p
         )
       )
       return
@@ -149,7 +182,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
         const percent = Math.round((event.loaded / event.total) * 100)
         setLocalFiles((prev) =>
           prev.map((p) =>
-            p.id === local.id ? { ...p, progress: percent, status: "uploading" } : p
+            p.id === local.id ? { ...p, progress: percent, status: "uploading" as UploadStatus } : p
           )
         )
       }
@@ -158,14 +191,21 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
     xhr.onload = () => {
       try {
         const resp = JSON.parse(xhr.responseText)
-        // Cloudinary returns public_id and secure_url (or url)
+    
         if (xhr.status >= 200 && xhr.status < 300 && (resp.secure_url || resp.url)) {
           const secureUrl = resp.secure_url || resp.url
           const publicId = resp.public_id || resp.publicId || resp.publicID // defensive
+          
+          console.log(`File uploaded successfully to Cloudinary:`, {
+            name: local.name,
+            url: secureUrl,
+            publicId
+          })
+          
           setLocalFiles((prev) =>
             prev.map((p) =>
               p.id === local.id
-                ? { ...p, status: "done", progress: 100, url: secureUrl, publicId }
+                ? { ...p, status: "done" as UploadStatus, progress: 100, url: secureUrl, publicId }
                 : p
             )
           )
@@ -173,7 +213,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
           console.error("Cloudinary upload failed:", xhr.status, resp)
           setLocalFiles((prev) =>
             prev.map((p) =>
-              p.id === local.id ? { ...p, status: "error", error: `Upload failed (${xhr.status})` } : p
+              p.id === local.id ? { ...p, status: "error" as UploadStatus, error: `Upload failed (${xhr.status})` } : p
             )
           )
         }
@@ -181,7 +221,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
         console.error("Invalid Cloudinary response", err, xhr.responseText)
         setLocalFiles((prev) =>
           prev.map((p) =>
-            p.id === local.id ? { ...p, status: "error", error: "Invalid response from Cloudinary" } : p
+            p.id === local.id ? { ...p, status: "error" as UploadStatus, error: "Invalid response from Cloudinary" } : p
           )
         )
       }
@@ -191,7 +231,7 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
       console.error("XHR error while uploading", xhr)
       setLocalFiles((prev) =>
         prev.map((p) =>
-          p.id === local.id ? { ...p, status: "error", error: "Network error" } : p
+          p.id === local.id ? { ...p, status: "error" as UploadStatus, error: "Network error" } : p
         )
       )
     }
@@ -257,10 +297,11 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                     <p className="text-xs text-[#1C1C1CBF]">
                       {(f.size / 1024).toFixed(2)} KB •{" "}
                       {f.status === "uploading" && `Uploading (${f.progress}%)`}
-                      {f.status === "done" && "Uploaded"}
+                      {f.status === "done" && !f.isDeleting && "Uploaded"}
+                      {f.isDeleting && "Deleting..."}
                       {f.status === "error" && `Error: ${f.error ?? "unknown"}`}
                     </p>
-                    {f.status === "done" && f.url && (
+                    {f.status === "done" && f.url && !f.isDeleting && (
                       <a
                         href={f.url}
                         target="_blank"
@@ -270,7 +311,6 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                         View file
                       </a>
                     )}
-                   
                   </div>
                 </div>
 
@@ -278,10 +318,15 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
                   <button
                     type="button"
                     onClick={() => removeFile(f.id)}
-                    className="p-1 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                    disabled={f.isDeleting || f.status === "uploading"}
+                    className="p-1 hover:bg-red-50 rounded transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label={`Remove ${f.name}`}
                   >
-                    <X size={18} className="text-red-500" />
+                    {f.isDeleting ? (
+                      <Loader2 size={18} className="text-red-500 animate-spin" />
+                    ) : (
+                      <X size={18} className="text-red-500" />
+                    )}
                   </button>
                 </div>
               </div>
