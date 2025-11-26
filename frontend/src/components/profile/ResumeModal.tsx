@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FaTrash, FaEye, FaUpload, FaFilePdf, FaTimes } from 'react-icons/fa';
 import { graduateApi } from '../../api/graduate';
+import cloudinaryApi from '../../api/cloudinary';
 
 interface CV {
   _id: string;
@@ -21,7 +22,7 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const {
     data: cvsData,
@@ -38,16 +39,44 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
 
   const cvs: CV[] = cvsData || [];
 
-  // Delete CV mutation
+  // Delete CV mutation with Cloudinary deletion
   const deleteMutation = useMutation({
-    mutationFn: async (cvId: string) => {
-      await graduateApi.deleteCV(cvId);
+    mutationFn: async (cv: CV) => {
+      // First, delete from Cloudinary
+      if (cv.fileUrl) {
+        console.log(`Deleting CV from Cloudinary: ${cv.fileName}`);
+        try {
+          const cloudinaryResult = await cloudinaryApi.deleteCV(cv.fileUrl);
+          console.log('Cloudinary deletion result:', cloudinaryResult);
+        } catch (cloudinaryError: any) {
+          console.error('Cloudinary deletion error:', cloudinaryError);
+          // Log but don't throw - we still want to delete from database
+          console.warn('Continuing with database deletion despite Cloudinary error');
+        }
+      }
+
+      // Then delete from database
+      await graduateApi.deleteCV(cv._id);
     },
-    onSuccess: () => {
+    onMutate: async (cv) => {
+      // Add to deleting set to show loading state
+      setDeletingIds((prev) => new Set(prev).add(cv._id));
+    },
+    onSuccess: (_, cv) => {
       queryClient.invalidateQueries({ queryKey: ['graduateCVs'] });
+      console.log(`Successfully deleted CV: ${cv.fileName}`);
     },
-    onError: (error: any) => {
+    onError: (error: any, cv) => {
       alert(error?.response?.data?.message || 'Failed to delete CV');
+      console.error('Delete mutation error:', error);
+    },
+    onSettled: (_, __, cv) => {
+      // Remove from deleting set
+      setDeletingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(cv._id);
+        return newSet;
+      });
     },
   });
 
@@ -122,6 +151,12 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
           const secureUrl = resp.secure_url || resp.url;
           const publicId = resp.public_id || resp.publicId;
 
+          console.log('File uploaded to Cloudinary:', {
+            fileName: file.name,
+            url: secureUrl,
+            publicId,
+          });
+
           // Save CV to backend
           await graduateApi.addCV({
             fileName: file.name,
@@ -155,6 +190,12 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
     };
 
     xhr.send(formData);
+  };
+
+  const handleDeleteCV = (cv: CV) => {
+    if (window.confirm(`Are you sure you want to delete "${cv.fileName}"? This will remove it from both Cloudinary and the database.`)) {
+      deleteMutation.mutate(cv);
+    }
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -244,75 +285,82 @@ const ResumeModal = ({ isOpen, onClose }: ResumeModalProps) => {
             </div>
           ) : (
             <div className="space-y-[12px]">
-              {cvs.map((cv) => (
-                <div
-                  key={cv._id}
-                  className={`p-[16px] rounded-[16px] border transition-all ${
-                    cv.onDisplay
-                      ? 'border-button bg-[#F0F9F0]'
-                      : 'border-fade bg-white hover:border-[#E0E0E0]'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-[12px]">
-                    <div className="flex items-start gap-[12px] flex-1 min-w-0">
-                      <div className="p-[12px] rounded-[10px] bg-white border border-fade">
-                        <FaFilePdf className="text-[24px] text-red-500" />
+              {cvs.map((cv) => {
+                const isDeleting = deletingIds.has(cv._id);
+                
+                return (
+                  <div
+                    key={cv._id}
+                    className={`p-[16px] rounded-[16px] border transition-all ${
+                      cv.onDisplay
+                        ? 'border-button bg-[#F0F9F0]'
+                        : 'border-fade bg-white hover:border-[#E0E0E0]'
+                    } ${isDeleting ? 'opacity-50' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-[12px]">
+                      <div className="flex items-start gap-[12px] flex-1 min-w-0">
+                        <div className="p-[12px] rounded-[10px] bg-white border border-fade">
+                          <FaFilePdf className="text-[24px] text-red-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-medium text-[#1C1C1C] truncate">
+                            {cv.fileName}
+                          </p>
+                          <p className="text-[12px] text-[#1C1C1C80] mt-[4px]">
+                            {formatFileSize(cv.size)}
+                          </p>
+                          {isDeleting && (
+                            <p className="text-[11px] text-red-500 mt-[4px] font-medium">
+                              Deleting from Cloudinary...
+                            </p>
+                          )}
+                          {cv.onDisplay && !isDeleting && (
+                            <span className="inline-block mt-[8px] px-[10px] py-[4px] rounded-[6px] bg-button text-white text-[11px] font-medium">
+                              On Display
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-medium text-[#1C1C1C] truncate">
-                          {cv.fileName}
-                        </p>
-                        <p className="text-[12px] text-[#1C1C1C80] mt-[4px]">
-                          {formatFileSize(cv.size)}
-                        </p>
-                        {cv.onDisplay && (
-                          <span className="inline-block mt-[8px] px-[10px] py-[4px] rounded-[6px] bg-button text-white text-[11px] font-medium">
-                            On Display
-                          </span>
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-[8px]">
-                      {!cv.onDisplay && (
-                        <button
-                          onClick={() => updateDisplayMutation.mutate(cv._id)}
-                          disabled={updateDisplayMutation.isPending}
-                          className="p-[10px] rounded-[10px] border border-fade hover:border-button hover:bg-[#F8F8F8] transition-colors"
-                          title="Set as display CV"
+                      <div className="flex items-center gap-[8px]">
+                        {!cv.onDisplay && (
+                          <button
+                            onClick={() => updateDisplayMutation.mutate(cv._id)}
+                            disabled={updateDisplayMutation.isPending || isDeleting}
+                            className="p-[10px] rounded-[10px] border border-fade hover:border-button hover:bg-[#F8F8F8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Set as display CV"
+                          >
+                            <FaEye className="text-[16px] text-[#1C1C1C80]" />
+                          </button>
+                        )}
+                        <a
+                          href={cv.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`p-[10px] rounded-[10px] border border-fade hover:border-button hover:bg-[#F8F8F8] transition-colors ${
+                            isDeleting ? 'pointer-events-none opacity-50' : ''
+                          }`}
+                          title="View CV"
                         >
-                          <FaEye className="text-[16px] text-[#1C1C1C80]" />
+                          <FaFilePdf className="text-[16px] text-red-500" />
+                        </a>
+                        <button
+                          onClick={() => handleDeleteCV(cv)}
+                          disabled={isDeleting}
+                          className="p-[10px] rounded-[10px] border border-fade hover:border-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed relative"
+                          title="Delete CV"
+                        >
+                          {isDeleting ? (
+                            <div className="animate-spin h-[16px] w-[16px] border-2 border-red-500 border-t-transparent rounded-full" />
+                          ) : (
+                            <FaTrash className="text-[16px] text-red-500" />
+                          )}
                         </button>
-                      )}
-                      <a
-                        href={cv.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-[10px] rounded-[10px] border border-fade hover:border-button hover:bg-[#F8F8F8] transition-colors"
-                        title="View CV"
-                      >
-                        <FaFilePdf className="text-[16px] text-red-500" />
-                      </a>
-                      <button
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              'Are you sure you want to delete this CV?'
-                            )
-                          ) {
-                            deleteMutation.mutate(cv._id);
-                          }
-                        }}
-                        disabled={deleteMutation.isPending}
-                        className="p-[10px] rounded-[10px] border border-fade hover:border-red-500 hover:bg-red-50 transition-colors"
-                        title="Delete CV"
-                      >
-                        <FaTrash className="text-[16px] text-red-500" />
-                      </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
