@@ -1678,6 +1678,23 @@ export const applyToJob = async (
       return;
     }
 
+    // Validate profile completeness before allowing application
+    const missingFields: string[] = [];
+    if (!graduate.location || graduate.location.trim() === '') {
+      missingFields.push('location');
+    }
+    if (!graduate.cv || !Array.isArray(graduate.cv) || graduate.cv.length === 0) {
+      missingFields.push('CV');
+    }
+
+    if (missingFields.length > 0) {
+      res.status(400).json({
+        message: `Please complete your profile before applying. Missing: ${missingFields.join(', ')}`,
+        missingFields,
+      });
+      return;
+    }
+
     const { jobId } = req.params;
     if (!jobId || !ObjectId.isValid(jobId)) {
       res.status(400).json({ message: 'Invalid jobId' });
@@ -1712,7 +1729,7 @@ export const applyToJob = async (
       jobId,
     });
 
-    const { coverLetter, resume } = req.body as {
+    const { coverLetter, resume, extraAnswers } = req.body as {
       coverLetter?: string;
       resume?: {
         fileName: string;
@@ -1721,7 +1738,31 @@ export const applyToJob = async (
         publicId: any;
         onDisplay: boolean;
       } | null;
+      extraAnswers?: Record<string, string>;
     };
+
+    // Validate extra answers against job requirements and get contact preference
+    const jobWithRequirements = await Job.findById(jobId)
+      .select('requirements directContact title companyId')
+      .lean();
+    
+    let validatedExtraAnswers: Record<string, string> | undefined;
+    if (extraAnswers && jobWithRequirements?.requirements?.extraRequirements) {
+      validatedExtraAnswers = {};
+
+      for (const req of jobWithRequirements.requirements.extraRequirements) {
+        const answer = extraAnswers[req.label];
+        if (req.required && (!answer || typeof answer !== 'string' || !answer.trim())) {
+          res.status(400).json({
+            message: `Required field "${req.label}" is missing or empty`,
+          });
+          return;
+        }
+        if (answer && typeof answer === 'string') {
+          validatedExtraAnswers[req.label] = answer.trim();
+        }
+      }
+    }
 
     // ✅ FIX: Handle resume as object, NOT string
     const application = await Application.create({
@@ -1734,6 +1775,7 @@ export const applyToJob = async (
 
       // 🔥 KEY FIX HERE — REMOVE .trim(), STORE OBJECT DIRECTLY
       resume: typeof resume === 'object' && resume !== null ? resume : undefined,
+      extraAnswers: validatedExtraAnswers,
     });
 
     const persistedApplicationId = application._id as mongoose.Types.ObjectId;
@@ -1743,11 +1785,13 @@ export const applyToJob = async (
       application: application.toObject({ versionKey: false }),
     });
 
-    // Emit notifications for both graduate and company
+    // Emit notifications for graduate, company, and admin (if admin handles)
     try {
       const graduateName =
         `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() ||
         'A graduate';
+
+      const jobDirectContact = jobWithRequirements?.directContact !== false; // Default to true
 
       // Notify graduate
       if (graduate.userId) {
@@ -1764,8 +1808,8 @@ export const applyToJob = async (
         });
       }
 
-      // Notify company
-      if (company?.userId) {
+      // Notify company only if direct contact
+      if (jobDirectContact && company?.userId) {
         await notifyCompanyJobApplicationReceived({
           applicationId: persistedApplicationId.toString(),
           jobId: jobId,
@@ -1775,7 +1819,28 @@ export const applyToJob = async (
           companyId: company.userId.toString(),
         });
       }
-    } catch (error) {
+
+      // Notify all admin users if admin handles
+      if (!jobDirectContact) {
+        const User = (await import('../models/User.model')).default;
+        const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
+        
+        for (const admin of adminUsers) {
+          await createNotification({
+            userId: admin._id,
+            type: 'application',
+            title: 'New Application Requires Admin Review',
+            message: `${graduateName} applied to "${job.title}" at ${company?.companyName || 'Company'}. This application requires admin handling.`,
+            relatedId: persistedApplicationId,
+            relatedType: 'application',
+            email: {
+              subject: `New Application: ${job.title} at ${company?.companyName || 'Company'}`,
+              text: `A new application has been submitted that requires admin review.\n\nApplicant: ${graduateName}\nJob: ${job.title}\nCompany: ${company?.companyName || 'Company'}\n\nPlease review and handle this application through the admin panel.`,
+            },
+          });
+        }
+      }
+      } catch (error) {
       console.error('Failed to send application notifications:', error);
     }
   } catch (error) {

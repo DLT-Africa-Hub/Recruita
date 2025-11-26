@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import { graduateApi } from '../../api/graduate';
 import { JobPreviewModal } from '../../index';
-import { PageLoader, ErrorState, SectionHeader } from '../../components/ui';
-import { EmptyState } from '../../components/ui';
+import ApplicationFormModal from '../../components/jobs/ApplicationFormModal';
+import { PageLoader, ErrorState, SectionHeader, Button, EmptyState, BaseModal } from '../../components/ui';
 import {
   DEFAULT_JOB_IMAGE,
   formatSalaryRange,
@@ -25,6 +26,15 @@ interface Match {
     location?: string;
     jobType?: string;
     description?: string;
+    requirements?: {
+      skills?: string[];
+      extraRequirements?: Array<{
+        label: string;
+        type: 'text' | 'url' | 'textarea';
+        required: boolean;
+        placeholder?: string;
+      }>;
+    };
     salary?: {
       min?: number;
       max?: number;
@@ -44,9 +54,23 @@ const normalizeMatchScore = (score: number | undefined): number => {
 };
 
 const GraduateDashboard = () => {
+  const navigate = useNavigate();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [selectedMatchScore, setSelectedMatchScore] = useState<number | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
+  const [showProfileIncompleteModal, setShowProfileIncompleteModal] = useState(false);
+  const [profileMissingFields, setProfileMissingFields] = useState<string[]>([]);
+  const [showAlreadyAppliedModal, setShowAlreadyAppliedModal] = useState(false);
+
+  // Fetch graduate profile to check completeness
+  const { data: profileData } = useQuery({
+    queryKey: ['graduateProfile'],
+    queryFn: async () => {
+      const response = await graduateApi.getProfile();
+      return response.graduate || response;
+    },
+  });
 
   const {
     data: matchesData,
@@ -59,6 +83,37 @@ const GraduateDashboard = () => {
       return response.matches || [];
     },
   });
+
+  const { data: applicationsData } = useQuery({
+    queryKey: ['graduateApplications', 'dashboard'],
+    queryFn: async () => {
+      const response = await graduateApi.getApplications({ page: 1, limit: 100 });
+      return response.applications || [];
+    },
+  });
+
+  const appliedJobIds = useMemo(() => {
+    if (!applicationsData || applicationsData.length === 0) {
+      return new Set<string>();
+    }
+
+    const ids = applicationsData
+      .map((application: any) => {
+        if (application.job?.id) {
+          return application.job.id;
+        }
+        if (typeof application.jobId === 'string') {
+          return application.jobId;
+        }
+        if (application.jobId?._id) {
+          return application.jobId._id.toString();
+        }
+        return null;
+      })
+      .filter((value: string | null): value is string => Boolean(value));
+
+    return new Set(ids);
+  }, [applicationsData]);
 
   const transformMatchToCompany = useCallback(
     (match: Match, index: number): Company & { jobId: string } => {
@@ -170,11 +225,30 @@ const GraduateDashboard = () => {
   };
 
   const handleApply = () => {
-    // TODO: Handle application
-    if (selectedJobId) {
-      console.log('Apply clicked for job:', selectedJobId);
-      // You can call graduateApi.applyToJob(selectedJobId) here
+    if (!selectedJobId) return;
+
+    if (appliedJobIds.has(selectedJobId)) {
+      setShowAlreadyAppliedModal(true);
+      setIsModalOpen(false);
+      return;
     }
+
+    // Check profile completeness (only for location, CV can be uploaded in form)
+    const missingFields: string[] = [];
+    if (!profileData?.location || profileData.location.trim() === '') {
+      missingFields.push('location');
+    }
+
+    if (missingFields.length > 0) {
+      setProfileMissingFields(missingFields);
+      setShowProfileIncompleteModal(true);
+      setIsModalOpen(false);
+      return;
+    }
+
+    // Proceed with application (CV can be uploaded in the form if missing)
+    setIsApplicationFormOpen(true);
+    setIsModalOpen(false);
   };
 
   return (
@@ -197,7 +271,7 @@ const GraduateDashboard = () => {
             <SectionHeader title="AI Matched Opportunities" />
 
             {availableOpportunities.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 flex-wrap gap-8 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full">
                 {availableOpportunities.map((company) => (
                   <CompanyCard
                     key={company.id}
@@ -246,10 +320,97 @@ const GraduateDashboard = () => {
         jobId={selectedJobId}
         jobData={selectedJobData}
         matchScore={selectedMatchScore}
+        hasApplied={selectedJobId ? appliedJobIds.has(selectedJobId) : false}
         onClose={handleCloseModal}
         onChat={handleChat}
         onApply={handleApply}
       />
+
+      {selectedJobId && selectedJobData && (
+        <ApplicationFormModal
+          isOpen={isApplicationFormOpen}
+          jobId={selectedJobId}
+          jobTitle={selectedJobData.title || 'Position'}
+          extraRequirements={selectedJobData.requirements?.extraRequirements}
+          onClose={() => {
+            setIsApplicationFormOpen(false);
+          }}
+          onSuccess={() => {
+            // Optionally show success message
+          }}
+        />
+      )}
+
+      {/* Profile Incomplete Modal */}
+      <BaseModal
+        isOpen={showProfileIncompleteModal}
+        onClose={() => setShowProfileIncompleteModal(false)}
+        size="md"
+      >
+        <div className="flex flex-col gap-6">
+          <div>
+            <h2 className="text-[24px] font-semibold text-[#1C1C1C]">
+              Complete Your Profile
+            </h2>
+            <p className="text-[14px] text-[#1C1C1C80] mt-2">
+              Please complete your profile before applying for jobs.
+            </p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-[14px] font-medium text-yellow-800 mb-2">
+              Missing required fields:
+            </p>
+            <ul className="list-disc list-inside text-[14px] text-yellow-700 space-y-1">
+              {profileMissingFields.map((field) => (
+                <li key={field} className="capitalize">
+                  {field === 'CV' ? 'CV/Resume' : field}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => setShowProfileIncompleteModal(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setShowProfileIncompleteModal(false);
+                navigate('/graduate/profile');
+              }}
+              className="flex-1"
+            >
+              Update Profile
+            </Button>
+          </div>
+        </div>
+      </BaseModal>
+
+      <BaseModal
+        isOpen={showAlreadyAppliedModal}
+        onClose={() => setShowAlreadyAppliedModal(false)}
+        size="sm"
+      >
+        <div className="flex flex-col gap-6">
+          <div>
+            <h2 className="text-[24px] font-semibold text-[#1C1C1C]">
+              Already Applied
+            </h2>
+            <p className="text-[14px] text-[#1C1C1C80] mt-2">
+              You have already submitted an application for this role. We will notify you once there is an update.
+            </p>
+          </div>
+          <Button variant="primary" onClick={() => setShowAlreadyAppliedModal(false)}>
+            Got it
+          </Button>
+        </div>
+      </BaseModal>
     </div>
   );
 };

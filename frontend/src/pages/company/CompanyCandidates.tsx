@@ -65,6 +65,7 @@ const CompanyCandidates = () => {
           : undefined,
         jobType: job.jobType,
         salary: job.salary,
+        directContact: job.directContact !== false, // Default to true
       };
     },
     []
@@ -100,6 +101,7 @@ const CompanyCandidates = () => {
         matchPercentage: matchScore,
         jobType: job.jobType,
         salary: job.salary,
+        directContact: job.directContact !== false, // Default to true
       };
     },
     []

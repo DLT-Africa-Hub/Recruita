@@ -85,8 +85,8 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   const badgeConfig = getMatchBadgeConfig(company.match);
 
   return (
-    <div className="flex flex-col items-center justify-between gap-[16px] max-w-[400px] py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group">
-      <div className="w-full h-[232px] relative">
+    <div className="flex flex-col items-center justify-between gap-[16px] w-full py-[18px] px-[17px] border border-fade rounded-[10px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group">
+      <div className="w-full h-[180px] sm:h-[200px] md:h-[232px] relative">
         <ImageWithFallback
           src={company.image}
           className="object-cover w-full h-full rounded-[10px]"
@@ -97,35 +97,35 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           <PiBuildingApartmentLight className="text-[#F8F8F8]" />
         </div>
       </div>
-      <div className="flex justify-between w-full">
-        <div className="flex flex-col gap-[5px]">
-          <p className="font-semibold text-[24px] max-w-[114px] text-[#1C1C1C]">
+      <div className="flex flex-col sm:flex-row justify-between w-full gap-3 sm:gap-0">
+        <div className="flex flex-col gap-[5px] flex-1 min-w-0">
+          <p className="font-semibold text-[20px] sm:text-[24px] text-[#1C1C1C] truncate">
             {company.name}
           </p>
-          <p className="font-sf font-normal text-[16px] max-w-[114px]  text-[#1C1C1CBF]">
+          <p className="font-sf font-normal text-[14px] sm:text-[16px] text-[#1C1C1CBF] truncate">
             {company.role}
           </p>
         </div>
         <div
-          className={`flex items-center gap-3 px-4 h-[50px] leading-none rounded-[9999px] border border-transparent shadow-sm ${badgeConfig.container}`}
+          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[50px] leading-none rounded-[9999px] border border-transparent shadow-sm flex-shrink-0 ${badgeConfig.container}`}
         >
           <span className={`w-2.5 h-2.5 rounded-full ${badgeConfig.dot}`} />
           <div className="flex flex-col leading-tight">
-            <span className="text-[14px] font-semibold">
+            <span className="text-[12px] sm:text-[14px] font-semibold whitespace-nowrap">
               {company.match}% match
             </span>
-            <span className="text-[12px] opacity-80">{badgeConfig.label}</span>
+            <span className="text-[10px] sm:text-[12px] opacity-80 whitespace-nowrap">{badgeConfig.label}</span>
           </div>
         </div>
       </div>
-      <div className="flex w-full items-center justify-between">
-        <p className="text-center w-full font-semibold text-[16px]">
+      <div className="flex flex-col sm:flex-row w-full items-center justify-between gap-2 sm:gap-0">
+        <p className="text-center sm:text-left w-full sm:w-auto font-semibold text-[14px] sm:text-[16px]">
           {company.contract}
         </p>
-        <div className="h-[20px] bg-black w-0.5" />
-        <p className="text-center  font-semibold w-full">{company.location}</p>
-        <div className="h-[20px] bg-black w-0.5" />
-        <p className="text-center font-semibold w-full">
+        <div className="hidden sm:block h-[20px] bg-black w-0.5" />
+        <p className="text-center sm:text-center font-semibold w-full sm:w-auto text-[14px] sm:text-[16px]">{company.location}</p>
+        <div className="hidden sm:block h-[20px] bg-black w-0.5" />
+        <p className="text-center sm:text-right font-semibold w-full sm:w-auto text-[14px] sm:text-[16px]">
           {company.wage}
         </p>
       </div>
@@ -136,10 +136,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
           )
         }
-        className="h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#176300] hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg"
+        className="h-[50px] sm:h-[55px] cursor-pointer bg-button w-full rounded-[10px] text-[#F8F8F8] flex items-center justify-center gap-2.5 font-medium transition-all duration-200 hover:bg-[#176300] hover:scale-[1.02] active:scale-[0.98] shadow-md hover:shadow-lg text-[14px] sm:text-[16px]"
       >
         <CiMail
-          className={`text-[24px] ${buttonText === 'Preview' && 'hidden'}`}
+          className={`text-[20px] sm:text-[24px] ${buttonText === 'Preview' && 'hidden'}`}
         />
         {buttonText}
       </button>

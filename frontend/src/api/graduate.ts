@@ -100,19 +100,20 @@ export const graduateApi = {
 
   // Applications
   applyToJob: async (
-    jobId: any,
-    data: {
+    jobId: string,
+    data?: {
       coverLetter?: string;
       resume?: {
         fileName: string;
         fileUrl: string;
         size: number;
-        publicId: any;
-        onDisplay: boolean;
+        publicId?: any;
+        onDisplay?: boolean;
       };
+      extraAnswers?: Record<string, string>;
     }
   ) => {
-    const response = await api.post(`/graduates/apply/${jobId}`, data);
+    const response = await api.post(`/graduates/apply/${jobId}`, data || {});
     return response.data;
   },
   

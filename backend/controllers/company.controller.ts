@@ -204,7 +204,7 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
+  const { title, jobType, preferedRank, description, requirements, location, salary, status, directContact } =
     req.body;
 
   const validatedTitle = validateRequiredString(title, 'Title', res);
@@ -237,6 +237,25 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
   const validatedSkills = validateSkills(requirements.skills, res);
   if (!validatedSkills) return;
 
+  // Validate extra requirements if provided
+  let validatedExtraRequirements: any[] | undefined;
+  if (requirements.extraRequirements && Array.isArray(requirements.extraRequirements)) {
+    validatedExtraRequirements = requirements.extraRequirements
+      .filter((req: any) => req && typeof req === 'object')
+      .map((req: any) => ({
+        label: typeof req.label === 'string' && req.label.trim() ? req.label.trim() : null,
+        type: ['text', 'url', 'textarea'].includes(req.type) ? req.type : 'text',
+        required: Boolean(req.required),
+        placeholder: typeof req.placeholder === 'string' ? req.placeholder.trim() : undefined,
+      }))
+      .filter((req: any) => req.label !== null);
+
+    if (requirements.extraRequirements.length > 0 && validatedExtraRequirements && validatedExtraRequirements.length === 0) {
+      res.status(400).json({ message: 'Invalid extra requirements format' });
+      return;
+    }
+  }
+
   const validatedLocation = location ? validateOptionalString(location, 'Location', res) : null;
   if (location && validatedLocation === null) return;
 
@@ -247,6 +266,9 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     ? validateOptionalEnum(status, ['active', 'closed', 'draft'] as const, 'Status', res)
     : null;
   if (status && validatedStatus === null) return;
+
+  // Validate directContact (default to true if not provided)
+  const validatedDirectContact = directContact !== undefined ? Boolean(directContact) : true;
 
   const jobText = `
     Title: ${validatedTitle}
@@ -284,7 +306,11 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
     description: validatedDescription,
     requirements: {
       skills: validatedSkills,
+      ...(validatedExtraRequirements && validatedExtraRequirements.length > 0
+        ? { extraRequirements: validatedExtraRequirements }
+        : {}),
     },
+    directContact: validatedDirectContact,
     embedding,
     ...deleteUndefined({
       location: validatedLocation,
@@ -484,7 +510,7 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const { title, jobType, preferedRank, description, requirements, location, salary, status } =
+  const { title, jobType, preferedRank, description, requirements, location, salary, status, directContact } =
     req.body;
   let needsEmbeddingUpdate = false;
 
@@ -551,6 +577,10 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     const validated = validateEnum(status, ['active', 'closed', 'draft'] as const, 'Status', res);
     if (!validated) return;
     job.status = validated;
+  }
+
+  if (directContact !== undefined) {
+    job.directContact = Boolean(directContact);
   }
 
   if (needsEmbeddingUpdate) {
@@ -893,7 +923,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
       })
       .populate({
         path: 'jobId',
-        select: 'title companyId location jobType salary',
+        select: 'title companyId location jobType salary directContact',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -993,7 +1023,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
       })
       .populate({
         path: 'jobId',
-        select: 'title companyId',
+        select: 'title companyId directContact',
         populate: {
           path: 'companyId',
           select: 'companyName',
@@ -1015,5 +1045,227 @@ export const getApplications = async (req: Request, res: Response): Promise<void
       total,
       pages: Math.ceil(total / pagination.limit),
     },
+  });
+};
+
+/**
+ * Update application status (accept/reject)
+ * PUT /api/companies/applications/:applicationId/status
+ */
+export const updateApplicationStatus = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId }).lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const { applicationId } = req.params;
+  const { status, notes } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+    res.status(400).json({ message: 'Invalid application ID' });
+    return;
+  }
+
+  const validatedStatus = validateEnum(
+    status,
+    ['accepted', 'rejected', 'reviewed', 'shortlisted', 'interviewed'] as const,
+    'Status',
+    res
+  );
+  if (!validatedStatus) return;
+
+  // Verify application belongs to company's jobs
+  const application = await Application.findById(applicationId)
+    .populate({
+      path: 'jobId',
+      select: 'companyId title',
+      populate: {
+        path: 'companyId',
+        select: 'userId',
+      },
+    })
+    .populate({
+      path: 'graduateId',
+      select: 'firstName lastName userId',
+    });
+
+  if (!application) {
+    res.status(404).json({ message: 'Application not found' });
+    return;
+  }
+
+  const job = application.jobId as any;
+  if (!job || job.companyId?._id?.toString() !== company._id.toString()) {
+    res.status(403).json({ message: 'Application does not belong to your company' });
+    return;
+  }
+
+  application.status = validatedStatus;
+  application.reviewedAt = new Date();
+  if (notes !== undefined) {
+    application.notes = typeof notes === 'string' ? notes.trim() : undefined;
+  }
+
+  await application.save();
+
+  // Send notifications
+  try {
+    const graduate = application.graduateId as any;
+    if (graduate?.userId) {
+      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
+        ? graduate.userId.toString()
+        : String(graduate.userId);
+      await createNotification({
+        userId: graduateUserId,
+        type: 'application',
+        title: `Application ${validatedStatus === 'accepted' ? 'Accepted' : validatedStatus === 'rejected' ? 'Rejected' : 'Updated'}`,
+        message: `Your application for "${job.title}" has been ${validatedStatus}.`,
+        relatedId: application._id instanceof mongoose.Types.ObjectId
+          ? application._id.toString()
+          : String(application._id),
+        relatedType: 'application',
+        email: {
+          subject: `Application Update: ${job.title}`,
+          text: `Your application for "${job.title}" at ${company.companyName} has been ${validatedStatus}.`,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Failed to send application status notification:', error);
+  }
+
+  res.json({
+    message: 'Application status updated successfully',
+    application: application.toObject({ versionKey: false }),
+  });
+};
+
+/**
+ * Schedule interview for application
+ * POST /api/companies/applications/:applicationId/schedule-interview
+ */
+export const scheduleInterview = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId }).lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const { applicationId } = req.params;
+  const { scheduledAt, interviewLink } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+    res.status(400).json({ message: 'Invalid application ID' });
+    return;
+  }
+
+  if (!scheduledAt) {
+    res.status(400).json({ message: 'Scheduled time is required' });
+    return;
+  }
+
+  const scheduledDate = new Date(scheduledAt);
+  if (isNaN(scheduledDate.getTime())) {
+    res.status(400).json({ message: 'Invalid date format' });
+    return;
+  }
+
+  if (scheduledDate < new Date()) {
+    res.status(400).json({ message: 'Interview cannot be scheduled in the past' });
+    return;
+  }
+
+  // Verify application belongs to company's jobs
+  const application = await Application.findById(applicationId)
+    .populate({
+      path: 'jobId',
+      select: 'companyId title',
+      populate: {
+        path: 'companyId',
+        select: 'userId',
+      },
+    })
+    .populate({
+      path: 'graduateId',
+      select: 'firstName lastName userId',
+    });
+
+  if (!application) {
+    res.status(404).json({ message: 'Application not found' });
+    return;
+  }
+
+  const job = application.jobId as any;
+  if (!job || job.companyId?._id?.toString() !== company._id.toString()) {
+    res.status(403).json({ message: 'Application does not belong to your company' });
+    return;
+  }
+
+  application.interviewScheduledAt = scheduledDate;
+  application.interviewLink = typeof interviewLink === 'string' ? interviewLink.trim() : undefined;
+  application.status = 'interviewed';
+  if (!application.reviewedAt) {
+    application.reviewedAt = new Date();
+  }
+
+  await application.save();
+
+  // Send notifications
+  try {
+    const graduate = application.graduateId as any;
+    if (graduate?.userId) {
+      const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+      const formattedDate = scheduledDate.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+
+      const graduateUserId = graduate.userId instanceof mongoose.Types.ObjectId
+        ? graduate.userId.toString()
+        : String(graduate.userId);
+
+      await createNotification({
+        userId: graduateUserId,
+        type: 'application',
+        title: 'Interview Scheduled',
+        message: `An interview has been scheduled for your application to "${job.title}" on ${formattedDate}.`,
+        relatedId: application._id instanceof mongoose.Types.ObjectId
+          ? application._id.toString()
+          : String(application._id),
+        relatedType: 'application',
+        email: {
+          subject: `Interview Scheduled: ${job.title} at ${company.companyName}`,
+          text: `Hello ${graduateName},\n\nAn interview has been scheduled for your application to "${job.title}" at ${company.companyName}.\n\nDate: ${formattedDate}${application.interviewLink ? `\nInterview Link: ${application.interviewLink}` : ''}\n\nWe look forward to speaking with you!`,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Failed to send interview scheduling notification:', error);
+  }
+
+  res.json({
+    message: 'Interview scheduled successfully',
+    application: application.toObject({ versionKey: false }),
   });
 };

@@ -23,6 +23,9 @@ export interface IApplication extends Document {
     publicId:any;
     onDisplay:boolean;
   };
+  extraAnswers?: Record<string, string>; // Map of requirement label to answer
+  interviewScheduledAt?: Date;
+  interviewLink?: string;
   appliedAt: Date;
   reviewedAt?: Date;
   notes?: string;
@@ -101,6 +104,19 @@ const ApplicationSchema: Schema = new Schema(
       required: false,
     },
     notes: {
+      type: String,
+      required: false,
+    },
+    extraAnswers: {
+      type: Map,
+      of: String,
+      required: false,
+    },
+    interviewScheduledAt: {
+      type: Date,
+      required: false,
+    },
+    interviewLink: {
       type: String,
       required: false,
     },
