@@ -245,7 +245,10 @@ export const createProfile = async (
       profilePictureUrl,
       location,
       workExperiences = [],
+      cv,
+      summary
     } = req.body;
+
 
     if (
       typeof firstName !== 'string' ||
@@ -338,6 +341,8 @@ export const createProfile = async (
       expLevel,
       expYears: yearsValue,
       position,
+      cv: cv,
+      summary,
       profilePictureUrl:
         typeof profilePictureUrl === 'string'
           ? profilePictureUrl.trim()
@@ -411,6 +416,8 @@ export const createProfile = async (
             .filter((exp): exp is NonNullable<typeof exp> => exp !== null)
         : [],
     });
+
+ 
 
     res.status(201).json({
       message: 'Profile created successfully',
@@ -824,16 +831,13 @@ export const addWorkExperience = async (
 ): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     const graduate = await findGraduateOrRespond(userId, res);
-    if (!graduate) {
-      return;
-    }
+    if (!graduate) return;
 
-    const { company, title, startDate, endDate, description } = req.body;
+    const { company, title, startDate, endDate, description, current } = req.body;
+
     if (
       typeof company !== 'string' ||
       typeof title !== 'string' ||
@@ -845,14 +849,16 @@ export const addWorkExperience = async (
       return;
     }
 
+    // Parse startDate
     const parsedStart = new Date(startDate);
     if (Number.isNaN(parsedStart.getTime())) {
       res.status(400).json({ message: 'startDate must be a valid date' });
       return;
     }
 
+    // Parse endDate if provided and current is false
     let parsedEnd: Date | undefined;
-    if (endDate) {
+    if (!current && endDate) {
       const end = new Date(endDate);
       if (Number.isNaN(end.getTime())) {
         res.status(400).json({ message: 'endDate must be a valid date' });
@@ -861,13 +867,14 @@ export const addWorkExperience = async (
       parsedEnd = end;
     }
 
+    // Add work experience
     graduate.workExperiences.push({
       company: company.trim(),
       title: title.trim(),
       startDate: parsedStart,
-      endDate: parsedEnd,
-      description:
-        typeof description === 'string' ? description.trim() : undefined,
+      endDate: current ? undefined : parsedEnd, // Remove endDate if currently working
+      description: typeof description === 'string' ? description.trim() : undefined,
+      current: typeof current === 'boolean' ? current : false,
     });
 
     await graduate.save();
@@ -885,20 +892,17 @@ export const addWorkExperience = async (
   }
 };
 
+
 export const updateWorkExperience = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const userId = requireAuthenticatedUserId(req, res);
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     const graduate = await findGraduateOrRespond(userId, res);
-    if (!graduate) {
-      return;
-    }
+    if (!graduate) return;
 
     const { experienceId } = req.params;
     if (!experienceId || !ObjectId.isValid(experienceId)) {
@@ -917,15 +921,14 @@ export const updateWorkExperience = async (
     }
 
     const experience = graduate.workExperiences[experienceIndex];
+    const { company, title, startDate, endDate, description, current } = req.body;
 
-    const { company, title, startDate, endDate, description } = req.body;
+  
 
-    if (typeof company === 'string' && company.trim().length > 0) {
-      experience.company = company.trim();
-    }
-    if (typeof title === 'string' && title.trim().length > 0) {
-      experience.title = title.trim();
-    }
+    // Validate and update fields
+    if (typeof company === 'string' && company.trim()) experience.company = company.trim();
+    if (typeof title === 'string' && title.trim()) experience.title = title.trim();
+
     if (startDate) {
       const parsedStart = new Date(startDate);
       if (Number.isNaN(parsedStart.getTime())) {
@@ -934,22 +937,36 @@ export const updateWorkExperience = async (
       }
       experience.startDate = parsedStart;
     }
-    if (endDate === null || endDate === '') {
-      experience.endDate = undefined;
-    } else if (endDate !== undefined) {
-      const parsedEnd = new Date(endDate);
-      if (Number.isNaN(parsedEnd.getTime())) {
-        res.status(400).json({ message: 'endDate must be a valid date' });
-        return;
+
+  
+    if (typeof current === 'boolean') {
+      experience.current = current;
+      if (current) {
+        experience.endDate = undefined; // clear endDate if currently working
+      } else if (endDate) {
+        const parsedEnd = new Date(endDate);
+        if (Number.isNaN(parsedEnd.getTime())) {
+          res.status(400).json({ message: 'endDate must be a valid date' });
+          return;
+        }
+        experience.endDate = parsedEnd;
       }
-      experience.endDate = parsedEnd;
+    } else if (endDate !== undefined) {
+      if (endDate === null || endDate === '') {
+        experience.endDate = undefined;
+      } else {
+        const parsedEnd = new Date(endDate);
+        if (Number.isNaN(parsedEnd.getTime())) {
+          res.status(400).json({ message: 'endDate must be a valid date' });
+          return;
+        }
+        experience.endDate = parsedEnd;
+      }
     }
-    if (typeof description === 'string') {
-      experience.description = description.trim();
-    }
+
+    if (typeof description === 'string') experience.description = description.trim();
 
     graduate.workExperiences[experienceIndex] = experience;
-
     graduate.markModified('workExperiences');
     await graduate.save();
 
@@ -962,6 +979,7 @@ export const updateWorkExperience = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 export const deleteWorkExperience = async (
   req: Request,
@@ -1660,6 +1678,23 @@ export const applyToJob = async (
       return;
     }
 
+    // Validate profile completeness before allowing application
+    const missingFields: string[] = [];
+    if (!graduate.location || graduate.location.trim() === '') {
+      missingFields.push('location');
+    }
+    if (!graduate.cv || !Array.isArray(graduate.cv) || graduate.cv.length === 0) {
+      missingFields.push('CV');
+    }
+
+    if (missingFields.length > 0) {
+      res.status(400).json({
+        message: `Please complete your profile before applying. Missing: ${missingFields.join(', ')}`,
+        missingFields,
+      });
+      return;
+    }
+
     const { jobId } = req.params;
     if (!jobId || !ObjectId.isValid(jobId)) {
       res.status(400).json({ message: 'Invalid jobId' });
@@ -1694,11 +1729,42 @@ export const applyToJob = async (
       jobId,
     });
 
-    const { coverLetter, resume } = req.body as {
+    const { coverLetter, resume, extraAnswers } = req.body as {
       coverLetter?: string;
-      resume?: string;
+      resume?: {
+        fileName: string;
+        fileUrl: string;
+        size: number;
+        publicId: any;
+        onDisplay: boolean;
+      } | null;
+      extraAnswers?: Record<string, string>;
     };
 
+    // Validate extra answers against job requirements and get contact preference
+    const jobWithRequirements = await Job.findById(jobId)
+      .select('requirements directContact title companyId')
+      .lean();
+    
+    let validatedExtraAnswers: Record<string, string> | undefined;
+    if (extraAnswers && jobWithRequirements?.requirements?.extraRequirements) {
+      validatedExtraAnswers = {};
+
+      for (const req of jobWithRequirements.requirements.extraRequirements) {
+        const answer = extraAnswers[req.label];
+        if (req.required && (!answer || typeof answer !== 'string' || !answer.trim())) {
+          res.status(400).json({
+            message: `Required field "${req.label}" is missing or empty`,
+          });
+          return;
+        }
+        if (answer && typeof answer === 'string') {
+          validatedExtraAnswers[req.label] = answer.trim();
+        }
+      }
+    }
+
+    // ✅ FIX: Handle resume as object, NOT string
     const application = await Application.create({
       graduateId: graduate._id,
       jobId,
@@ -1706,7 +1772,10 @@ export const applyToJob = async (
       status: 'pending',
       coverLetter:
         typeof coverLetter === 'string' ? coverLetter.trim() : undefined,
-      resume: typeof resume === 'string' ? resume.trim() : undefined,
+
+      // 🔥 KEY FIX HERE — REMOVE .trim(), STORE OBJECT DIRECTLY
+      resume: typeof resume === 'object' && resume !== null ? resume : undefined,
+      extraAnswers: validatedExtraAnswers,
     });
 
     const persistedApplicationId = application._id as mongoose.Types.ObjectId;
@@ -1716,9 +1785,13 @@ export const applyToJob = async (
       application: application.toObject({ versionKey: false }),
     });
 
-    // Emit notifications for both graduate and company
+    // Emit notifications for graduate, company, and admin (if admin handles)
     try {
-      const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() || 'A graduate';
+      const graduateName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() ||
+        'A graduate';
+
+      const jobDirectContact = jobWithRequirements?.directContact !== false; // Default to true
 
       // Notify graduate
       if (graduate.userId) {
@@ -1726,14 +1799,17 @@ export const applyToJob = async (
           applicationId: persistedApplicationId.toString(),
           jobId: jobId,
           jobTitle: job.title,
-          companyId: company?.userId?.toString() || company?._id?.toString() || '',
+          companyId:
+            company?.userId?.toString() ||
+            company?._id?.toString() ||
+            '',
           companyName: company?.companyName || 'Company',
           graduateId: graduate.userId.toString(),
         });
       }
 
-      // Notify company
-      if (company?.userId) {
+      // Notify company only if direct contact
+      if (jobDirectContact && company?.userId) {
         await notifyCompanyJobApplicationReceived({
           applicationId: persistedApplicationId.toString(),
           jobId: jobId,
@@ -1743,6 +1819,27 @@ export const applyToJob = async (
           companyId: company.userId.toString(),
         });
       }
+
+      // Notify all admin users if admin handles
+      if (!jobDirectContact) {
+        const User = (await import('../models/User.model')).default;
+        const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
+        
+        for (const admin of adminUsers) {
+          await createNotification({
+            userId: admin._id,
+            type: 'application',
+            title: 'New Application Requires Admin Review',
+            message: `${graduateName} applied to "${job.title}" at ${company?.companyName || 'Company'}. This application requires admin handling.`,
+            relatedId: persistedApplicationId,
+            relatedType: 'application',
+            email: {
+              subject: `New Application: ${job.title} at ${company?.companyName || 'Company'}`,
+              text: `A new application has been submitted that requires admin review.\n\nApplicant: ${graduateName}\nJob: ${job.title}\nCompany: ${company?.companyName || 'Company'}\n\nPlease review and handle this application through the admin panel.`,
+            },
+          });
+        }
+      }
       } catch (error) {
       console.error('Failed to send application notifications:', error);
     }
@@ -1751,6 +1848,7 @@ export const applyToJob = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 export const getApplications = async (
   req: Request,
@@ -1886,6 +1984,222 @@ export const updateApplicationStatus = async (
     });
   } catch (error) {
     console.error('Update application status error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const addCV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { fileName, fileUrl, size, publicId, onDisplay } = req.body;
+
+    if (
+      typeof fileName !== 'string' ||
+      fileName.trim() === '' ||
+      typeof fileUrl !== 'string' ||
+      fileUrl.trim() === '' ||
+      typeof size !== 'number' ||
+      size <= 0
+    ) {
+      res.status(400).json({
+        message: 'fileName, fileUrl, and size (positive number) are required',
+      });
+      return;
+    }
+
+    
+    const existingCV = graduate.cv?.find((cv) => cv.fileUrl === fileUrl.trim());
+    if (existingCV) {
+      res.status(409).json({
+        message: 'CV with this URL already exists',
+      });
+      return;
+    }
+
+ 
+    if (onDisplay === true && graduate.cv) {
+      graduate.cv.forEach((cv) => {
+        cv.onDisplay = false;
+      });
+    }
+
+   
+    const newCV = {
+      fileName: fileName.trim(),
+      fileUrl: fileUrl.trim(),
+      size,
+      publicId: typeof publicId === 'string' ? publicId.trim() : undefined,
+      onDisplay: typeof onDisplay === 'boolean' ? onDisplay : false,
+    };
+
+  
+    if (!graduate.cv) {
+      graduate.cv = [];
+    }
+    graduate.cv.push(newCV);
+
+    graduate.markModified('cv');
+    await graduate.save();
+
+    const addedCV = graduate.cv[graduate.cv.length - 1];
+
+    res.status(201).json({
+      message: 'CV added successfully',
+      cv: addedCV,
+    });
+  } catch (error) {
+    console.error('Add CV error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const deleteCV = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { cvId } = req.params;
+    if (!cvId || !ObjectId.isValid(cvId)) {
+      res.status(400).json({ message: 'Invalid cvId' });
+      return;
+    }
+
+    if (!graduate.cv || graduate.cv.length === 0) {
+      res.status(404).json({ message: 'No CVs found' });
+      return;
+    }
+
+    const cvObjectId = new ObjectId(cvId);
+    const cvIndex = graduate.cv.findIndex(
+      (cv) => cv._id && cv._id.equals(cvObjectId)
+    );
+
+    if (cvIndex === -1) {
+      res.status(404).json({ message: 'CV not found' });
+      return;
+    }
+
+
+    const deletedCV = graduate.cv[cvIndex];
+    const publicId = deletedCV.publicId;
+
+   
+    graduate.cv.splice(cvIndex, 1);
+    graduate.markModified('cv');
+    await graduate.save();
+
+    res.json({
+      message: 'CV deleted successfully',
+      publicId,
+    });
+  } catch (error) {
+    console.error('Delete CV error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+
+export const updateCVDisplay = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    const { cvId } = req.params;
+    if (!cvId || !ObjectId.isValid(cvId)) {
+      res.status(400).json({ message: 'Invalid cvId' });
+      return;
+    }
+
+    if (!graduate.cv || graduate.cv.length === 0) {
+      res.status(404).json({ message: 'No CVs found' });
+      return;
+    }
+
+    const cvObjectId = new ObjectId(cvId);
+    const cvIndex = graduate.cv.findIndex(
+      (cv) => cv._id && cv._id.equals(cvObjectId)
+    );
+
+    if (cvIndex === -1) {
+      res.status(404).json({ message: 'CV not found' });
+      return;
+    }
+
+   
+    graduate.cv.forEach((cv) => {
+      cv.onDisplay = false;
+    });
+
+  
+    graduate.cv[cvIndex].onDisplay = true;
+
+    graduate.markModified('cv');
+    await graduate.save();
+
+    res.json({
+      message: 'CV display status updated',
+      cv: graduate.cv[cvIndex],
+    });
+  } catch (error) {
+    console.error('Update CV display error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getCVs = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = requireAuthenticatedUserId(req, res);
+    if (!userId) {
+      return;
+    }
+
+    const graduate = await findGraduateOrRespond(userId, res);
+    if (!graduate) {
+      return;
+    }
+
+    res.json({
+      cvs: graduate.cv || [],
+    });
+  } catch (error) {
+    console.error('Get CVs error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };

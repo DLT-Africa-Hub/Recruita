@@ -1,8 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Input, Select, Textarea, Button } from '../../../../components/ui';
+import { Input, Select, Button } from '../../../../components/ui';
+import RichTextEditor from '../../../../components/ui/RichTextEditor';
 import { skills } from '../../../../utils/material.utils';
-import { HiChevronDown } from 'react-icons/hi2';
+import { HiChevronDown, HiXMark, HiPlus } from 'react-icons/hi2';
+
+interface ExtraRequirement {
+  label: string;
+  type: 'text' | 'url' | 'textarea';
+  required: boolean;
+  placeholder?: string;
+}
 
 interface JobFormData {
   title: string;
@@ -11,7 +19,9 @@ interface JobFormData {
   salaryMin: string;
   salaryMax: string;
   description: string;
-  skills: string[]; // Changed to array
+  skills: string[];
+  extraRequirements: ExtraRequirement[];
+  directContact: boolean;
 }
 
 interface LocationState {
@@ -29,6 +39,8 @@ const CompanyJobForm = () => {
     salaryMax: '',
     description: '',
     skills: [],
+    extraRequirements: [],
+    directContact: true, // Default to direct contact
   });
   const [isSkillsDropdownOpen, setIsSkillsDropdownOpen] = useState(false);
   const skillsDropdownRef = useRef<HTMLDivElement>(null);
@@ -111,7 +123,11 @@ const CompanyJobForm = () => {
       description: formData.description,
       requirements: {
         skills: formData.skills,
+        ...(formData.extraRequirements.length > 0
+          ? { extraRequirements: formData.extraRequirements }
+          : {}),
       },
+      directContact: formData.directContact,
       salary:
         salaryMin || salaryMax
           ? {
@@ -331,15 +347,174 @@ const CompanyJobForm = () => {
           
         </div>
 
-        <Textarea
+        <RichTextEditor
           label="Job Description"
-          name="description"
-          rows={4}
-          placeholder="Describe the role, responsibilities, and requirements"
           value={formData.description}
-          onChange={handleChange}
+          onChange={(html) => setFormData((prev) => ({ ...prev, description: html }))}
+          placeholder="Describe the role, responsibilities, and requirements"
           required
+          rows={6}
         />
+
+        {/* Extra Requirements Section */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-[#1C1C1C] text-[16px] font-medium">
+                Additional Requirements
+              </label>
+              <p className="text-[#1C1C1C80] text-[14px] font-normal">
+                Add custom fields for applicants (e.g., portfolio URL, essay)
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFormData((prev) => ({
+                  ...prev,
+                  extraRequirements: [
+                    ...prev.extraRequirements,
+                    { label: '', type: 'text', required: false },
+                  ],
+                }));
+              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-button text-button hover:bg-button/10 transition"
+            >
+              <HiPlus className="text-[18px]" />
+              <span className="text-[14px] font-medium">Add Field</span>
+            </button>
+          </div>
+
+          {formData.extraRequirements.map((req, index) => (
+            <div
+              key={index}
+              className="p-4 border border-fade rounded-xl bg-[#F8F8F8] flex flex-col gap-3"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Input
+                    placeholder="Field label (e.g., Portfolio URL)"
+                    value={req.label}
+                    onChange={(e) => {
+                      const updated = [...formData.extraRequirements];
+                      updated[index].label = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        extraRequirements: updated,
+                      }));
+                    }}
+                  />
+                  <Select
+                    value={req.type}
+                    onChange={(e) => {
+                      const updated = [...formData.extraRequirements];
+                      updated[index].type = e.target.value as 'text' | 'url' | 'textarea';
+                      setFormData((prev) => ({
+                        ...prev,
+                        extraRequirements: updated,
+                      }));
+                    }}
+                    options={[
+                      { value: 'text', label: 'Short Text' },
+                      { value: 'url', label: 'URL' },
+                      { value: 'textarea', label: 'Long Text' },
+                    ]}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      extraRequirements: prev.extraRequirements.filter((_, i) => i !== index),
+                    }));
+                  }}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                >
+                  <HiXMark className="text-[20px]" />
+                </button>
+              </div>
+              <div className="flex items-center gap-4">
+                <Input
+                  placeholder="Placeholder text (optional)"
+                  value={req.placeholder || ''}
+                  onChange={(e) => {
+                    const updated = [...formData.extraRequirements];
+                    updated[index].placeholder = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      extraRequirements: updated,
+                    }));
+                  }}
+                />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={req.required}
+                    onChange={(e) => {
+                      const updated = [...formData.extraRequirements];
+                      updated[index].required = e.target.checked;
+                      setFormData((prev) => ({
+                        ...prev,
+                        extraRequirements: updated,
+                      }));
+                    }}
+                    className="w-4 h-4 rounded border-fade text-button focus:ring-button"
+                  />
+                  <span className="text-[14px] text-[#1C1C1C]">Required</span>
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Contact Preference Section */}
+        <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-[#F8F8F8]">
+          <div>
+            <label className="text-[#1C1C1C] text-[16px] font-medium">
+              Application Handling
+            </label>
+            <p className="text-[#1C1C1C80] text-[14px] font-normal mt-1">
+              Choose how you want to handle applications for this job
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-fade bg-white hover:bg-[#F8F8F8] transition">
+              <input
+                type="radio"
+                name="directContact"
+                checked={formData.directContact === true}
+                onChange={() => setFormData((prev) => ({ ...prev, directContact: true }))}
+                className="mt-1 w-4 h-4 text-button focus:ring-button"
+              />
+              <div className="flex-1">
+                <span className="text-[14px] font-medium text-[#1C1C1C] block">
+                  Discuss directly with applicants
+                </span>
+                <span className="text-[12px] text-[#1C1C1C80] block mt-1">
+                  You'll be able to chat and schedule interviews directly with candidates
+                </span>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-fade bg-white hover:bg-[#F8F8F8] transition">
+              <input
+                type="radio"
+                name="directContact"
+                checked={formData.directContact === false}
+                onChange={() => setFormData((prev) => ({ ...prev, directContact: false }))}
+                className="mt-1 w-4 h-4 text-button focus:ring-button"
+              />
+              <div className="flex-1">
+                <span className="text-[14px] font-medium text-[#1C1C1C] block">
+                  Let DLT Africa handle applications
+                </span>
+                <span className="text-[12px] text-[#1C1C1C80] block mt-1">
+                  DLT Africa admin team will review and manage applications on your behalf
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
 
         <div className="mt-[12px] flex justify-center">
           <Button type="submit" variant="primary" className="max-w-[400px]">

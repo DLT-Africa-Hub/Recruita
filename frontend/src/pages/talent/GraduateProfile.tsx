@@ -6,9 +6,17 @@ import { PageLoader, ErrorState } from '../../components/ui';
 import { DEFAULT_PROFILE_IMAGE } from '../../utils/job.utils';
 import ChangePassword from '../../components/ChangePassword';
 import GraduateProfileEditModal from '../../components/profile/GraduateProfileEditModal';
+import ProfilePictureEditor from '../../components/profile/ProfilePictureEditor';
+import { useQueryClient } from '@tanstack/react-query';
+import WorkingExperience from '../../components/profile/WorkingExperience';
+import ResumeModal from '../../components/profile/ResumeModal';
+import cloudinaryApi from '../../api/cloudinary';
 
 const GraduateProfile = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     data: profileData,
@@ -87,6 +95,97 @@ const GraduateProfile = () => {
     );
   }
 
+  const handleProfilePictureUpload = async (file: Blob) => {
+    try {
+      setIsUploading(true);
+
+      // Store the old profile picture URL before uploading new one
+      const oldProfilePictureUrl = graduate.profilePictureUrl;
+      const isReplacingExistingPicture = 
+        oldProfilePictureUrl && 
+        oldProfilePictureUrl !== DEFAULT_PROFILE_IMAGE &&
+        oldProfilePictureUrl.includes('cloudinary.com');
+
+      console.log('Uploading new profile picture...');
+      if (isReplacingExistingPicture) {
+        console.log('Will delete old picture after upload:', oldProfilePictureUrl);
+      }
+
+      const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+      const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+      if (!CLOUD_NAME || !UPLOAD_PRESET) {
+        throw new Error(
+          'Missing Cloudinary configuration. Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.'
+        );
+      }
+
+      const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
+
+      const fileToUpload =
+        file instanceof File ? file : new File([file], 'profile.jpg', { type: (file as Blob).type || 'image/jpeg' });
+
+      const form = new FormData();
+      form.append('file', fileToUpload);
+      form.append('upload_preset', UPLOAD_PRESET);
+      form.append('folder', 'graduates/profile-pictures');
+
+      const res = await fetch(url, {
+        method: 'POST',
+        body: form,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Cloudinary upload failed: ${res.status} ${errText}`);
+      }
+
+      const data = await res.json();
+      const secureUrl: string | undefined = data.secure_url || data.secureUrl || data.url;
+      const publicId: string | undefined = data.public_id || data.publicId;
+
+      if (!secureUrl) {
+        throw new Error('Cloudinary response did not include secure_url');
+      }
+
+      console.log('New profile picture uploaded:', {
+        url: secureUrl,
+        publicId
+      });
+
+      // Update profile picture in database
+      await graduateApi.updateProfilePicture(secureUrl);
+
+      // Delete old profile picture from Cloudinary after successful update
+      if (isReplacingExistingPicture) {
+        try {
+          console.log('Deleting old profile picture from Cloudinary...');
+          const deleteResult = await cloudinaryApi.deleteProfilePicture(oldProfilePictureUrl);
+          
+          if (deleteResult.success) {
+            console.log('Successfully deleted old profile picture:', deleteResult.message);
+          } else {
+            console.warn('Failed to delete old profile picture:', deleteResult);
+          }
+        } catch (deleteError: any) {
+          // Log error but don't throw - the new picture is already uploaded and saved
+          console.error('Error deleting old profile picture:', deleteError);
+          console.warn('Continuing despite deletion error - new picture is saved');
+        }
+      }
+
+      // Refresh profile data
+      queryClient.invalidateQueries({ queryKey: ['graduateProfile', 'profilePage'] });
+
+      console.log('Profile picture update complete!');
+    } catch (err: any) {
+      console.error('Failed to upload profile picture', err);
+      alert(err?.message || 'Failed to upload profile picture');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <div className="p-[20px] lg:p-[32px] flex flex-col gap-[32px]">
       <div className="flex flex-wrap items-start justify-between gap-[16px]">
@@ -106,119 +205,139 @@ const GraduateProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-[32px]">
-        <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
-          <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
-            <div className="flex md:flex-row gap-[12px]">
-              <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4]">
-                <img
-                  src={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
-                  alt={fullName || 'Profile'}
-                  className="w-full h-full object-cover"
-                />
+        <div className='flex flex-col gap-[32px]'>
+          <div className="rounded-[24px] border border-fade bg-white p-[24px] flex flex-col gap-[24px]">
+            <div className="flex flex-col items-center text-center lg:items-start lg:text-left gap-[12px] ">
+              <div className='w-full flex flex-col-reverse gap-[20px] lg:flex-row items-start justify-between'>
+                <div className="flex md:flex-row gap-[12px]">
+                  <div className="w-[150px] h-[150px] rounded-[10px] overflow-hidden bg-[#F4F4F4] relative">
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="animate-spin h-8 w-8 border-4 border-white border-t-transparent rounded-full" />
+                          <p className="text-white text-xs">Uploading...</p>
+                        </div>
+                      </div>
+                    )}
+                    <ProfilePictureEditor
+                      imageUrl={graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE}
+                      size={150}
+                      onUpload={handleProfilePictureUpload}
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-[20px] font-semibold text-[#1C1C1C]">
+                      {fullName || 'Profile Name'}
+                    </p>
+                    <p className="text-[14px] text-[#1C1C1C80] capitalize">
+                      {headline}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsResumeModalOpen(true)}
+                  className='px-[20px] py-[12px] rounded-[12px] border border-button bg-button text-white hover:bg-[#176300] transition-colors flex items-center gap-[8px]'
+                >
+                  Resume
+                </button>
               </div>
 
-              <div>
-                <p className="text-[20px] font-semibold text-[#1C1C1C]">
-                  {fullName || 'Profile Name'}
+              <div className="w-full">
+                <p className="text-[16px] font-semibold text-[#1C1C1C]">
+                  Summary
                 </p>
-                <p className="text-[14px] text-[#1C1C1C80] capitalize">
-                  {headline}
+                <p className="text-[14px] text-[#1C1C1C80] leading-relaxed mt-[8px]">
+                  {summary}
                 </p>
               </div>
-            </div>
 
-            <div className="w-full">
-              <p className="text-[16px] font-semibold text-[#1C1C1C]">
-                Summary
-              </p>
-              <p className="text-[14px] text-[#1C1C1C80] leading-relaxed mt-[8px]">
-                {summary}
-              </p>
-            </div>
+              {/* Social Links Section */}
+              <div className="w-full mt-[24px] pt-[24px] border-t border-fade">
+                <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[16px]">
+                  Links
+                </p>
+                <div className="flex flex-wrap gap-[12px]">
+                  {githubUrl ? (
+                    <a
+                      href={githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaGithub className="text-[18px] text-[#1C1C1C]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        {githubUsername || 'GitHub'}
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaGithub className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
 
-            {/* Social Links Section */}
-            <div className="w-full mt-[24px] pt-[24px] border-t border-fade">
-              <p className="text-[16px] font-semibold text-[#1C1C1C] mb-[16px]">
-                Links
-              </p>
-              <div className="flex flex-wrap gap-[12px]">
-                {githubUrl ? (
-                  <a
-                    href={githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaGithub className="text-[18px] text-[#1C1C1C]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      {githubUsername || 'GitHub'}
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaGithub className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
+                  {linkedinUrl ? (
+                    <a
+                      href={linkedinUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLinkedin className="text-[18px] text-[#0077B5]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        {linkedinUsername || 'LinkedIn'}
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLinkedin className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
 
-                {linkedinUrl ? (
-                  <a
-                    href={linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLinkedin className="text-[18px] text-[#0077B5]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      {linkedinUsername || 'LinkedIn'}
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLinkedin className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
-
-                {portfolioUrl ? (
-                  <a
-                    href={portfolioUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLink className="text-[18px] text-[#1C1C1C]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C]">
-                      Personal Portfolio
-                    </span>
-                  </a>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(true)}
-                    className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
-                  >
-                    <FaLink className="text-[18px] text-[#1C1C1C80]" />
-                    <span className="text-[14px] font-medium text-[#1C1C1C80]">
-                      Connect
-                    </span>
-                  </button>
-                )}
+                  {portfolioUrl ? (
+                    <a
+                      href={portfolioUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLink className="text-[18px] text-[#1C1C1C]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C]">
+                        Personal Portfolio
+                      </span>
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="flex items-center gap-[8px] px-[16px] py-[10px] rounded-[10px] border border-fade bg-white hover:bg-[#F8F8F8] hover:border-button transition-colors"
+                    >
+                      <FaLink className="text-[18px] text-[#1C1C1C80]" />
+                      <span className="text-[14px] font-medium text-[#1C1C1C80]">
+                        Connect
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+          <WorkingExperience workExperiences={graduate.workExperiences}/>
         </div>
 
         <div className="flex flex-col gap-[32px]">
@@ -239,7 +358,6 @@ const GraduateProfile = () => {
                   label: 'Location',
                   value: graduate.location || 'Not specified',
                 },
-
                 {
                   label: 'Skills',
                   value:
@@ -258,6 +376,11 @@ const GraduateProfile = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         graduate={graduate}
+      />
+
+      <ResumeModal
+        isOpen={isResumeModalOpen}
+        onClose={() => setIsResumeModalOpen(false)}
       />
     </div>
   );

@@ -1,12 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+export interface ExtraRequirement {
+  label: string;
+  type: 'text' | 'url' | 'textarea';
+  required: boolean;
+  placeholder?: string;
+}
+
 export interface IJob extends Document {
   companyId: mongoose.Types.ObjectId;
   title: string;
   jobType: 'Full time' | 'Part time' | 'Contract' | 'Internship';
-  description: string;
+  description: string; // Rich text HTML content
   requirements: {
     skills: string[];
+    extraRequirements?: ExtraRequirement[];
   };
   location?: string;
   salary?: {
@@ -16,6 +24,7 @@ export interface IJob extends Document {
   };
   preferedRank: 'A' | 'B' | 'C' | 'D' | 'A and B' | 'B and C' | 'C and D';
   status: 'active' | 'closed' | 'draft';
+  directContact: boolean; // true = company handles directly, false = DLT Africa (admin) handles
   embedding?: number[];
   matches?: {
     graduateId: mongoose.Types.ObjectId;
@@ -57,6 +66,27 @@ const JobSchema: Schema = new Schema(
         type: [String],
         required: true,
       },
+      extraRequirements: [
+        {
+          label: {
+            type: String,
+            required: true,
+          },
+          type: {
+            type: String,
+            enum: ['text', 'url', 'textarea'],
+            required: true,
+          },
+          required: {
+            type: Boolean,
+            default: false,
+          },
+          placeholder: {
+            type: String,
+            required: false,
+          },
+        },
+      ],
     },
     location: String,
     salary: {
@@ -71,6 +101,11 @@ const JobSchema: Schema = new Schema(
       type: String,
       enum: ['active', 'closed', 'draft'],
       default: 'active',
+    },
+    directContact: {
+      type: Boolean,
+      default: true, // Default to direct contact
+      required: true,
     },
     embedding: [Number],
     matches: [

@@ -1,7 +1,8 @@
-import { HiOutlineBriefcase } from 'react-icons/hi';
+import { useState } from 'react';
+import { HiOutlineBriefcase, HiVideoCamera } from 'react-icons/hi';
 import { CandidateProfile } from '../../data/candidates';
 import BaseModal from '../ui/BaseModal';
-import { ActionButtonGroup } from '../ui';
+import { Input, Button } from '../ui';
 import { formatJobType, formatSalaryRange, getSalaryType } from '../../utils/job.utils';
 
 interface CandidatePreviewModalProps {
@@ -10,6 +11,9 @@ interface CandidatePreviewModalProps {
   onClose: () => void;
   onChat?: (candidate: CandidateProfile) => void;
   onViewCV?: (candidate: CandidateProfile) => void;
+  onAccept?: (candidate: CandidateProfile) => void;
+  onReject?: (candidate: CandidateProfile) => void;
+  onScheduleInterview?: (candidate: CandidateProfile, scheduledAt: string, interviewLink?: string) => void;
 }
 
 const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
@@ -18,7 +22,14 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
   onClose,
   onChat,
   onViewCV,
+  onAccept,
+  onReject,
+  onScheduleInterview,
 }) => {
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [interviewLink, setInterviewLink] = useState('');
+
   if (!candidate) return null;
 
   const matchPercentage = candidate.matchPercentage ?? undefined;
@@ -43,6 +54,24 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
       window.open(candidate.cv, '_blank');
     }
     onViewCV?.(candidate);
+  };
+
+  const handleAccept = () => {
+    onAccept?.(candidate);
+  };
+
+  const handleReject = () => {
+    onReject?.(candidate);
+  };
+
+  const handleScheduleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (scheduledAt) {
+      onScheduleInterview?.(candidate, scheduledAt, interviewLink || undefined);
+      setShowScheduleForm(false);
+      setScheduledAt('');
+      setInterviewLink('');
+    }
   };
 
   return (
@@ -126,17 +155,102 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-[8px]">
-          <ActionButtonGroup
-            secondary={{
-              label: 'Chat',
-              onClick: handleChat,
-            }}
-            primary={{
-              label: 'View CV',
-              onClick: handleViewCV,
-            }}
-          />
+        <div className="pt-[8px] flex flex-col gap-3">
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleViewCV}
+              className="flex-1"
+            >
+              View CV
+            </Button>
+            {/* Only show Chat if direct contact is enabled */}
+            {candidate.directContact !== false && (
+              <Button
+                variant="secondary"
+                onClick={handleChat}
+                className="flex-1"
+              >
+                Chat
+              </Button>
+            )}
+          </div>
+
+          {!showScheduleForm ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleAccept}
+                  className="flex-1 bg-button text-white hover:bg-[#176300] font-semibold py-3"
+                >
+                  Accept
+                </Button>
+                <Button
+                  onClick={handleReject}
+                  className="flex-1 bg-red-600 text-white hover:bg-red-700 font-semibold py-3 border-0"
+                >
+                  Reject
+                </Button>
+              </div>
+              {/* Only show Schedule Interview if direct contact is enabled */}
+              {candidate.directContact !== false && (
+                <Button
+                  onClick={() => setShowScheduleForm(true)}
+                  variant="secondary"
+                  className="w-full border-2 border-button text-button hover:bg-button/5 font-medium py-3"
+                >
+                  <HiVideoCamera className="text-[18px] mr-2" />
+                  Schedule Interview
+                </Button>
+              )}
+              {candidate.directContact === false && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-[14px] text-blue-800">
+                    This application is being handled by DLT Africa admin team. They will review and manage this candidate on your behalf.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleScheduleSubmit} className="flex flex-col gap-3 p-4 border border-fade rounded-lg bg-[#F8F8F8]">
+              <Input
+                type="datetime-local"
+                label="Interview Date & Time"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                required
+              />
+              <Input
+                type="url"
+                label="Video Call Link (optional)"
+                placeholder="https://meet.google.com/..."
+                value={interviewLink}
+                onChange={(e) => setInterviewLink(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="flex-1"
+                >
+                  Schedule Interview
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setShowScheduleForm(false);
+                    setScheduledAt('');
+                    setInterviewLink('');
+                  }}
+                  className="flex-1"
+                  variant="secondary"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </BaseModal>

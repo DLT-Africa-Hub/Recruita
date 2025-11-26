@@ -1,5 +1,6 @@
 import mongoose, { HydratedDocument, Model, Schema, Types } from 'mongoose';
 
+
 export interface IEducationDetails {
   degree: string;
   field: string;
@@ -14,6 +15,7 @@ export interface IWorkExperience {
   startDate: Date;
   endDate?: Date;
   description?: string;
+  current?: boolean
 }
 
 export interface IAssessmentQuestion {
@@ -21,6 +23,15 @@ export interface IAssessmentQuestion {
   options: string[];
   answer: string;
   skill?: string;
+}
+
+export interface ICv{
+  _id?: Types.ObjectId;
+  fileName: string;
+  fileUrl: string;
+  size:number;
+  publicId:any;
+  onDisplay:boolean;
 }
 
 export interface IGraduate {
@@ -52,7 +63,7 @@ export interface IGraduate {
   };
   portfolio?: string;
   summary?: string;
-  cv?: string; // URL to CV/resume file
+  cv?: ICv[]; // URL to CV/resume file
   workExperiences: IWorkExperience[];
   assessmentData?: {
     submittedAt: Date;
@@ -173,8 +184,30 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
       required: false,
     },
     cv: {
-      type: String,
-      required: false, // URL to CV/resume file
+      type:[
+        {
+          fileName: {
+            type: String,
+            required: true,
+          },
+          fileUrl: {
+            type: String,
+            required: true,
+          },
+          size: {
+            type: Number,
+            required: true,
+          },
+          publicId:{
+            type: String,
+            required: false,
+          },
+          onDisplay:{
+            type: Boolean
+          }
+        }
+      ],
+      default:[],
     },
     workExperiences: {
       type: [
@@ -197,6 +230,9 @@ const GraduateSchema: Schema<IGraduate, GraduateModel> = new Schema(
           description: {
             type: String,
           },
+          current:{
+            type: Boolean,
+          }
         },
       ],
       default: [],

@@ -29,6 +29,7 @@ interface JobPreviewModalProps {
   jobId: string | null;
   jobData?: JobData | null; // Pre-loaded job data (optional)
   matchScore?: number;
+  hasApplied?: boolean;
   onClose: () => void;
   onChat?: () => void;
   onApply?: () => void;
@@ -39,6 +40,7 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   jobId,
   jobData: preloadedJobData,
   matchScore,
+  hasApplied = false,
   onClose,
   onChat,
   onApply,
@@ -109,6 +111,7 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   };
 
   const handleApply = () => {
+    if (hasApplied) return;
     onApply?.();
   };
 
@@ -192,9 +195,17 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               <p className="font-semibold text-[20px] text-[#1C1C1C]">
                 Job Description
               </p>
-              <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed">
-                {job.description || 'No description available.'}
-              </p>
+              {hasApplied && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-[14px] text-green-800">
+                  You have already applied for this job. Sit tight — we will notify you when the company responds.
+                </div>
+              )}
+              <div
+                className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: job.description || '<p>No description available.</p>',
+                }}
+              />
             </div>
 
             {/* Skills */}
@@ -240,10 +251,15 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="w-full flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer transition hover:bg-[#176300]"
+                  disabled={hasApplied}
+                  className={`w-full flex items-center justify-center gap-[12px] py-[15px] rounded-[10px] text-[16px] font-medium transition ${
+                    hasApplied
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-button text-[#F8F8F8] cursor-pointer hover:bg-[#176300]'
+                  }`}
                 >
                   <BsSend className="text-[24px]" />
-                  <p className="text-[16px] font-medium">Apply</p>
+                  <p>{hasApplied ? 'Application Submitted' : 'Apply'}</p>
                 </button>
               </div>
             </div>

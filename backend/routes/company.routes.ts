@@ -12,6 +12,8 @@ import {
   getAllMatches,
   updateMatchStatus,
   getApplications,
+  updateApplicationStatus,
+  scheduleInterview,
 } from '../controllers/company.controller';
 import {
   authenticate,
@@ -44,6 +46,10 @@ router.get('/jobs/:jobId', strictLimiter, getJob);
 router.get('/jobs/:jobId/matches', strictLimiter, getJobMatches);
 router.get('/matches', strictLimiter, getAllMatches);
 router.get('/applications', strictLimiter, getApplications);
+
+// Application management
+router.put('/applications/:applicationId/status', veryStrictLimiter, updateApplicationStatus);
+router.post('/applications/:applicationId/schedule-interview', veryStrictLimiter, scheduleInterview);
 
 // Write operations (POST/PUT/DELETE) - very strict limiter
 router.post('/jobs', veryStrictLimiter, createJob);

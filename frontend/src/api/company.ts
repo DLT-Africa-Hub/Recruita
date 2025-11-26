@@ -64,6 +64,19 @@ export const companyApi = {
     const response = await api.get('/companies/applications', { params });
     return response.data;
   },
+
+  updateApplicationStatus: async (applicationId: string, status: string, notes?: string) => {
+    const response = await api.put(`/companies/applications/${applicationId}/status`, { status, notes });
+    return response.data;
+  },
+
+  scheduleInterview: async (applicationId: string, scheduledAt: string, interviewLink?: string) => {
+    const response = await api.post(`/companies/applications/${applicationId}/schedule-interview`, {
+      scheduledAt,
+      interviewLink,
+    });
+    return response.data;
+  },
 };
 
 export default companyApi;

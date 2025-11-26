@@ -102,7 +102,7 @@ function App() {
                   <Layout>
                     <GraduateProfile />
                   </Layout>
-                </AssessmentGuard>
+                  </AssessmentGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }
@@ -180,7 +180,7 @@ function App() {
                   <Layout>
                     <ExploreCompany />
                   </Layout>
-                </AssessmentGuard>
+                  </AssessmentGuard>
                 </EmailVerificationGuard>
               </ProtectedRoute>
             }

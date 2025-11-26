@@ -22,8 +22,8 @@ export const graduateApi = {
   },
 
   // Update profile picture
-  updateProfilePicture: async (pictureUrl: string) => {
-    const response = await api.patch('/graduates/profile/picture', { pictureUrl });
+  updateProfilePicture: async (profilePictureUrl: string) => {
+    const response = await api.patch('/graduates/profile/picture', { profilePictureUrl });
     return response.data;
   },
 
@@ -99,10 +99,24 @@ export const graduateApi = {
   },
 
   // Applications
-  applyToJob: async (jobId: string) => {
-    const response = await api.post(`/graduates/apply/${jobId}`);
+  applyToJob: async (
+    jobId: string,
+    data?: {
+      coverLetter?: string;
+      resume?: {
+        fileName: string;
+        fileUrl: string;
+        size: number;
+        publicId?: any;
+        onDisplay?: boolean;
+      };
+      extraAnswers?: Record<string, string>;
+    }
+  ) => {
+    const response = await api.post(`/graduates/apply/${jobId}`, data || {});
     return response.data;
   },
+  
 
   getApplications: async (params?: { page?: number; limit?: number; status?: string }) => {
     const response = await api.get('/graduates/applications', { params });
@@ -114,7 +128,36 @@ export const graduateApi = {
 
   return response.data;
   },
+
+
+getCVs: async () => {
+  const response = await api.get('/graduates/profile/cv');
+  return response.data;
+},
+
+addCV: async (cvData: {
+  fileName: string;
+  fileUrl: string;
+  size: number;
+  publicId?: string;
+  onDisplay?: boolean;
+}) => {
+  const response = await api.post('/graduates/profile/cv', cvData);
+  return response.data;
+},
+
+deleteCV: async (cvId: string) => {
+  const response = await api.delete(`/graduates/profile/cv/${cvId}`);
+  return response.data;
+},
+
+updateCVDisplay: async (cvId: string) => {
+  const response = await api.patch(`/graduates/profile/cv/${cvId}/display`);
+  return response.data;
+},
 };
+
+
 
 
 export default graduateApi;
