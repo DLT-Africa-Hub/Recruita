@@ -28,6 +28,7 @@ interface AvailableJob {
     currency?: string;
   };
   matchScore?: number | null;
+  description?: string;
 }
 
 const ExploreCompany = () => {
@@ -138,10 +139,12 @@ const ExploreCompany = () => {
             ? '—'
             : `${salaryRange} ${salaryType}`,
         image: DEFAULT_JOB_IMAGE,
+        description: job.description || 'No description provided.'
       };
     },
     []
   );
+ 
 
   // Transform all jobs to companies
   const companies = useMemo(() => {
@@ -156,7 +159,7 @@ const ExploreCompany = () => {
   const handlePreviewClick = (companyId: number) => {
     const company = companies.find((c: Company) => c.id === companyId);
     if (company) {
-      console.log(company)
+      
       setSelectedCompany(company);
       setIsModalOpen(true);
     }
