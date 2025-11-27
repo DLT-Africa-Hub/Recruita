@@ -168,8 +168,6 @@ useEffect(() => {
   };
 
 
-  console.log(company)
-
   const renderStepContent = () => {
     switch (currentStep) {
       case 'cv-selection':
