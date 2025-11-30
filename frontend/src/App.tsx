@@ -261,6 +261,20 @@ function App() {
             }
           />
           <Route
+            path="/candidates/:id"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyCandidates />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/messages"
             element={
               <ProtectedRoute allowedRoles={['company', 'graduate']}>
