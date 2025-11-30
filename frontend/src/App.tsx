@@ -331,6 +331,16 @@ function App() {
             path="/explore-preview/:id"
             element={<ExplorePreviewRedirect />}
           />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['adnin']}>
+                <Layout>
+                  <GraduateDashboard />
+                </Layout>
+            </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </AuthProvider>
