@@ -261,6 +261,20 @@ function App() {
             }
           />
           <Route
+            path="/candidates/:id"
+            element={
+              <ProtectedRoute allowedRoles={['company']}>
+                <EmailVerificationGuard>
+                  <CompanyRouteGuard>
+                    <Layout>
+                      <CompanyCandidates />
+                    </Layout>
+                  </CompanyRouteGuard>
+                </EmailVerificationGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/messages"
             element={
               <ProtectedRoute allowedRoles={['company', 'graduate']}>
@@ -330,6 +344,16 @@ function App() {
           <Route
             path="/explore-preview/:id"
             element={<ExplorePreviewRedirect />}
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['adnin']}>
+                <Layout>
+                  <GraduateDashboard />
+                </Layout>
+            </ProtectedRoute>
+            }
           />
         </Routes>
       </div>
