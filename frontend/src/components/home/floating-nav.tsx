@@ -3,7 +3,6 @@ import {
   Menu,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Button } from "../ui";
 import DropdownMenu,{
     DropdownMenuTrigger,
     DropdownMenuContent,
