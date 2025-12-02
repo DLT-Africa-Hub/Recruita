@@ -80,7 +80,6 @@ const FloatingNavbar = () => {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem><Link className="w-full" to="/login">Login</Link></DropdownMenuItem>
-                    <DropdownMenuItem><Link className="w-full" to="/orders">My Orders</Link></DropdownMenuItem>
                     <DropdownMenuItem><Link className="w-full" to="/logout">Logout</Link></DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -88,7 +87,7 @@ const FloatingNavbar = () => {
             </div>
           </div>
 
-          {/* Removed old static mobile menu - dropdown handles it */}
+      
         </div>
       </div>
     </nav>
