@@ -1,47 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import interviewApi from '../api/interview';
 import { Button, PageLoader } from '../components/ui';
 import ErrorState from '../components/ui/ErrorState';
 import { useAuth } from '../context/AuthContext';
-
-const JITSI_SCRIPT_ID = 'jitsi-external-api';
-const getJitsiDomain = () =>
-  import.meta.env.VITE_JITSI_DOMAIN || 'meet.jit.si';
-
-const loadJitsiScript = (): Promise<void> => {
-  if (typeof window === 'undefined') {
-    return Promise.resolve();
-  }
-
-  if ((window as any).JitsiMeetExternalAPI) {
-    return Promise.resolve();
-  }
-
-  if (document.getElementById(JITSI_SCRIPT_ID)) {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(), 300);
-    });
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.id = JITSI_SCRIPT_ID;
-    script.src = 'https://meet.jit.si/external_api.js';
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = (err) => reject(err);
-    document.body.appendChild(script);
-  });
-};
+import StreamVideoCall from '../components/interview/StreamVideoCall';
 
 const InterviewRoom = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [scriptReady, setScriptReady] = useState(false);
 
   const {
     data,
@@ -56,44 +25,20 @@ const InterviewRoom = () => {
     },
   });
 
+  const {
+    data: tokenData,
+    isLoading: tokenLoading,
+    error: tokenError,
+  } = useQuery({
+    queryKey: ['streamToken', slug],
+    enabled: Boolean(slug) && Boolean(data?.interview),
+    queryFn: async () => {
+      if (!slug) return null;
+      return interviewApi.getStreamToken(slug);
+    },
+  });
+
   const interview = data?.interview;
-
-  useEffect(() => {
-    loadJitsiScript()
-      .then(() => setScriptReady(true))
-      .catch(() => {
-        setScriptReady(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    if (!scriptReady || !interview || !containerRef.current) {
-      return;
-    }
-
-    const domain = getJitsiDomain();
-    const roomName = `TalentHub-${interview.roomSlug}`;
-
-    const api = new (window as any).JitsiMeetExternalAPI(domain, {
-      roomName,
-      parentNode: containerRef.current,
-      userInfo: {
-        displayName: interview.participant?.name || 'Talent Hub Guest',
-      },
-      configOverwrite: {
-        prejoinPageEnabled: false,
-      },
-      interfaceConfigOverwrite: {
-        SHOW_JITSI_WATERMARK: false,
-      },
-    });
-
-    return () => {
-      if (api && typeof api.dispose === 'function') {
-        api.dispose();
-      }
-    };
-  }, [interview, scriptReady]);
 
   const formattedDate = useMemo(() => {
     if (!interview?.scheduledAt) return '';
@@ -108,7 +53,7 @@ const InterviewRoom = () => {
     });
   }, [interview?.scheduledAt]);
 
-  if (isLoading) {
+  if (isLoading || tokenLoading) {
     return <PageLoader message="Preparing interview room..." />;
   }
 
@@ -133,6 +78,27 @@ const InterviewRoom = () => {
     );
   }
 
+  if (tokenError || !tokenData) {
+    const fallbackDestination =
+      user?.role === 'company' ? '/company' : '/graduate';
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 gap-4">
+        <ErrorState
+          title="Unable to connect to video call"
+          message={
+            (tokenError as any)?.response?.data?.message ||
+            (tokenError as Error)?.message ||
+            'Failed to initialize video call. Please try again.'
+          }
+          variant="fullPage"
+        />
+        <Button onClick={() => navigate(fallbackDestination)}>
+          Back to dashboard
+        </Button>
+      </div>
+    );
+  }
+
   const counterpartLabel =
     interview.participant?.role === 'company' ? 'Candidate' : 'Company';
   const counterpartName =
@@ -143,7 +109,13 @@ const InterviewRoom = () => {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#F8F8F8]">
       <div className="w-full lg:w-2/3 bg-black min-h-[50vh]">
-        <div ref={containerRef} className="w-full h-full min-h-[60vh]" />
+        <StreamVideoCall
+          apiKey={tokenData.apiKey}
+          token={tokenData.token}
+          callId={tokenData.callId}
+          userName={tokenData.userName}
+          userId={tokenData.userId}
+        />
       </div>
       <div className="w-full lg:w-1/3 bg-white border-l border-fade flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-1">
@@ -209,4 +181,3 @@ const InterviewRoom = () => {
 };
 
 export default InterviewRoom;
-

@@ -18,7 +18,7 @@ export interface IInterview extends Document {
   status: InterviewStatus;
   roomSlug: string;
   roomUrl: string;
-  provider: 'jitsi';
+  provider: 'stream';
   createdBy: mongoose.Types.ObjectId;
   updatedBy?: mongoose.Types.ObjectId;
   startedAt?: Date;
@@ -89,8 +89,8 @@ const InterviewSchema = new Schema<IInterview>(
     },
     provider: {
       type: String,
-      enum: ['jitsi'],
-      default: 'jitsi',
+      enum: ['stream'],
+      default: 'stream',
     },
     createdBy: {
       type: Schema.Types.ObjectId,

@@ -1514,7 +1514,7 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       status: 'scheduled',
       roomSlug,
       roomUrl,
-      provider: 'jitsi',
+      provider: 'stream',
       createdBy: new mongoose.Types.ObjectId(userId),
     });
   } else {
