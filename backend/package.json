@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Backend API for Talent Hub job matching platform",
   "main": "dist/index.js",
+  "packageManager": "pnpm@10.11.0",
   "scripts": {
     "dev": "tsx watch index.ts",
     "build": "tsc",
