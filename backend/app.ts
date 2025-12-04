@@ -65,6 +65,20 @@ app.get(`${API_PREFIX}/health`, (_req, res) => {
   res.success({ status: 'ok', message: 'Talent Hub API is running' });
 });
 
+// Simple test endpoint that doesn't require MongoDB
+app.get('/api/test', (_req, res) => {
+  res.success({ 
+    status: 'ok', 
+    message: 'Handler is working',
+    timestamp: new Date().toISOString(),
+    env: {
+      nodeEnv: process.env.NODE_ENV,
+      apiPrefix: API_PREFIX,
+      hasMongoUri: !!process.env.MONGODB_URI,
+    }
+  });
+});
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
 app.use(`${API_PREFIX}/auth`, authRoutes);
