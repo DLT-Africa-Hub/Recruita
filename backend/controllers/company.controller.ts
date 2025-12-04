@@ -1754,6 +1754,7 @@ export const getCompanyInterviews = async (req: Request, res: Response): Promise
           select: 'companyName',
         },
       })
+      // Note: companyId is already available via jobId.companyId, no need to populate separately
       .sort({ scheduledAt: 1 })
       .skip(skip)
       .limit(pagination.limit)
