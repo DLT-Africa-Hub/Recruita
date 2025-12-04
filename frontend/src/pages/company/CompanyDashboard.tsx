@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../index';
 import { EmptyState, SectionHeader } from '../../components/ui';
 import CandidateCard from '../../components/company/CandidateCard';
 import CandidatePreviewModal from '../../components/company/CandidatePreviewModal';
+import ScheduleInterviewModal from '../../components/company/ScheduleInterviewModal';
 import { CandidateProfile } from '../../types/candidates';
 import {
   mapApplicationStatusToCandidateStatus,
@@ -17,8 +18,12 @@ import {
 import { ApiMatch, ApiApplication } from '../../types/api';
 
 const CompanyDashboard = () => {
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateProfile | null>(null);
+  const [selectedCandidate, setSelectedCandidate] =
+    useState<CandidateProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [multiSlotCandidate, setMultiSlotCandidate] =
+    useState<CandidateProfile | null>(null);
+  const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch matches (Matched Professionals)
@@ -34,16 +39,17 @@ const CompanyDashboard = () => {
   });
 
   // Fetch applications (Contract offers - those who applied)
-  const { data: applicationsResponse, isLoading: loadingApplications } = useQuery({
-    queryKey: ['companyApplications'],
-    queryFn: async () => {
-      const response = await companyApi.getApplications({
-        page: 1,
-        limit: 100,
-      });
-      return response;
-    },
-  });
+  const { data: applicationsResponse, isLoading: loadingApplications } =
+    useQuery({
+      queryKey: ['companyApplications'],
+      queryFn: async () => {
+        const response = await companyApi.getApplications({
+          page: 1,
+          limit: 100,
+        });
+        return response;
+      },
+    });
 
   const scheduleInterviewMutation = useMutation({
     mutationFn: async ({
@@ -67,13 +73,43 @@ const CompanyDashboard = () => {
     },
   });
 
+  // Mutation for suggesting multiple time slots
+  const suggestTimeSlotsMutation = useMutation({
+    mutationFn: async ({
+      applicationId,
+      timeSlots,
+      companyTimezone,
+      selectionDeadline,
+    }: {
+      applicationId: string;
+      timeSlots: Array<{ date: string; duration: number }>;
+      companyTimezone: string;
+      selectionDeadline?: string;
+    }) => {
+      return companyApi.suggestTimeSlots({
+        applicationId,
+        timeSlots,
+        companyTimezone,
+        selectionDeadline,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companyApplications'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['interviews', 'company'] });
+      setIsMultiSlotModalOpen(false);
+      setMultiSlotCandidate(null);
+    },
+  });
+
   // Transform matches to candidate profiles
   const transformMatch = useCallback(
     (match: ApiMatch, index: number): CandidateProfile => {
       const graduate = match.graduateId || {};
       const job = match.jobId || {};
 
-      const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+      const fullName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
       const matchScore = match.score
         ? match.score > 1
@@ -102,7 +138,8 @@ const CompanyDashboard = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
+        cv:
+          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
         matchPercentage: matchScore,
         jobType: job.jobType,
         salary: job.salary,
@@ -122,7 +159,8 @@ const CompanyDashboard = () => {
         app.status || ''
       );
 
-      const fullName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+      const fullName =
+        `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
 
       return {
         id: app._id || index,
@@ -146,7 +184,8 @@ const CompanyDashboard = () => {
         skills: (graduate.skills || []).slice(0, 3),
         image: graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE,
         summary: graduate.summary,
-        cv: typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
+        cv:
+          typeof graduate.cv === 'string' ? graduate.cv : graduate.cv?.fileUrl,
         matchPercentage: app.matchId?.score
           ? app.matchId.score > 1
             ? Math.min(100, Math.round(app.matchId.score))
@@ -155,9 +194,9 @@ const CompanyDashboard = () => {
         jobType: job.jobType,
         salary: job.salary,
         directContact: job.directContact !== false, // Default to true
-        interviewScheduledAt: app.interviewScheduledAt 
-          ? typeof app.interviewScheduledAt === 'string' 
-            ? app.interviewScheduledAt 
+        interviewScheduledAt: app.interviewScheduledAt
+          ? typeof app.interviewScheduledAt === 'string'
+            ? app.interviewScheduledAt
             : app.interviewScheduledAt.toISOString()
           : undefined,
         interviewRoomSlug: app.interviewRoomSlug,
@@ -238,6 +277,34 @@ const CompanyDashboard = () => {
     [scheduleInterviewMutation]
   );
 
+  // Handler to open multi-slot scheduling modal
+  const handleSuggestTimeSlots = useCallback((candidate: CandidateProfile) => {
+    setMultiSlotCandidate(candidate);
+    setIsMultiSlotModalOpen(true);
+    setIsModalOpen(false); // Close the preview modal
+  }, []);
+
+  // Handler for submitting multiple time slots
+  const handleSubmitTimeSlots = useCallback(
+    async (
+      candidate: CandidateProfile,
+      timeSlots: Array<{ date: string; duration: number }>,
+      companyTimezone: string,
+      selectionDeadline?: string
+    ) => {
+      if (!candidate.applicationId) {
+        throw new Error('Missing application reference for this candidate.');
+      }
+      await suggestTimeSlotsMutation.mutateAsync({
+        applicationId: candidate.applicationId,
+        timeSlots,
+        companyTimezone,
+        selectionDeadline,
+      });
+    },
+    [suggestTimeSlotsMutation]
+  );
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -299,7 +366,32 @@ const CompanyDashboard = () => {
         isOpen={isModalOpen}
         candidate={selectedCandidate}
         onClose={handleCloseModal}
-        onScheduleInterview={handleScheduleInterview}
+        onScheduleInterview={
+          selectedCandidate?.applicationId ? handleScheduleInterview : undefined
+        }
+        onSuggestTimeSlots={
+          selectedCandidate?.applicationId ? handleSuggestTimeSlots : undefined
+        }
+        isSchedulingInterview={
+          !!(
+            scheduleInterviewMutation.isPending &&
+            selectedCandidate?.applicationId &&
+            scheduleInterviewMutation.variables?.applicationId ===
+              selectedCandidate.applicationId
+          )
+        }
+      />
+
+      {/* Multi-Slot Scheduling Modal */}
+      <ScheduleInterviewModal
+        isOpen={isMultiSlotModalOpen}
+        candidate={multiSlotCandidate}
+        onClose={() => {
+          setIsMultiSlotModalOpen(false);
+          setMultiSlotCandidate(null);
+        }}
+        onSchedule={handleSubmitTimeSlots}
+        isScheduling={suggestTimeSlotsMutation.isPending}
       />
     </DashboardLayout>
   );

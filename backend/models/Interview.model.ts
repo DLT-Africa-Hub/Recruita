@@ -10,8 +10,8 @@ export type InterviewStatus =
 export interface ISuggestedTimeSlot {
   _id?: mongoose.Types.ObjectId;
   date: Date;
-  duration: number; // 15, 30, 45, or 60 minutes
-  timezone: string; // e.g., 'America/New_York', 'UTC'
+  duration: number;
+  timezone: string;
 }
 
 export interface ISelectedTimeSlot {
@@ -28,7 +28,6 @@ export interface IInterview extends Document {
   companyUserId: mongoose.Types.ObjectId;
   graduateId: mongoose.Types.ObjectId;
   graduateUserId: mongoose.Types.ObjectId;
-  // For backwards compatibility - used when time is confirmed
   scheduledAt: Date;
   durationMinutes: number;
   status: InterviewStatus;
@@ -40,17 +39,15 @@ export interface IInterview extends Document {
   startedAt?: Date;
   endedAt?: Date;
   notes?: string;
-  // Multiple time slot support
   suggestedTimeSlots?: ISuggestedTimeSlot[];
   selectedTimeSlot?: ISelectedTimeSlot;
   companyTimezone?: string;
   graduateTimezone?: string;
-  selectionDeadline?: Date; // Optional deadline for graduate to select a slot
+  selectionDeadline?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Helper to validate timezone string
 const isValidTimezone = (tz: string): boolean => {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: tz });
@@ -152,7 +149,6 @@ const InterviewSchema = new Schema<IInterview>(
     scheduledAt: {
       type: Date,
       required: function(this: IInterview) {
-        // Only required when status is not pending_selection
         return this.status !== 'pending_selection';
       },
     },

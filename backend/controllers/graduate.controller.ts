@@ -2032,10 +2032,7 @@ export const getInterviews = async (
             select: 'companyName',
           },
         })
-        .populate({
-          path: 'companyId',
-          select: 'companyName',
-        })
+        // Note: companyId is already available via jobId.companyId, no need to populate separately
         .sort({ scheduledAt: 1 })
         .skip(skip)
         .limit(limit)

@@ -89,9 +89,8 @@ export const getInterviewBySlug = async (
     null;
   const graduate = (interviewData.graduateId as Record<string, any>) || {};
 
-  const graduateName = `${graduate.firstName || ''} ${
-    graduate.lastName || ''
-  }`.trim();
+  const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''
+    }`.trim();
 
   const participantRole = isCompanyParticipant ? 'company' : 'graduate';
   const participantDisplayName =
@@ -186,6 +185,7 @@ export const suggestTimeSlots = async (
   const validDurations = [15, 30, 45, 60];
   const now = new Date();
   const suggestedSlots: ISuggestedTimeSlot[] = [];
+  const seenDates = new Set<string>(); // Track dates to prevent duplicates
 
   for (const slot of timeSlots) {
     if (!slot.date) {
@@ -209,6 +209,16 @@ export const suggestTimeSlots = async (
       res.status(400).json({ message: 'Duration must be 15, 30, 45, or 60 minutes' });
       return;
     }
+
+    // Check for duplicate time slots (same date/time)
+    const dateKey = slotDate.toISOString();
+    if (seenDates.has(dateKey)) {
+      res.status(400).json({ 
+        message: 'Duplicate time slots are not allowed. Each time slot must be unique.' 
+      });
+      return;
+    }
+    seenDates.add(dateKey);
 
     suggestedSlots.push({
       date: slotDate,
@@ -255,7 +265,7 @@ export const suggestTimeSlots = async (
 
   const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
   const jobData = (typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)) ? job : null;
-  
+
   if (!jobData || jobData.companyId?.toString() !== company._id.toString()) {
     res.status(403).json({ message: 'Application does not belong to your company' });
     return;
@@ -276,8 +286,8 @@ export const suggestTimeSlots = async (
   });
 
   if (existingInterview) {
-    res.status(400).json({ 
-      message: 'An interview is already scheduled or pending for this application' 
+    res.status(400).json({
+      message: 'An interview is already scheduled or pending for this application'
     });
     return;
   }
@@ -388,8 +398,12 @@ export const getPendingSelectionInterviews = async (
     .sort({ createdAt: -1 })
     .lean();
 
-  // Get graduate's timezone from profile or default to UTC
-  const graduateTimezone = 'UTC'; // Could be stored in profile
+  // Get graduate's timezone from request or default to UTC
+  // Frontend should send timezone, but we default to UTC for safety
+  const requestTimezone = typeof req.query.timezone === 'string' ? req.query.timezone : undefined;
+  const graduateTimezone = requestTimezone && isValidTimezone(requestTimezone)
+    ? requestTimezone
+    : 'UTC';
 
   const formattedInterviews = interviews.map((interview) => {
     const interviewData = interview as Record<string, unknown>;
@@ -482,12 +496,20 @@ export const selectTimeSlot = async (
     return;
   }
 
-  // Get interview
+  // Get interview with populated company and job for notifications
   const interview = await Interview.findOne({
     _id: new mongoose.Types.ObjectId(interviewId),
     graduateId: graduate._id,
     status: 'pending_selection',
-  });
+  })
+    .populate({
+      path: 'companyId',
+      select: 'companyName',
+    })
+    .populate({
+      path: 'jobId',
+      select: 'title',
+    });
 
   if (!interview) {
     res.status(404).json({ message: 'Interview not found or already confirmed' });
@@ -505,102 +527,151 @@ export const selectTimeSlot = async (
   }
 
   // Check if the selected slot is still in the future
-  if (new Date(selectedSlot.date) < new Date()) {
+  const now = new Date();
+  if (new Date(selectedSlot.date) < now) {
     res.status(400).json({ message: 'Selected time slot has already passed' });
     return;
   }
 
-  // Update interview with selected slot
-  interview.selectedTimeSlot = {
-    date: selectedSlot.date,
-    duration: selectedSlot.duration,
-    timezone: selectedSlot.timezone,
-    selectedAt: new Date(),
-  };
-  interview.scheduledAt = selectedSlot.date;
-  interview.durationMinutes = selectedSlot.duration;
-  interview.status = 'scheduled';
-  interview.graduateTimezone = graduateTimezone || 'UTC';
-  interview.updatedBy = new mongoose.Types.ObjectId(userId);
+  // Use atomic update with transaction to prevent race conditions
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  await interview.save();
-
-  // Update application
-  const application = await Application.findById(interview.applicationId);
-  if (application) {
-    application.interviewScheduledAt = selectedSlot.date;
-    application.interviewLink = interview.roomUrl;
-    application.interviewRoomSlug = interview.roomSlug;
-    application.interviewId = interview._id as mongoose.Types.ObjectId;
-    await application.save();
-  }
-
-  // Get company and job info for notifications
-  const company = await Company.findById(interview.companyId).lean();
-  const job = await Job.findById(interview.jobId).select('title').lean();
-
-  const formattedDate = formatDateInTimezone(
-    selectedSlot.date,
-    interview.companyTimezone || 'UTC',
-    {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    }
-  );
-
-  const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
-
-  // Notify company
   try {
-    const companyUserId = interview.companyUserId instanceof mongoose.Types.ObjectId
-      ? interview.companyUserId.toString()
-      : String(interview.companyUserId);
+    // Atomically update interview - only if still in pending_selection status
+    const updatedInterview = await Interview.findOneAndUpdate(
+      {
+        _id: new mongoose.Types.ObjectId(interviewId),
+        graduateId: graduate._id,
+        status: 'pending_selection', // Critical: ensures atomic status check
+      },
+      {
+        $set: {
+          selectedTimeSlot: {
+            date: selectedSlot.date,
+            duration: selectedSlot.duration,
+            timezone: selectedSlot.timezone,
+            selectedAt: now,
+          },
+          scheduledAt: selectedSlot.date,
+          durationMinutes: selectedSlot.duration,
+          status: 'scheduled',
+          graduateTimezone: graduateTimezone || 'UTC',
+          updatedBy: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        new: true,
+        session, // Include in transaction
+      }
+    );
 
-    await createNotification({
-      userId: companyUserId,
-      type: 'interview',
-      title: 'Interview Time Confirmed',
-      message: `${graduateName || 'A candidate'} has selected a time slot for their interview: ${formattedDate}.`,
-      relatedId: interview._id as mongoose.Types.ObjectId,
-      relatedType: 'interview',
-      email: {
-        subject: `Interview Confirmed: ${job?.title || 'Position'}`,
-        text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${job?.title || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${interview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+    if (!updatedInterview) {
+      await session.abortTransaction();
+      session.endSession();
+      res.status(409).json({
+        message: 'Interview status changed. Another user may have already selected a time slot.',
+      });
+      return;
+    }
+
+    // Update application within transaction
+    await Application.findByIdAndUpdate(
+      interview.applicationId,
+      {
+        $set: {
+          interviewScheduledAt: selectedSlot.date,
+          interviewLink: updatedInterview.roomUrl,
+          interviewRoomSlug: updatedInterview.roomSlug,
+          interviewId: updatedInterview._id,
+        },
+      },
+      { session }
+    );
+
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Get company and job info for notifications (already populated)
+    const company = interview.companyId as { companyName?: string } | mongoose.Types.ObjectId;
+    const job = interview.jobId as { title?: string } | mongoose.Types.ObjectId;
+    const companyName = typeof company === 'object' && company && !(company instanceof mongoose.Types.ObjectId) && 'companyName' in company
+      ? company.companyName
+      : undefined;
+    const jobTitle = typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId) && 'title' in job
+      ? job.title
+      : undefined;
+
+    const formattedDate = formatDateInTimezone(
+      selectedSlot.date,
+      updatedInterview.companyTimezone || 'UTC',
+      {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }
+    );
+
+    const graduateName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim();
+
+    // Notify company
+    try {
+      const companyUserId = updatedInterview.companyUserId instanceof mongoose.Types.ObjectId
+        ? updatedInterview.companyUserId.toString()
+        : String(updatedInterview.companyUserId);
+
+      await createNotification({
+        userId: companyUserId,
+        type: 'interview',
+        title: 'Interview Time Confirmed',
+        message: `${graduateName || 'A candidate'} has selected a time slot for their interview: ${formattedDate}.`,
+        relatedId: updatedInterview._id as mongoose.Types.ObjectId,
+        relatedType: 'interview',
+        email: {
+          subject: `Interview Confirmed: ${jobTitle || 'Position'}`,
+          text: `Hello,\n\n${graduateName || 'A candidate'} has confirmed their interview time for "${jobTitle || 'the position'}".\n\nScheduled: ${formattedDate}\nJoin Link: ${updatedInterview.roomUrl}\n\nYou can join the interview from your Talent Hub Interviews tab when it's time.`,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to send interview confirmation to company:', error);
+    }
+
+    // Notify graduate (confirmation)
+    try {
+      await createNotification({
+        userId,
+        type: 'interview',
+        title: 'Interview Scheduled',
+        message: `Your interview with ${companyName || 'the company'} is confirmed for ${formattedDate}.`,
+        relatedId: updatedInterview._id as mongoose.Types.ObjectId,
+        relatedType: 'interview',
+      });
+    } catch (error) {
+      console.error('Failed to send interview confirmation to graduate:', error);
+    }
+
+    res.json({
+      message: 'Time slot selected successfully',
+      interview: {
+        id: updatedInterview._id?.toString(),
+        status: updatedInterview.status,
+        scheduledAt: updatedInterview.scheduledAt,
+        durationMinutes: updatedInterview.durationMinutes,
+        roomSlug: updatedInterview.roomSlug,
+        roomUrl: updatedInterview.roomUrl,
+        selectedTimeSlot: updatedInterview.selectedTimeSlot,
       },
     });
   } catch (error) {
-    console.error('Failed to send interview confirmation to company:', error);
+    // Rollback transaction on error
+    await session.abortTransaction();
+    session.endSession();
+    console.error('Error selecting time slot:', error);
+    res.status(500).json({ message: 'Failed to select time slot. Please try again.' });
   }
-
-  // Notify graduate (confirmation)
-  try {
-    await createNotification({
-      userId,
-      type: 'interview',
-      title: 'Interview Scheduled',
-      message: `Your interview with ${company?.companyName || 'the company'} is confirmed for ${formattedDate}.`,
-      relatedId: interview._id as mongoose.Types.ObjectId,
-      relatedType: 'interview',
-    });
-  } catch (error) {
-    console.error('Failed to send interview confirmation to graduate:', error);
-  }
-
-  res.json({
-    message: 'Time slot selected successfully',
-    interview: {
-      id: interview._id?.toString(),
-      status: interview.status,
-      scheduledAt: interview.scheduledAt,
-      durationMinutes: interview.durationMinutes,
-      roomSlug: interview.roomSlug,
-      roomUrl: interview.roomUrl,
-      selectedTimeSlot: interview.selectedTimeSlot,
-    },
-  });
 };
 
