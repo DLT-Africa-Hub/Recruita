@@ -29,5 +29,9 @@ services:
         value: "30"
       - key: FEEDBACK_MODEL
         value: "gpt-4o-mini"
+      - key: KEEP_ALIVE_ENABLED
+        value: "true"
+      - key: KEEP_ALIVE_INTERVAL_SECONDS
+        value: "25"
     healthCheckPath: /health
 

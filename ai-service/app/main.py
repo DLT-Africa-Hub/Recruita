@@ -8,6 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import os
+import asyncio
+import httpx
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 from app.embeddings import EmbeddingError, generate_embedding, generate_embeddings_batch
@@ -22,10 +25,60 @@ from app.questions import (
 # Load environment variables
 load_dotenv()
 
+# Keep-alive configuration
+KEEP_ALIVE_INTERVAL = int(os.getenv("KEEP_ALIVE_INTERVAL_SECONDS", "25"))
+KEEP_ALIVE_ENABLED = os.getenv("KEEP_ALIVE_ENABLED", "true").lower() == "true"
+SERVICE_URL = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("SERVICE_URL") or "http://localhost:8000"
+
+
+async def keep_alive_task():
+    """Background task to ping the health endpoint to prevent Render from sleeping."""
+    if not KEEP_ALIVE_ENABLED:
+        return
+    
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        while True:
+            try:
+                # Ping the health endpoint
+                response = await client.get(f"{SERVICE_URL}/health")
+                if response.status_code == 200:
+                    print(f"[Keep-Alive] Health check successful at {SERVICE_URL}/health")
+                else:
+                    print(f"[Keep-Alive] Health check returned status {response.status_code}")
+            except Exception as e:
+                print(f"[Keep-Alive] Error pinging health endpoint: {e}")
+            
+            # Wait for the specified interval
+            await asyncio.sleep(KEEP_ALIVE_INTERVAL)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup: Start keep-alive task
+    if KEEP_ALIVE_ENABLED:
+        print(f"[Keep-Alive] Starting keep-alive task (interval: {KEEP_ALIVE_INTERVAL}s, URL: {SERVICE_URL})")
+        keep_alive_task_instance = asyncio.create_task(keep_alive_task())
+    else:
+        print("[Keep-Alive] Keep-alive is disabled")
+        keep_alive_task_instance = None
+    
+    yield
+    
+    # Shutdown: Cancel keep-alive task
+    if keep_alive_task_instance:
+        keep_alive_task_instance.cancel()
+        try:
+            await keep_alive_task_instance
+        except asyncio.CancelledError:
+            print("[Keep-Alive] Keep-alive task cancelled")
+
+
 app = FastAPI(
     title="Talent Hub AI Service",
     description="AI microservice for job matching and candidate evaluation",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware
