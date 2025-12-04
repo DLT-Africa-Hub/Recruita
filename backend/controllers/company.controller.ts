@@ -1,4 +1,4 @@
-import '../types/express.d';
+import '../types/express.d.ts';
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Company from '../models/Company.model';
