@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Features = () => {
   return (
     <div className="flex items-start justify-center flex-col lg:flex-row font-inter py-[58px] px-[20px] lg:py-[114px] h-auto lg:h-screen gap-[60px] lg:gap-[140px]">

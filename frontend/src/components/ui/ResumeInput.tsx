@@ -50,13 +50,13 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
 
   const CLOUD_NAME =
     (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CLOUDINARY_CLOUD_NAME) ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    process.env.VITE_CLOUDINARY_CLOUD_NAME
+    import.meta.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 
   const UPLOAD_PRESET =
     (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CLOUDINARY_UPLOAD_PRESET) ||
-    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
-    process.env.VITE_CLOUDINARY_UPLOAD_PRESET
+    import.meta.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
+    import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
   useEffect(() => {
     const uploaded: UploadedFile[] = localFiles
