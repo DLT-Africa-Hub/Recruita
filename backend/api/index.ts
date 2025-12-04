@@ -15,7 +15,7 @@ dotenv.config();
 let cachedConnection: typeof mongoose | null = null;
 
 async function connectToDatabase() {
-  if (cachedConnection) {
+  if (cachedConnection && mongoose.connection.readyState === 1) {
     return cachedConnection;
   }
 
@@ -25,6 +25,11 @@ async function connectToDatabase() {
   }
 
   try {
+    // Close existing connection if any
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+
     const conn = await mongoose.connect(MONGODB_URI, {
       // Optimize for serverless
       maxPoolSize: 1, // Limit connections in serverless
@@ -49,7 +54,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Database connection failed' });
   }
 
-  // Handle the request with Express app
-  return app(req, res);
-}
+  // Cast Vercel types to Express types for compatibility
+  // Vercel's types are compatible at runtime, but TypeScript needs explicit casting
+  // Using 'any' here because @vercel/node types are compatible with Express at runtime
+  const expressReq = req as any;
+  const expressRes = res as any;
 
+  // Wrap Express app call in a Promise to ensure Vercel waits for response
+  return new Promise<void>((resolve, reject) => {
+    // Handle the request with Express app
+    app(expressReq, expressRes);
+
+    // Wait for response to finish before resolving
+    expressRes.on('finish', () => {
+      resolve();
+    });
+
+    // Handle errors that occur during response handling
+    expressRes.on('error', (error: Error) => {
+      reject(error);
+    });
+  });
+}
