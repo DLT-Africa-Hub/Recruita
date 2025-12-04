@@ -57,6 +57,22 @@ app.use(responseFormatter);
 app.use(apiLimiter);
 app.use(userRateLimiter);
 
+// Root endpoint
+app.get('/', (_req, res) => {
+  res.success({ 
+    status: 'ok', 
+    message: 'Talent Hub API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      apiHealth: `${API_PREFIX}/health`,
+      test: '/api/test',
+      docs: '/docs',
+      api: API_PREFIX
+    }
+  });
+});
+
 app.get('/health', (_req, res) => {
   res.success({ status: 'ok', message: 'Talent Hub API is running' });
 });
