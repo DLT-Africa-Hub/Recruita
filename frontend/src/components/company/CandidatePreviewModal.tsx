@@ -75,8 +75,13 @@ const CandidatePreviewModal: React.FC<CandidatePreviewModalProps> = ({
         minute: '2-digit',
       })
     : null;
-  const hasUpcomingInterview = candidate.hasUpcomingInterview || false;
-  const hasActiveInterview = hasUpcomingInterview;
+  
+  // Check if there's an active interview (scheduled, pending selection, or in progress)
+  // Check both interviewStatus and hasUpcomingInterview for comprehensive coverage
+  const hasActiveInterview = 
+    candidate.hasUpcomingInterview ||
+    (candidate.interviewStatus && ['pending_selection', 'scheduled', 'in_progress'].includes(candidate.interviewStatus)) ||
+    (candidate.interviewScheduledAt && !candidate.interviewStatus); // Fallback: if scheduledAt exists but no status, assume active
   const isSchedulingLoading = isSchedulingInterview || isScheduling;
   const canScheduleInterview =
     !hasActiveInterview &&

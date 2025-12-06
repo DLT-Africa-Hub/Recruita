@@ -44,7 +44,7 @@ export const companyApi = {
   },
 
   // Matches
-  getAllMatches: async (params?: { page?: number; limit?: number; status?: string; minScore?: number }) => {
+  getAllMatches: async (params?: { page?: number; limit?: number; status?: string; minScore?: number; search?: string }) => {
     const response = await api.get('/companies/matches', { params });
     return response.data;
   },
@@ -60,7 +60,7 @@ export const companyApi = {
   },
 
   // Applications
-  getApplications: async (params?: { page?: number; limit?: number; status?: string; jobId?: string }) => {
+  getApplications: async (params?: { page?: number; limit?: number; status?: string; jobId?: string; search?: string }) => {
     const response = await api.get('/companies/applications', { params });
     return response.data;
   },
@@ -106,6 +106,17 @@ export const companyApi = {
     sortBy?: string;
   }) => {
     const response = await api.get('/companies/graduates', { params });
+    return response.data;
+  },
+
+  // Offer management
+  getOfferById: async (offerId: string) => {
+    const response = await api.get(`/companies/offers/by-id/${offerId}`);
+    return response.data;
+  },
+
+  confirmHire: async (offerId: string) => {
+    const response = await api.post(`/companies/offers/${offerId}/confirm-hire`);
     return response.data;
   },
 };

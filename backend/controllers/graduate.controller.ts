@@ -1087,18 +1087,21 @@ export const getAssessmentQuestions = async (
       language,
     });
 
-    // Store questions in assessmentData for later scoring
+    // Store questions in assessmentData for later scoring using atomic update
+    // This prevents VersionError when document is modified concurrently
+    const updateData: Record<string, unknown> = {
+      'assessmentData.currentQuestions': questions,
+    };
+
+    // Only set initial assessmentData if it doesn't exist
     if (!graduate.assessmentData) {
-      graduate.assessmentData = {
-        submittedAt: new Date(), // Temporary date, will be updated on submission
-        attempts: 0,
-        needsRetake: false,
-        questionSetVersion: 1,
-      };
+      updateData['assessmentData.submittedAt'] = new Date(); // Temporary date, will be updated on submission
+      updateData['assessmentData.attempts'] = 0;
+      updateData['assessmentData.needsRetake'] = false;
+      updateData['assessmentData.questionSetVersion'] = 1;
     }
-    // Store questions temporarily (we'll use them when calculating score)
-    graduate.assessmentData.currentQuestions = questions;
-    await graduate.save();
+
+    await Graduate.findByIdAndUpdate(graduate._id, { $set: updateData }).exec();
 
     res.json({
       questionSetVersion,

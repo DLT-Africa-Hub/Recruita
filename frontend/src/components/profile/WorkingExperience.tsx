@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import graduateApi from '../../api/graduate';
 import { Edit, Trash2 } from 'lucide-react';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 
 interface WorkExperienceItem {
@@ -121,10 +122,17 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
     setIsModalOpen(true);
   };
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  
   const handleDelete = (id?: string) => {
     if (!id) return;
-    if (confirm('Are you sure you want to delete this experience?')) {
-      deleteExpMutation.mutate(id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmId) {
+      deleteExpMutation.mutate(deleteConfirmId);
+      setDeleteConfirmId(null);
     }
   };
 
@@ -198,6 +206,19 @@ const WorkingExperience: React.FC<WorkingExperienceProps> = ({ workExperiences =
           defaultValues={editingExp || undefined}
         />
       )}
+
+      <ConfirmDialog
+      
+        isOpen={!!deleteConfirmId}
+        title="Delete Experience"
+        message="Are you sure you want to delete this experience? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirmId(null)}
+        isLoading={deleteExpMutation.isPending}
+      />
     </div>
   );
 };

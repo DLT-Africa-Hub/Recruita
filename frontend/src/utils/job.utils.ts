@@ -125,8 +125,8 @@ export const candidateStatusFilters: {
 export const mapApplicationStatusToCandidateStatus = (
   appStatus: string
 ): CandidateStatus => {
-  // Hired status
-  if (appStatus === 'accepted' || appStatus === 'hired') return 'hired';
+  // Hired status - only when explicitly hired
+  if (appStatus === 'hired') return 'hired';
   
   // Pending status - when offer is sent but not yet accepted
   if (appStatus === 'offer_sent') return 'pending';
@@ -137,9 +137,10 @@ export const mapApplicationStatusToCandidateStatus = (
     return 'matched';
   }
   
-  // Applied status - when status is 'pending' (default when someone applies)
-  // Even if they have a match, if status is still 'pending', they're 'applied' until reviewed
-  if (appStatus === 'pending' || !appStatus) {
+  // Applied status - when status is 'pending' or 'accepted' (default when someone applies)
+  // Note: 'accepted' application status should not exist - when accepting, status becomes 'offer_sent'
+  // But we handle it gracefully here just in case
+  if (appStatus === 'pending' || appStatus === 'accepted' || !appStatus) {
     return 'applied';
   }
   

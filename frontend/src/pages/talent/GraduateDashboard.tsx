@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
@@ -53,6 +53,7 @@ const normalizeMatchScore = (score: number | undefined): number => {
 };
 
 const GraduateDashboard = () => {
+  const queryClient = useQueryClient();
   const [selectedCompany, setSelectedCompany] = useState<(Company & { jobId: string }) | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -148,10 +149,7 @@ const GraduateDashboard = () => {
     if (buttonText === 'Preview') {
       setSelectedCompany(company as Company & { jobId: string });
       setIsModalOpen(true);
-    } else if (buttonText === 'Get in Touch') {
-      // TODO: Handle contact action
-      console.log('Get in Touch clicked for company:', company.id);
-    }
+    } 
   };
 
   const handleCloseModal = () => {
@@ -159,15 +157,10 @@ const GraduateDashboard = () => {
     setSelectedCompany(null);
   };
 
-  const handleChat = () => {
-    // TODO: Navigate to chat
-    console.log('Chat clicked for company:', selectedCompany?.id);
-  };
-
   const handleApply = () => {
-    // Application is handled by CompanyPreviewModal
-    // This callback can be used for post-application actions if needed
-    console.log('Application submitted for company:', selectedCompany?.id);
+    // Refresh matches and applications after successful application
+    queryClient.invalidateQueries({ queryKey: ['graduateMatches'] });
+    queryClient.invalidateQueries({ queryKey: ['graduateApplications'] });
   };
 
   return (
@@ -186,7 +179,7 @@ const GraduateDashboard = () => {
       {!loading && (
         <>
         
-          <div className="flex flex-col gap-[20px] w-full md:gap-[30px] mt-50">
+          <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
             <SectionHeader title="AI Matched Opportunities" />
 
             {availableOpportunities.length > 0 ? (
@@ -204,6 +197,7 @@ const GraduateDashboard = () => {
               <EmptyState
                 title="No opportunities yet"
                 description="Full-time and part-time opportunities will appear here once you're matched with jobs."
+                variant="minimal"
               />
             )}
           </div>
@@ -228,6 +222,7 @@ const GraduateDashboard = () => {
               <EmptyState
                 title="No contract offers yet"
                 description="Contract and internship opportunities will appear here once you're matched with jobs."
+                variant="minimal"
               />
             )}
           </div>
@@ -238,7 +233,6 @@ const GraduateDashboard = () => {
         isOpen={isModalOpen}
         company={selectedCompany}
         onClose={handleCloseModal}
-        onChat={handleChat}
         onApply={handleApply}
       />
     </div>

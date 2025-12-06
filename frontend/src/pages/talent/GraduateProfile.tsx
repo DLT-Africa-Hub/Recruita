@@ -12,8 +12,10 @@ import WorkingExperience from '../../components/profile/WorkingExperience';
 import ResumeModal from '../../components/profile/ResumeModal';
 import cloudinaryApi from '../../api/cloudinary';
 import { ApiError } from '../../types/api';
+import { useToastContext } from '../../context/ToastContext';
 
 const GraduateProfile = () => {
+  const { error: showError } = useToastContext();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -182,7 +184,7 @@ const GraduateProfile = () => {
     } catch (err) {
       const error = err as ApiError;
       console.error('Failed to upload profile picture', error);
-      alert(error.response?.data?.message || 'Failed to upload profile picture');
+      showError(error.response?.data?.message || 'Failed to upload profile picture');
     } finally {
       setIsUploading(false);
     }

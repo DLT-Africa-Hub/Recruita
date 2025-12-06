@@ -12,7 +12,7 @@ type Props = {
 export default function ProfilePictureEditor({ imageUrl, size = 150, onUpload }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [fileSrc, setFileSrc] = useState<string | null>(imageUrl || null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setFileSrc(imageUrl || null)
@@ -63,7 +63,7 @@ interface ImageCropModalProps {
   initialImage: string | null;
   onImageSaved: (url: string) => void;
   onUpload?: (file: Blob) => Promise<void> | void;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<HTMLInputElement>;
   previewSize?: number;
 }
 
@@ -182,7 +182,7 @@ function ImageCropModal({
                 className="rounded-full overflow-hidden border mx-auto"
                 style={{ width: previewSize, height: previewSize }}
               >
-                {imageSrc ? (
+                {imageSrc && croppedAreaPixels ? (
                   <PreviewCanvas imageSrc={imageSrc} cropPixels={croppedAreaPixels} size={previewSize} />
                 ) : (
                   <div className="flex items-center justify-center text-xs text-gray-400 h-full">

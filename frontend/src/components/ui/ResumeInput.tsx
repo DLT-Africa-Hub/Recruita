@@ -145,8 +145,8 @@ const ResumeInput: React.FC<Props> = ({ onChange, value = [] }) => {
         console.error("Error deleting file from Cloudinary:", error)
         const apiError = error as ApiError;
       
-        if (apiError.response) {
-          console.error("Error response:", error.response.data)
+        if (apiError?.response) {
+          console.error("Error response:", apiError.response.data)
         }
         
      

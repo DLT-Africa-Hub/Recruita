@@ -7,7 +7,8 @@ export const interviewApi = {
   },
   getStreamToken: async () => {
     const response = await api.get('/interviews/token/stream');
-    return response.data.token;
+    // Backend returns { success: true, data: { token } }
+    return response.data.data?.token || response.data.token;
   },
 };
 

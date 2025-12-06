@@ -545,6 +545,61 @@ export const createJob = async (req: Request, res: Response): Promise<void> => {
       companyId: companyUserId,
       companyName: company.companyName,
     });
+
+    // Notify all admin users if admin handles applications (directContact is false)
+    if (!validatedDirectContact) {
+      const User = (await import('../models/User.model')).default;
+      const { createNotification } = await import('../services/notification.service');
+      const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
+
+      // Build comprehensive job details for admin
+      const salaryText = validatedSalary
+        ? `${validatedSalary.currency || 'USD'} ${(validatedSalary.amount / 1000).toLocaleString()}k`
+        : 'Not specified';
+      
+      const extraRequirementsText = validatedExtraRequirements && validatedExtraRequirements.length > 0
+        ? validatedExtraRequirements.map(req => `- ${req.label} (${req.type}${req.required ? ', required' : ''})`).join('\n')
+        : 'None';
+
+      const jobDetailsText = `
+Job Title: ${validatedTitle}
+Company: ${company.companyName}
+Job Type: ${validatedJobType}
+Location: ${validatedLocation || 'Not specified'}
+Preferred Rank: ${validatedPreferedRank}
+Salary: ${salaryText}
+
+Description:
+${validatedDescription}
+
+Required Skills:
+${validatedSkills.map(skill => `- ${skill}`).join('\n')}
+
+Additional Requirements:
+${extraRequirementsText}
+
+Job ID: ${jobId}
+      `.trim();
+
+      for (const admin of adminUsers) {
+        const adminId = admin._id instanceof mongoose.Types.ObjectId
+          ? admin._id
+          : new mongoose.Types.ObjectId(String(admin._id));
+        
+        await createNotification({
+          userId: adminId,
+          type: 'system',
+          title: 'New Job Requires Admin Handling',
+          message: `A new job "${validatedTitle}" has been posted by ${company.companyName}. You are responsible for managing applications, scheduling interviews, and vetting candidates for this position.`,
+          relatedId: jobId,
+          relatedType: 'job',
+          email: {
+            subject: `New Job Requires Admin Handling: ${validatedTitle} at ${company.companyName}`,
+            text: `A new job posting has been created that requires admin handling.\n\n${jobDetailsText}\n\nAs the admin, you will:\n- Review and manage all applications\n- Schedule interview processes\n- Vet all applicants\n- Notify the company about the best candidates\n\nPlease access the admin panel to begin managing this job.`,
+          },
+        });
+      }
+    }
   } catch (error) {
     console.error('Failed to send job creation notification:', error);
   }
@@ -813,6 +868,7 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
     job.status = validated;
   }
 
+  const previousDirectContact = job.directContact;
   if (directContact !== undefined) {
     job.directContact = Boolean(directContact);
   }
@@ -841,6 +897,70 @@ export const updateJob = async (req: Request, res: Response): Promise<void> => {
   }
 
   await job.save();
+
+  // Notify admins if directContact changed from true to false
+  if (previousDirectContact === true && job.directContact === false) {
+    try {
+      const User = (await import('../models/User.model')).default;
+      const { createNotification } = await import('../services/notification.service');
+      const adminUsers = await User.find({ role: 'admin' }).select('_id email').lean();
+
+      // Build comprehensive job details for admin
+      const salaryText = job.salary
+        ? `${job.salary.currency || 'USD'} ${((job.salary.amount || 0) / 1000).toLocaleString()}k`
+        : 'Not specified';
+      
+      const extraRequirementsText = job.requirements?.extraRequirements && job.requirements.extraRequirements.length > 0
+        ? job.requirements.extraRequirements.map((req: { label: string; type: string; required: boolean }) => 
+            `- ${req.label} (${req.type}${req.required ? ', required' : ''})`).join('\n')
+        : 'None';
+
+      const jobDetailsText = `
+Job Title: ${job.title}
+Company: ${company.companyName}
+Job Type: ${job.jobType}
+Location: ${job.location || 'Not specified'}
+Preferred Rank: ${job.preferedRank}
+Salary: ${salaryText}
+
+Description:
+${job.description}
+
+Required Skills:
+${job.requirements?.skills?.map((skill: string) => `- ${skill}`).join('\n') || 'None'}
+
+Additional Requirements:
+${extraRequirementsText}
+
+Job ID: ${job._id}
+      `.trim();
+
+      const jobIdString = job._id instanceof mongoose.Types.ObjectId
+        ? job._id.toString()
+        : String(job._id);
+
+      for (const admin of adminUsers) {
+        const adminId = admin._id instanceof mongoose.Types.ObjectId
+          ? admin._id
+          : new mongoose.Types.ObjectId(String(admin._id));
+        
+        await createNotification({
+          userId: adminId,
+          type: 'system',
+          title: 'Job Now Requires Admin Handling',
+          message: `The job "${job.title}" at ${company.companyName} has been updated to require admin handling. You are now responsible for managing applications, scheduling interviews, and vetting candidates.`,
+          relatedId: jobIdString,
+          relatedType: 'job',
+          email: {
+            subject: `Job Now Requires Admin Handling: ${job.title} at ${company.companyName}`,
+            text: `A job posting has been updated to require admin handling.\n\n${jobDetailsText}\n\nAs the admin, you will:\n- Review and manage all applications\n- Schedule interview processes\n- Vet all applicants\n- Notify the company about the best candidates\n\nPlease access the admin panel to begin managing this job.`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send admin notification for job update:', error);
+    }
+  }
 
   // Convert to plain object and remove embedding for response
   const jobResponse = job.toObject();
@@ -1109,7 +1229,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const { status, minScore, page = '1', limit = '10' } = req.query;
+  const { status, minScore, search, page = '1', limit = '10' } = req.query;
 
   const pagination = validatePagination(page as string, limit as string, res);
   if (!pagination) return;
@@ -1149,10 +1269,77 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
     query.score = { $gte: validatedMinScore };
   }
 
+  // If search is provided, find matching graduates and jobs first
+  let matchingGraduateIds: mongoose.Types.ObjectId[] | null = null;
+  let matchingJobIds: mongoose.Types.ObjectId[] | null = null;
+
+  if (search && typeof search === 'string' && search.trim()) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+
+    // Find matching graduates
+    const matchingGraduates = await Graduate.find({
+      $or: [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { position: searchRegex },
+        { location: searchRegex },
+        { skills: { $in: [searchRegex] } },
+      ],
+    }).select('_id').lean();
+    matchingGraduateIds = matchingGraduates.map((g) =>
+      g._id instanceof mongoose.Types.ObjectId
+        ? g._id
+        : new mongoose.Types.ObjectId(g._id as string)
+    );
+
+    // Find matching jobs
+    const matchingJobs = await Job.find({
+      $or: [
+        { title: searchRegex },
+        { location: searchRegex },
+      ],
+      companyId: company._id,
+    }).select('_id').lean();
+    matchingJobIds = matchingJobs.map((j) =>
+      j._id instanceof mongoose.Types.ObjectId
+        ? j._id
+        : new mongoose.Types.ObjectId(j._id as string)
+    );
+  }
+
+  // Build final query
+  const finalQuery: Record<string, unknown> = { ...query };
+
+  if (matchingGraduateIds !== null || matchingJobIds !== null) {
+    if (matchingGraduateIds !== null && matchingGraduateIds.length > 0 &&
+      matchingJobIds !== null && matchingJobIds.length > 0) {
+      finalQuery.$or = [
+        { graduateId: { $in: matchingGraduateIds } },
+        { jobId: { $in: matchingJobIds } },
+      ];
+    } else if (matchingJobIds !== null && matchingJobIds.length > 0) {
+      finalQuery.jobId = { $in: matchingJobIds };
+    } else if (matchingGraduateIds !== null && matchingGraduateIds.length > 0) {
+      finalQuery.graduateId = { $in: matchingGraduateIds };
+    } else {
+      // No matches found, return empty result
+      res.json({
+        matches: [],
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: 0,
+          pages: 0,
+        },
+      });
+      return;
+    }
+  }
+
   const skip = (pagination.page - 1) * pagination.limit;
 
   const [matches, total] = await Promise.all([
-    Match.find(query)
+    Match.find(finalQuery)
       .populate({
         path: 'graduateId',
         select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum',
@@ -1173,7 +1360,7 @@ export const getAllMatches = async (req: Request, res: Response): Promise<void> 
       .skip(skip)
       .limit(pagination.limit)
       .lean(),
-    Match.countDocuments(query),
+    Match.countDocuments(finalQuery),
   ]);
 
   res.json({
@@ -1206,7 +1393,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
     return;
   }
 
-  const { status, jobId, page = '1', limit = '10' } = req.query;
+  const { status, jobId, search, page = '1', limit = '10' } = req.query;
 
   const pagination = validatePagination(page as string, limit as string, res);
   if (!pagination) return;
@@ -1214,7 +1401,7 @@ export const getApplications = async (req: Request, res: Response): Promise<void
   const validatedStatus = status
     ? validateOptionalEnum(
       status as string,
-      ['pending', 'reviewed', 'shortlisted', 'interviewed', 'accepted', 'rejected', 'withdrawn'] as const,
+      ['pending', 'reviewed', 'shortlisted', 'interviewed', 'accepted', 'rejected', 'withdrawn', 'hired'] as const,
       'Status',
       res
     )
@@ -1251,8 +1438,75 @@ export const getApplications = async (req: Request, res: Response): Promise<void
 
   const skip = (pagination.page - 1) * pagination.limit;
 
+  // If search is provided, find matching graduates and jobs first
+  let matchingGraduateIds: mongoose.Types.ObjectId[] | null = null;
+  let matchingJobIds: mongoose.Types.ObjectId[] | null = null;
+
+  if (search && typeof search === 'string' && search.trim()) {
+    const searchRegex = new RegExp(search.trim(), 'i');
+
+    // Find matching graduates
+    const matchingGraduates = await Graduate.find({
+      $or: [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { position: searchRegex },
+        { location: searchRegex },
+        { skills: { $in: [searchRegex] } },
+      ],
+    }).select('_id').lean();
+    matchingGraduateIds = matchingGraduates.map((g) =>
+      g._id instanceof mongoose.Types.ObjectId
+        ? g._id
+        : new mongoose.Types.ObjectId(g._id as string)
+    );
+
+    // Find matching jobs
+    const matchingJobs = await Job.find({
+      $or: [
+        { title: searchRegex },
+        { location: searchRegex },
+      ],
+      companyId: company._id,
+    }).select('_id').lean();
+    matchingJobIds = matchingJobs.map((j) =>
+      j._id instanceof mongoose.Types.ObjectId
+        ? j._id
+        : new mongoose.Types.ObjectId(j._id as string)
+    );
+  }
+
+  // Build final query
+  const finalQuery: Record<string, unknown> = { ...query };
+
+  if (matchingGraduateIds !== null || matchingJobIds !== null) {
+    if (matchingGraduateIds !== null && matchingGraduateIds.length > 0 &&
+      matchingJobIds !== null && matchingJobIds.length > 0) {
+      finalQuery.$or = [
+        { graduateId: { $in: matchingGraduateIds } },
+        { jobId: { $in: matchingJobIds } },
+      ];
+    } else if (matchingJobIds !== null && matchingJobIds.length > 0) {
+      finalQuery.jobId = { $in: matchingJobIds };
+    } else if (matchingGraduateIds !== null && matchingGraduateIds.length > 0) {
+      finalQuery.graduateId = { $in: matchingGraduateIds };
+    } else {
+      // No matches found, return empty result
+      res.json({
+        applications: [],
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total: 0,
+          pages: 0,
+        },
+      });
+      return;
+    }
+  }
+
   const [applications, total] = await Promise.all([
-    Application.find(query)
+    Application.find(finalQuery)
       .populate({
         path: 'graduateId',
         select: 'firstName lastName skills education rank profilePictureUrl summary cv expYears position location salaryPerAnnum',
@@ -1270,11 +1524,15 @@ export const getApplications = async (req: Request, res: Response): Promise<void
         },
       })
       .populate('matchId', 'score')
+      .populate({
+        path: 'interviewId',
+        select: 'status scheduledAt selectedTimeSlot suggestedTimeSlots durationMinutes',
+      })
       .sort({ appliedAt: -1 })
       .skip(skip)
       .limit(pagination.limit)
       .lean(),
-    Application.countDocuments(query),
+    Application.countDocuments(finalQuery),
   ]);
 
   res.json({
@@ -1524,24 +1782,65 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       ? graduateData.userId
       : new mongoose.Types.ObjectId(String(graduateData.userId));
 
-  // Check if this graduate has an active interview that has already started
-  const now = new Date();
+  // Get the graduate ID properly
+  const graduateId = graduateData._id instanceof mongoose.Types.ObjectId
+    ? graduateData._id
+    : (graduate instanceof mongoose.Types.ObjectId
+      ? graduate
+      : new mongoose.Types.ObjectId(String(graduateData._id || graduateData.id || graduate)));
+
+  // Check if this company-graduate pair has an active interview (not completed or cancelled)
+  // This prevents scheduling multiple interviews with the same candidate until the current one is completed
   const existingActiveInterviews = await Interview.find({
-    graduateId: graduate._id ?? new mongoose.Types.ObjectId(graduate.id),
-    status: { $in: ['scheduled', 'in_progress'] },
+    companyId: company._id,
+    graduateId: graduateId,
+    status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
   }).lean();
 
-  // Check if any of these interviews have started (scheduledAt <= now)
-  const activeStartedInterview = existingActiveInterviews.find((interview) => {
-    const interviewStartTime = new Date(interview.scheduledAt);
-    return interviewStartTime <= now;
-  });
+  if (existingActiveInterviews.length > 0) {
+    // Check if any interview is pending selection
+    const pendingSelection = existingActiveInterviews.find(
+      (interview) => interview.status === 'pending_selection'
+    );
+    if (pendingSelection) {
+      res.status(400).json({
+        message: 'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.'
+      });
+      return;
+    }
 
-  if (activeStartedInterview) {
-    res.status(400).json({
-      message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.'
-    });
-    return;
+    // Check if any interview is in progress
+    const inProgress = existingActiveInterviews.find(
+      (interview) => interview.status === 'in_progress'
+    );
+    if (inProgress) {
+      res.status(400).json({
+        message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.'
+      });
+      return;
+    }
+
+    // Check if any interview is scheduled (regardless of whether it has started)
+    const scheduled = existingActiveInterviews.find(
+      (interview) => interview.status === 'scheduled'
+    );
+    if (scheduled) {
+      const now = new Date();
+      let interviewTime: Date | null = null;
+      
+      if (scheduled.scheduledAt) {
+        interviewTime = new Date(scheduled.scheduledAt);
+      } else if (scheduled.selectedTimeSlot?.date) {
+        interviewTime = new Date(scheduled.selectedTimeSlot.date);
+      }
+
+      // If interview is scheduled (whether in past or future), prevent new scheduling
+      // Only allow if the interview has been completed
+      res.status(400).json({
+        message: 'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.'
+      });
+      return;
+    }
   }
 
   const durationRaw = req.body?.durationMinutes;
@@ -1565,7 +1864,17 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
     return;
   }
 
+  // Check if there's already an interview for this application
+  // If it exists and is active, we should have caught it above, but double-check here
   let interview = await Interview.findOne({ applicationId: application._id });
+  
+  if (interview && ['pending_selection', 'scheduled', 'in_progress'].includes(interview.status)) {
+    res.status(400).json({
+      message: 'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.'
+    });
+    return;
+  }
+
   const roomSlug = interview?.roomSlug ?? generateInterviewSlug();
   const roomUrl = buildInterviewRoomUrl(roomSlug);
 
@@ -1575,7 +1884,7 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       jobId: jobData._id || (job instanceof mongoose.Types.ObjectId ? job : new mongoose.Types.ObjectId()),
       companyId: company._id,
       companyUserId: new mongoose.Types.ObjectId(userId),
-      graduateId: graduateData?._id ?? (graduateData?.id ? new mongoose.Types.ObjectId(graduateData.id) : new mongoose.Types.ObjectId()),
+      graduateId: graduateId,
       graduateUserId,
       scheduledAt: scheduledDate,
       durationMinutes,
@@ -1586,12 +1895,24 @@ export const scheduleInterview = async (req: Request, res: Response): Promise<vo
       createdBy: new mongoose.Types.ObjectId(userId),
     });
   } else {
-    interview.scheduledAt = scheduledDate;
-    interview.durationMinutes = durationMinutes;
-    interview.status = 'scheduled';
-    interview.roomSlug = roomSlug;
-    interview.roomUrl = roomUrl;
-    interview.updatedBy = new mongoose.Types.ObjectId(userId);
+    // Only update if the interview was completed or cancelled
+    if (interview.status === 'completed' || interview.status === 'cancelled') {
+      interview.scheduledAt = scheduledDate;
+      interview.durationMinutes = durationMinutes;
+      interview.status = 'scheduled';
+      interview.roomSlug = roomSlug;
+      interview.roomUrl = roomUrl;
+      interview.updatedBy = new mongoose.Types.ObjectId(userId);
+      // Reset interview timing fields
+      interview.startedAt = undefined;
+      interview.endedAt = undefined;
+    } else {
+      // Interview is still active, should not reach here due to check above, but handle gracefully
+      res.status(400).json({
+        message: 'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.'
+      });
+      return;
+    }
   }
 
 

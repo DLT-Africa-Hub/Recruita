@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import { graduateApi } from '../api/graduate';
@@ -75,9 +74,6 @@ const ExplorePreview = () => {
     navigate('/explore');
   };
 
-  const handleChat = () => {
-    // TODO: Navigate to chat
-  };
 
   const handleApply = () => {
     if (job.id) {
@@ -171,14 +167,6 @@ const ExplorePreview = () => {
 
           {/* Action Buttons */}
           <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
-            <button
-              type="button"
-              onClick={handleChat}
-              className="w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer transition hover:bg-[#F8F8F8]"
-            >
-              <HiOutlineChatBubbleLeftRight className="text-[24px]" />
-              <p className="text-[16px] font-medium">Chat</p>
-            </button>
             <button
               type="button"
               onClick={handleApply}

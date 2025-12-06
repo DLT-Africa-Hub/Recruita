@@ -25,7 +25,6 @@ export const roles: string[] = positions.map(p => p.value);
 const allSkills: string[] = [
   'React',
   'Node.js',
-  'Nodejs',
   'JavaScript',
   'TypeScript',
   'Python',

@@ -105,9 +105,8 @@ const CompanyJobForm = () => {
       return;
     }
 
-    // Parse salary value
     const salaryAmount = formData.salaryAmount
-      ? parseInt(formData.salaryAmount) * 1000 // Convert from k to actual amount
+      ? parseInt(formData.salaryAmount) * 1000 
       : undefined;
 
     const jobData = {
@@ -135,7 +134,6 @@ const CompanyJobForm = () => {
       status: 'active' as const,
     };
 
-    // Navigate to rank selector with job data and form data for restoration
     navigate('/jobs/rank-selector', { state: { jobData, formData } });
   };
 
@@ -470,7 +468,6 @@ const CompanyJobForm = () => {
           ))}
         </div>
 
-        {/* Contact Preference Section */}
         <div className="flex flex-col gap-3 p-4 border border-fade rounded-xl bg-[#F8F8F8]">
           <div>
             <label className="text-[#1C1C1C] text-[16px] font-medium">
@@ -511,7 +508,7 @@ const CompanyJobForm = () => {
                   Let DLT Africa handle applications
                 </span>
                 <span className="text-[12px] text-[#1C1C1C80] block mt-1">
-                  DLT Africa admin team will review and manage applications on your behalf
+                  DLT Africa admin team will review applications, schedule interviews, vet all candidates, and notify you about the best candidates
                 </span>
               </div>
             </label>

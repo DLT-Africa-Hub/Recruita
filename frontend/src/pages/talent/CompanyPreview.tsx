@@ -1,4 +1,3 @@
-import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import { useParams } from 'react-router-dom';
@@ -33,7 +32,6 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
 }) => {
   const { id } = useParams();
 
-  // Fetch job data from API
   const {
     data: jobData,
     isLoading,
@@ -68,7 +66,6 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
     );
   }
 
-  // Transform job data to Company format
   const salaryRange = formatSalaryRange(jobData.salary);
   const salaryType = jobData.jobType ? getSalaryType(jobData.jobType) : 'Annual';
   const formattedJobType = jobData.jobType ? formatJobType(jobData.jobType) : 'Full-time';
@@ -149,10 +146,6 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
 
           {mode === 'application' ? (
             <div className="flex flex-col md:flex-row w-full gap-[15px] items-center justify-center">
-              <button className="w-full flex items-center justify-center gap-[12px] border border-button py-[15px] rounded-[10px] text-button cursor-pointer ">
-                <HiOutlineChatBubbleLeftRight className="text-[24px]" />
-                <p className="text-[16px] font-medium">Chat</p>
-              </button>
               <button className="w-full  flex items-center justify-center gap-[12px] bg-button py-[15px] rounded-[10px] text-[#F8F8F8] cursor-pointer">
                 <BsSend className="text-[24px]" />
                 <p className="text-[16px] font-medium">View CV</p>

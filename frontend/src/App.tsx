@@ -1,5 +1,6 @@
 import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import {
   Home,
@@ -50,8 +51,9 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <AuthProvider>
-      <div className="App">
-        <Routes>
+      <ToastProvider>
+        <div className="App">
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route
             path="/login"
@@ -401,7 +403,8 @@ function App() {
             }
           />
         </Routes>
-      </div>
+        </div>
+      </ToastProvider>
     </AuthProvider>
     </GoogleOAuthProvider>
   );

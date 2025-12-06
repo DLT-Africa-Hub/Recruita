@@ -26,6 +26,8 @@ const Assessment: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [backendScore, setBackendScore] = useState<number | undefined>(undefined);
+  const [backendPassed, setBackendPassed] = useState<boolean | undefined>(undefined);
   // const [attempt, setAttempt] = useState(1); // Reserved for future retake functionality
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
@@ -54,7 +56,15 @@ const Assessment: React.FC = () => {
     }
 
     try {
-      await graduateApi.submitAssessment({ answers: allAnswers });
+      const response = await graduateApi.submitAssessment({ answers: allAnswers });
+
+      // Store the backend-calculated score and passed status
+      if (typeof response.score === 'number') {
+        setBackendScore(response.score);
+      }
+      if (typeof response.passed === 'boolean') {
+        setBackendPassed(response.passed);
+      }
 
       queryClient.invalidateQueries({
         queryKey: ['graduateProfile', 'assessment'],
@@ -96,7 +106,9 @@ const Assessment: React.FC = () => {
       setAnswers([]);
       setStep(0);
       setShowResults(false);
-        setTimeRemaining(60);
+      setBackendScore(undefined);
+      setBackendPassed(undefined);
+      setTimeRemaining(60);
       setTimerActive(true);
     } catch (err) {
       const error = err as ApiError;
@@ -162,7 +174,8 @@ const Assessment: React.FC = () => {
   };
 
   const handleRetry = () => {
-    setAttempt((prev) => prev + 1);
+    setBackendScore(undefined);
+    setBackendPassed(undefined);
     fetchQuestions();
   };
 
@@ -272,8 +285,13 @@ const Assessment: React.FC = () => {
   const isLastQuestion = step === totalSteps - 1;
 
   if (showResults) {
-    const score = calculateScore();
-    const passed = score.percentage >= 60;
+    // Use backend score if available, otherwise fall back to local calculation
+    const scorePercentage = backendScore !== undefined 
+      ? backendScore 
+      : calculateScore().percentage;
+    const passed = backendPassed !== undefined 
+      ? backendPassed 
+      : scorePercentage >= 60;
 
     return (
       <div className="flex justify-between items-center h-full pb-20 md:justify-center w-full flex-col md:gap-[70px] font-inter">
@@ -301,7 +319,7 @@ const Assessment: React.FC = () => {
                   Congratulations!
                 </p>
                 <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-                  You passed the assessment and you got {score.percentage}% of
+                  You passed the assessment and you got {scorePercentage}% of
                   the total score
                 </p>
               </div>
@@ -311,7 +329,7 @@ const Assessment: React.FC = () => {
                   Almost there!
                 </p>
                 <p className="font-normal text-[18px] text-[#1C1C1CBF]">
-                  You got {score.percentage}%, you need 60% to pass. But
+                  You got {scorePercentage}%, you need 60% to pass. But
                   don&apos;t worry you can try again
                 </p>
               </div>

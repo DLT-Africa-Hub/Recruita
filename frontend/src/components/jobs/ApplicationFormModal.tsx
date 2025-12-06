@@ -6,6 +6,7 @@ import { Input, Textarea, Button } from '../ui';
 import { graduateApi } from '../../api/graduate';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
+import { useToastContext } from '../../context/ToastContext';
 
 interface ApplicationFormModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
   const [coverLetter, setCoverLetter] = useState('');
   const [extraAnswers, setExtraAnswers] = useState<Record<string, string>>({});
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const { error: showError } = useToastContext();
   const [uploadedResume, setUploadedResume] = useState<{
     fileName: string;
     fileUrl: string;
@@ -179,7 +181,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     
     // Validate CV if not in profile
     if (!hasProfileCV && !uploadedResume) {
-      alert('Please upload your CV to complete your application.');
+      showError('Please upload your CV to complete your application.');
       return;
     }
     
@@ -189,7 +191,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
       .find((req) => !extraAnswers[req.label] || !extraAnswers[req.label].trim());
 
     if (missingRequired) {
-      alert(`Please fill in the required field: ${missingRequired.label}`);
+      showError(`Please fill in the required field: ${missingRequired.label}`);
       return;
     }
 

@@ -14,7 +14,7 @@ import {
   formatDateInTimezone,
   formatTimeSlotForDisplay,
 } from '../utils/timezone.utils';
-import { generateStreamToken } from '../utils/stream.utils';
+import { generateStreamToken, getStreamClient } from '../utils/stream.utils';
 
 export const getInterviewBySlug = async (
   req: Request,
@@ -279,17 +279,50 @@ export const suggestTimeSlots = async (
     return;
   }
 
-  // Check for existing active interview
-  const existingInterview = await Interview.findOne({
+  // Check for existing active interview for this application
+  const existingInterviewForApplication = await Interview.findOne({
     applicationId: application._id,
     status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
   });
 
-  if (existingInterview) {
+  if (existingInterviewForApplication) {
     res.status(400).json({
       message: 'An interview is already scheduled or pending for this application'
     });
     return;
+  }
+
+  // Check for existing active interview between this company and graduate
+  // (regardless of which application/job it's for)
+  // This prevents scheduling multiple interviews with the same candidate until the first one is completed
+  const existingInterviewForPair = await Interview.findOne({
+    companyId: company._id,
+    graduateId: graduateData._id,
+    status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
+  });
+
+  if (existingInterviewForPair) {
+    // Provide specific message based on status
+    if (existingInterviewForPair.status === 'pending_selection') {
+      res.status(400).json({
+        message: 'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.'
+      });
+      return;
+    }
+    
+    if (existingInterviewForPair.status === 'in_progress') {
+      res.status(400).json({
+        message: 'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.'
+      });
+      return;
+    }
+    
+    if (existingInterviewForPair.status === 'scheduled') {
+      res.status(400).json({
+        message: 'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.'
+      });
+      return;
+    }
   }
 
   // Generate room details
@@ -317,8 +350,13 @@ export const suggestTimeSlots = async (
 
   await interview.save();
 
-  // Update application status
-  application.status = 'interviewed';
+  // Update application status - only mark as reviewed/shortlisted, not interviewed
+  // Interview hasn't happened yet, just being scheduled
+  // Don't change status to 'interviewed' - that should only happen after the interview is completed
+  if (application.status === 'pending') {
+    application.status = 'reviewed';
+  }
+  // If already reviewed or shortlisted, keep that status (don't downgrade or change unnecessarily)
   if (!application.reviewedAt) {
     application.reviewedAt = new Date();
   }
@@ -687,7 +725,45 @@ export const generateStreamTokenController = async (
   }
 
   try {
-    const token = generateStreamToken(userId);
+    // Get user profile information
+    let userName = 'User';
+    let userImage: string | undefined = undefined;
+
+    // Check if user is a graduate
+    const graduate = await Graduate.findOne({ userId: new mongoose.Types.ObjectId(userId) }).lean();
+    if (graduate) {
+      userName = `${graduate.firstName || ''} ${graduate.lastName || ''}`.trim() || 'Graduate';
+      userImage = graduate.profilePictureUrl;
+    } else {
+      // Check if user is a company
+      const company = await Company.findOne({ userId: new mongoose.Types.ObjectId(userId) }).lean();
+      if (company) {
+        userName = company.companyName || 'Company';
+      }
+    }
+
+    // Prepare user data for Stream
+    const streamUser = {
+      id: userId,
+      role: 'user',
+      name: userName,
+      image: userImage || '',
+    };
+
+    // Validate user data
+    if (!streamUser.id || !streamUser.name) {
+      res.status(400).json({ message: 'User data is incomplete' });
+      return;
+    }
+
+    // Get Stream client and upsert user
+    const streamClient = getStreamClient();
+    await streamClient.upsertUsers([streamUser]);
+
+    // Generate token with 1 hour expiration
+    const expirationTime = 60 * 60; // 1 hour
+    const token = generateStreamToken(userId, expirationTime);
+
     res.success({ token });
   } catch (error) {
     console.error('Error generating Stream token:', error);

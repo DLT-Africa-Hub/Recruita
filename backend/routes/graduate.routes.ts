@@ -32,6 +32,7 @@ import {
 } from '../controllers/interview.controller';
 import {
   getOffer,
+  getOfferById,
   uploadSignedOffer,
   acceptOffer,
   rejectOffer,
@@ -90,6 +91,7 @@ router.put('/applications/:applicationId', updateApplicationStatus);
 
 // Offer management
 router.get('/offers/:applicationId', getOffer);
+router.get('/offers/by-id/:offerId', getOfferById);
 router.post('/offers/:offerId/upload-signed', uploadSignedOffer);
 router.post('/offers/:offerId/accept', acceptOffer);
 router.post('/offers/:offerId/reject', rejectOffer);

@@ -37,7 +37,9 @@ logger = logging.getLogger(__name__)
 
 _api_key = os.getenv("OPENAI_API_KEY")
 if not _api_key:
-    raise RuntimeError("OPENAI_API_KEY environment variable is required for feedback generation")
+    raise RuntimeError(
+        "OPENAI_API_KEY environment variable is required for feedback generation"
+    )
 
 client = OpenAI(api_key=_api_key)
 
@@ -72,7 +74,12 @@ def _serialise_list(values: Optional[Any]) -> str:
     if not values:
         return "Not specified"
     if isinstance(values, (list, tuple, set)):
-        return ", ".join(sorted({str(item).strip() for item in values if str(item).strip()})) or "Not specified"
+        return (
+            ", ".join(
+                sorted({str(item).strip() for item in values if str(item).strip()})
+            )
+            or "Not specified"
+        )
     return str(values)
 
 
@@ -134,7 +141,9 @@ def _parse_response(content: str, language: str) -> Dict[str, Any]:
         parsed = json.loads(cleaned)
     except json.JSONDecodeError as exc:
         logger.error("Unable to parse feedback JSON: %s", exc)
-        raise FeedbackGenerationError("Feedback generation returned invalid JSON") from exc
+        raise FeedbackGenerationError(
+            "Feedback generation returned invalid JSON"
+        ) from exc
 
     feedback = str(parsed.get("feedback", "")).strip()
     if not feedback:
@@ -158,10 +167,14 @@ def _parse_response(content: str, language: str) -> Dict[str, Any]:
 
     if not skill_gaps:
         logger.info("Feedback response missing skill gaps; synthesising placeholder.")
-        skill_gaps = [f"No explicit skill gaps identified. Consider verifying requirements in {language.upper()}."]
+        skill_gaps = [
+            f"No explicit skill gaps identified. Consider verifying requirements in {language.upper()}."
+        ]
 
     if not recommendations:
-        logger.info("Feedback response missing recommendations; synthesising placeholder.")
+        logger.info(
+            "Feedback response missing recommendations; synthesising placeholder."
+        )
         recommendations = [
             f"Schedule a follow-up coaching session to determine concrete next steps ({language.upper()})."
         ]
@@ -193,19 +206,27 @@ async def _call_openai(prompt: str) -> str:
         )
     except (RateLimitError, APITimeoutError) as exc:
         logger.warning("Feedback generation rate limited or timed out: %s", exc)
-        raise FeedbackGenerationError("Feedback service is currently unavailable, please retry shortly.") from exc
+        raise FeedbackGenerationError(
+            "Feedback service is currently unavailable, please retry shortly."
+        ) from exc
     except (BadRequestError, APIConnectionError, APIError) as exc:
         logger.error("Feedback generation API error: %s", exc)
-        raise FeedbackGenerationError("Feedback service rejected the request payload.") from exc
+        raise FeedbackGenerationError(
+            "Feedback service rejected the request payload."
+        ) from exc
     except OpenAIError as exc:
         logger.exception("Unexpected OpenAI error during feedback generation")
-        raise FeedbackGenerationError("Unexpected error from feedback service.") from exc
+        raise FeedbackGenerationError(
+            "Unexpected error from feedback service."
+        ) from exc
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Unhandled error during feedback generation")
         raise FeedbackGenerationError("Unable to generate feedback.") from exc
 
     choice = response.choices[0]
-    content = choice.message.content if choice.message and choice.message.content else ""
+    content = (
+        choice.message.content if choice.message and choice.message.content else ""
+    )
     if not content:
         raise FeedbackGenerationError("Feedback generation returned an empty response.")
     return content
@@ -223,9 +244,13 @@ async def generate_feedback_text(
     Generate skill gap analysis and improvement recommendations using GPT-4.
     """
     if not graduate_profile.skills:
-        logger.warning("Graduate profile contains no skills; feedback quality may be limited.")
+        logger.warning(
+            "Graduate profile contains no skills; feedback quality may be limited."
+        )
     if not job_requirements.skills:
-        logger.warning("Job requirements contain no skills; feedback quality may be limited.")
+        logger.warning(
+            "Job requirements contain no skills; feedback quality may be limited."
+        )
 
     target_language = (language or DEFAULT_LANGUAGE).strip() or DEFAULT_LANGUAGE
     template = _merge_templates(template_overrides)
@@ -240,4 +265,3 @@ async def generate_feedback_text(
 
     raw_response = await _call_openai(prompt)
     return _parse_response(raw_response, target_language)
-

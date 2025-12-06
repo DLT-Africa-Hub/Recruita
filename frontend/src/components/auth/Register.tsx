@@ -112,7 +112,7 @@ const Register = () => {
             label: 'Password',
             name: 'password',
             type: 'password',
-            placeholder: 'password',
+            placeholder: '8 characters or more',
             value: password,
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value),
           },

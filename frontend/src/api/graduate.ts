@@ -189,6 +189,38 @@ updateCVDisplay: async (cvId: string) => {
   const response = await api.patch(`/graduates/profile/cv/${cvId}/display`);
   return response.data;
 },
+
+// Offer management
+getOffer: async (applicationId: string) => {
+  const response = await api.get(`/graduates/offers/${applicationId}`);
+  return response.data;
+},
+
+getOfferById: async (offerId: string) => {
+  const response = await api.get(`/graduates/offers/by-id/${offerId}`);
+  return response.data;
+},
+
+uploadSignedOffer: async (offerId: string, file: File) => {
+  const formData = new FormData();
+  formData.append('signedOffer', file);
+  const response = await api.post(`/graduates/offers/${offerId}/upload-signed`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+},
+
+acceptOffer: async (offerId: string) => {
+  const response = await api.post(`/graduates/offers/${offerId}/accept`);
+  return response.data;
+},
+
+rejectOffer: async (offerId: string) => {
+  const response = await api.post(`/graduates/offers/${offerId}/reject`);
+  return response.data;
+},
 };
 
 
