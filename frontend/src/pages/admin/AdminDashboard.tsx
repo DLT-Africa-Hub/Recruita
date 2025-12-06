@@ -12,6 +12,19 @@ import HiringCompany from '../../components/admin/dashboard/hiring-company';
 import adminApi from '@/api/admin';
 import { formatDistanceToNow } from 'date-fns';
 
+export interface CompanyStatsApi {
+  _id: string;
+  companyName: string;
+  postedJobs: number;
+  hiredCandidates?: number;
+}
+
+export interface HiringCompanyStats {
+  name: string;
+  jobs: number;
+  hired: number;
+}
+
 export interface StatCard {
   title: string;
   numbers: string;
@@ -27,62 +40,45 @@ interface ActivityLog {
   metadata: Record<string, any>;
 }
 
-const hiringCompanies = [
-  {
-    name: "Care Chain",
-    jobs: 45,
-    hired: 30,
-  },
-  {
-    name: "DLT Africa",
-    jobs: 45,
-    hired: 30,
-  },
-  {
-    name: "Enterprise Corp",
-    jobs: 45,
-    hired: 30,
-  },
-  {
-    name: "Tech Innovations Inc",
-    jobs: 45,
-    hired: 30,
-  },
-  {
-    name: "DLT Hub",
-    jobs: 45,
-    hired: 30,
-  },
-];
-
 const AdminDashboard = () => {
-  // Fetch talent count
+  // Stats queries
   const { data: talentData, isLoading: talentLoading } = useQuery({
     queryKey: ['talentCount'],
     queryFn: adminApi.getTalentCount,
   });
 
-  // Fetch company count
   const { data: companyData, isLoading: companyLoading } = useQuery({
     queryKey: ['companyCount'],
     queryFn: adminApi.getCompanyCount,
   });
 
-  // Fetch active jobs count
   const { data: activeJobsData, isLoading: activeJobsLoading } = useQuery({
     queryKey: ['activeJobsCount'],
     queryFn: adminApi.getActiveJobsCount,
   });
 
-  // Fetch user activity logs
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['userActivityLogs'],
     queryFn: adminApi.getUserActivityLogs,
   });
 
-  const isLoading = talentLoading || companyLoading || activeJobsLoading || activityLoading;
+  // ✅ Top hiring companies
+  const {
+    data: companiesStatsData,
+    isLoading: companiesStatsLoading,
+  } = useQuery({
+    queryKey: ['companiesStats', { page: 1, limit: 5 }],
+    queryFn: () => adminApi.getCompaniesStats({ page: 1, limit: 5 }),
+  });
 
-  // Build stats array with real data
+  const isLoading =
+    talentLoading ||
+    companyLoading ||
+    activeJobsLoading ||
+    activityLoading ||
+    companiesStatsLoading;
+
+  // Stats cards
   const stats: StatCard[] = [
     {
       title: 'Total Companies',
@@ -98,8 +94,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'Total Jobs Posted',
-      numbers: '20,000+',
-      analysis: '+12% vs last month',
+      numbers: '—',
+      analysis: 'All time',
       icon: FaBriefcase,
     },
     {
@@ -110,8 +106,8 @@ const AdminDashboard = () => {
     },
     {
       title: 'New SignUps',
-      numbers: '234',
-      analysis: '+12% vs last month',
+      numbers: '—',
+      analysis: 'This week',
       icon: FaUserPlus,
     },
     {
@@ -122,78 +118,122 @@ const AdminDashboard = () => {
     },
     {
       title: 'Pending Approvals',
-      numbers: '18',
+      numbers: '—',
       analysis: 'Needs review',
       icon: MdPendingActions,
     },
     {
       title: 'AI Assessment',
-      numbers: '3,450',
+      numbers: '—',
       analysis: '+12% vs last month',
       icon: GiBrain,
     },
   ];
 
-  // Process activity logs
-  const activities = activityData?.data?.map((log: ActivityLog) => ({
-    activity: log.summary,
-    time: formatDistanceToNow(new Date(log.timestamp), { addSuffix: true }),
-    metadata: log.metadata,
-    type:log.type,
-    action:log.action
-  })) || [];
+  // Activity logs
+  const activities =
+    activityData?.data?.map((log: ActivityLog) => ({
+      activity: log.summary,
+      time: formatDistanceToNow(new Date(log.timestamp), { addSuffix: true }),
+      metadata: log.metadata,
+      type: log.type,
+      action: log.action,
+    })) || [];
+
+  
+  const hiringCompanies: HiringCompanyStats[] =
+  (companiesStatsData?.data as CompanyStatsApi[] | undefined)
+    ?.map((company) => ({
+      name: company.companyName || 'Unnamed Company',
+      jobs: company.postedJobs ?? 0,
+      hired: company.hiredCandidates ?? 0,
+    }))
+    ?.sort((a, b) => {
+  
+      if (b.jobs !== a.jobs) {
+        return b.jobs - a.jobs;
+      }
+
+   
+      return b.hired - a.hired;
+    }) || [];
+
+
+   
 
   if (isLoading) {
     return (
-      <div className="max-w-[1200px] my-0 mx-auto p-8 ">
+      <div className="max-w-[1200px] my-0 mx-auto p-8">
         <LoadingSpinner message="Loading dashboard..." fullPage />
       </div>
     );
   }
 
   return (
-    <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
+    <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
       <p className="text-[#1C1C1C] font-semibold text-[26px]">Dashboard</p>
 
+      {/* Stats cards */}
       <div className="flex flex-wrap gap-[61px] justify-between">
         {stats.map((stat) => (
           <StatsButton
+            key={stat.title}
             title={stat.title}
             analysis={stat.analysis}
             numbers={stat.numbers}
             icon={stat.icon}
-            key={stat.title}
           />
         ))}
       </div>
 
-      <div className='grid grid-cols-1 gap-5 lg:grid-cols-2  w-full'>
-        <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px]  max-w-[715px] p-[23px] max-h-[451px]  bg-white">
-          <p className="text-[#1C1C1C] font-semibold text-[20px]">Recent Activities</p>
-          <div className='flex flex-col gap-[25px] overflow-y-scroll'>
-              {activities.length > 0 ? (
-                activities.map((activity: any, index: number) => (
-                  <ActivityItem 
-                    activity={activity.activity} 
-                    time={activity.time} 
-                    key={`${activity.activity}-${index}`}
-                    metadata={activity.metadata}
-                    type={activity.type}
-                    action={activity.action}
-                  />
-                ))
-              ) : (
-                <p className="text-[#1C1C1CBF] text-center py-4">No recent activities</p>
-              )}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 w-full">
+        {/* Recent Activities */}
+        <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px] max-h-[451px] p-[23px] bg-white">
+          <p className="text-[#1C1C1C] font-semibold text-[20px]">
+            Recent Activities
+          </p>
+
+          <div className="flex flex-col gap-[25px] overflow-y-scroll">
+            {activities.length > 0 ? (
+              activities.map((activity, index) => (
+                <ActivityItem
+                  key={index}
+                  activity={activity.activity}
+                  time={activity.time}
+                  metadata={activity.metadata}
+                  type={activity.type}
+                  action={activity.action}
+                />
+              ))
+            ) : (
+              <p className="text-[#1C1C1CBF] text-center py-4">
+                No recent activities
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px] max-h-[451px]  max-w-[715px] p-[23px] bg-white">
-        <p className="text-[#1C1C1C] font-semibold text-[20px]">Top Hiring Companies</p> 
-        <div className='flex flex-col gap-[25px] overflow-y-scroll'>
-              {hiringCompanies.map((company) => (
-                <HiringCompany hired={company.hired} jobs={company.jobs} name={company.name} key={company.name}/>
-              ))}
+        {/* ✅ Top Hiring Companies */}
+        <div className="flex flex-col rounded-[10px] border border-fade w-full gap-[21px] max-h-[451px] p-[23px] bg-white">
+          <p className="text-[#1C1C1C] font-semibold text-[20px]">
+            Top Hiring Companies
+          </p>
+
+          <div className="flex flex-col gap-[25px] overflow-y-scroll">
+          {hiringCompanies.length > 0 ? (
+  hiringCompanies.map((company) => (
+    <HiringCompany
+      key={company.name}
+      name={company.name}
+      jobs={company.jobs}
+      hired={company.hired}
+    />
+  ))
+) : (
+  <p className="text-[#1C1C1CBF] text-center py-4">
+    No hiring companies yet
+  </p>
+)}
           </div>
         </div>
       </div>
