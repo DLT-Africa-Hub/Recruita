@@ -10,7 +10,7 @@ async function startTestServer() {
   try {
     // Try to use mongodb-memory-server for in-memory testing
     let uri: string;
-    
+
     try {
       const { MongoMemoryServer } = await import('mongodb-memory-server');
       mongo = await MongoMemoryServer.create();
@@ -18,8 +18,12 @@ async function startTestServer() {
       console.log('✅ Using in-memory MongoDB for testing');
     } catch (error) {
       // Fallback to local MongoDB if mongodb-memory-server is not available
-      console.log('⚠️  mongodb-memory-server not available, using local MongoDB');
-      uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/talent-hub-e2e-test';
+      console.log(
+        '⚠️  mongodb-memory-server not available, using local MongoDB'
+      );
+      uri =
+        process.env.MONGODB_URI ||
+        'mongodb://localhost:27017/talent-hub-e2e-test';
       console.log(`✅ Using local MongoDB: ${uri}`);
     }
 
@@ -81,4 +85,3 @@ if (require.main === module) {
 }
 
 export default startTestServer;
-

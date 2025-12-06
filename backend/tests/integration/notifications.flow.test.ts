@@ -160,9 +160,10 @@ describe('Notification workflows', () => {
       .expect(200);
 
     // Filter for application notifications (there may be other notifications like job creation)
-    const applicationNotifications = notificationsResponse.body.notifications.filter(
-      (n: { type: string }) => n.type === 'application'
-    );
+    const applicationNotifications =
+      notificationsResponse.body.notifications.filter(
+        (n: { type: string }) => n.type === 'application'
+      );
 
     expect(applicationNotifications).toHaveLength(1);
     expect(applicationNotifications[0]).toEqual(
