@@ -4,7 +4,10 @@
  * @param timezone - IANA timezone identifier (e.g., 'America/New_York')
  * @returns Formatted date string or original string if formatting fails
  */
-export const formatDateLong = (dateString: string, timezone: string): string => {
+export const formatDateLong = (
+  dateString: string,
+  timezone: string
+): string => {
   try {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -31,13 +34,13 @@ export const getTimeUntilDeadline = (deadline: string): string | null => {
     const deadlineDate = new Date(deadline);
     const now = new Date();
     const diff = deadlineDate.getTime() - now.getTime();
-    
+
     if (diff < 0) return null;
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
     return `${minutes} minute${minutes > 1 ? 's' : ''}`;
@@ -54,4 +57,3 @@ export const getTimeUntilDeadline = (deadline: string): string | null => {
 export const formatDuration = (minutes: number): string => {
   return minutes === 60 ? '1 hour' : `${minutes} minutes`;
 };
-

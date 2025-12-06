@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   getProfile,
   createProfile,
@@ -43,7 +43,7 @@ import {
   requireEmailVerification,
 } from '../middleware/auth.middleware';
 
-const router = Router();
+const router: IRouter = Router();
 
 // All routes require authentication and graduate role
 router.use(authenticate);

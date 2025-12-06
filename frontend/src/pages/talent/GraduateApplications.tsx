@@ -23,7 +23,16 @@ type ObjectIdLike = {
 
 interface Application {
   id: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'reviewed' | 'hired' | 'offer_sent' | 'shortlisted' | 'interviewed' | 'withdrawn';
+  status:
+    | 'pending'
+    | 'accepted'
+    | 'rejected'
+    | 'reviewed'
+    | 'hired'
+    | 'offer_sent'
+    | 'shortlisted'
+    | 'interviewed'
+    | 'withdrawn';
   job: {
     id?: string;
     _id?: string | ObjectIdLike;
@@ -250,7 +259,15 @@ const GraduateApplications = () => {
     );
   };
 
-  const statusTypes = ['all', 'pending', 'reviewed', 'accepted', 'rejected', 'hired', 'offer_sent'];
+  const statusTypes = [
+    'all',
+    'pending',
+    'reviewed',
+    'accepted',
+    'rejected',
+    'hired',
+    'offer_sent',
+  ];
 
   return (
     <>

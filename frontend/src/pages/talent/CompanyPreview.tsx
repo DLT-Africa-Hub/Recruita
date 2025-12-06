@@ -6,7 +6,12 @@ import { CiMail } from 'react-icons/ci';
 import { useQuery } from '@tanstack/react-query';
 import { graduateApi } from '../../api/graduate';
 import { LoadingSpinner, EmptyState } from '../../components/ui';
-import { formatSalaryRange, getSalaryType, formatJobType, DEFAULT_JOB_IMAGE } from '../../utils/job.utils';
+import {
+  formatSalaryRange,
+  getSalaryType,
+  formatJobType,
+  DEFAULT_JOB_IMAGE,
+} from '../../utils/job.utils';
 import { ApiJob } from '../../types/api';
 
 export interface Company {
@@ -40,9 +45,14 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
     queryKey: ['jobPreview', id],
     queryFn: async () => {
       if (!id) return null;
-      const response = await graduateApi.getAvailableJobs({ page: 1, limit: 100 });
+      const response = await graduateApi.getAvailableJobs({
+        page: 1,
+        limit: 100,
+      });
       const jobs = response.jobs || [];
-      return jobs.find((job: ApiJob) => job.id === id || job._id?.toString() === id);
+      return jobs.find(
+        (job: ApiJob) => job.id === id || job._id?.toString() === id
+      );
     },
     enabled: !!id,
   });
@@ -67,14 +77,22 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
   }
 
   const salaryRange = formatSalaryRange(jobData.salary);
-  const salaryType = jobData.jobType ? getSalaryType(jobData.jobType) : 'Annual';
-  const formattedJobType = jobData.jobType ? formatJobType(jobData.jobType) : 'Full-time';
-  
+  const salaryType = jobData.jobType
+    ? getSalaryType(jobData.jobType)
+    : 'Annual';
+  const formattedJobType = jobData.jobType
+    ? formatJobType(jobData.jobType)
+    : 'Full-time';
+
   const company: Company = {
     id: Number(id) || 0,
     name: jobData.companyName || 'Unknown Company',
     role: jobData.title || 'Position',
-    match: jobData.matchScore ? (jobData.matchScore > 1 ? Math.min(100, Math.round(jobData.matchScore)) : Math.min(100, Math.round(jobData.matchScore * 100))) : 0,
+    match: jobData.matchScore
+      ? jobData.matchScore > 1
+        ? Math.min(100, Math.round(jobData.matchScore))
+        : Math.min(100, Math.round(jobData.matchScore * 100))
+      : 0,
     contract: formattedJobType,
     location: jobData.location || 'Not specified',
     wageType: salaryType,
@@ -83,7 +101,6 @@ const CompanyPreview: React.FC<CompanyPreviewProps> = ({
     jobDesc: jobData.description || 'No description available.',
     skills: jobData.requirements?.skills || [],
   };
-
 
   return (
     <div className="flex items-center justify-center h-full lg:h-screen w-full font-inter">

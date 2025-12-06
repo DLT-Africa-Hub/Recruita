@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   getProfile,
   createProfile,
@@ -32,7 +32,7 @@ import {
   veryStrictLimiter,
 } from '../middleware/rateLimit.middleware';
 
-const router = Router();
+const router: IRouter = Router();
 
 // All routes require authentication and company role
 router.use(authenticate);

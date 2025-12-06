@@ -24,8 +24,9 @@ import {
 import { enforceHttps } from './middleware/https.middleware';
 import { userRateLimiter } from './middleware/userRateLimit.middleware';
 import { securityConfig } from './config/secrets';
+import type { Express } from 'express';
 
-const app = express();
+const app: Express = express();
 const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 
 app.disable('x-powered-by');

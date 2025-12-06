@@ -36,7 +36,9 @@ const InterviewRoom = () => {
   const navigate = useNavigate();
   const [videoClient, setVideoClient] = useState<StreamVideoClient>();
   const [call, setCall] = useState<Call>();
-  const tokenCacheRef = useRef<{ token: string; expiresAt: number } | null>(null);
+  const tokenCacheRef = useRef<{ token: string; expiresAt: number } | null>(
+    null
+  );
   const [streamError, setStreamError] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -54,16 +56,18 @@ const InterviewRoom = () => {
   useEffect(() => {
     if (!interview || !user || !interview.roomSlug) return;
 
-
     // Fetch token and initialize client
     const initializeClient = async () => {
       try {
         const userId = user.id || 'user-' + Date.now();
         const userName = user.email || 'Guest';
-        
+
         // Check cache first
         let token: string;
-        if (tokenCacheRef.current && tokenCacheRef.current.expiresAt > Date.now() + 60 * 60 * 1000) {
+        if (
+          tokenCacheRef.current &&
+          tokenCacheRef.current.expiresAt > Date.now() + 60 * 60 * 1000
+        ) {
           token = tokenCacheRef.current.token;
         } else {
           // Fetch token from backend with retry logic
@@ -72,54 +76,63 @@ const InterviewRoom = () => {
           for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
               const fetchedToken = await interviewApi.getStreamToken();
-              
+
               if (!fetchedToken) {
                 console.error('Token is empty or undefined');
                 throw new Error('Token is empty or undefined');
               }
-              
+
               token = fetchedToken;
-              
+
               // Cache the token (Stream tokens expire in 1 hour)
               tokenCacheRef.current = {
                 token,
                 expiresAt: Date.now() + 55 * 60 * 1000, // Cache for 55 minutes (token valid for 1 hour)
               };
-              
+
               break; // Success, exit retry loop
             } catch (error) {
-              const apiError = error as { 
+              const apiError = error as {
                 response?: { status?: number };
                 code?: string;
                 message?: string;
               };
-              
+
               // If it's a 429 (rate limit), wait before retrying
               if (apiError.response?.status === 429) {
                 if (attempt < maxRetries - 1) {
                   // Exponential backoff: wait 2^attempt seconds
                   const waitTime = Math.pow(2, attempt) * 1000;
-                  console.warn(`Rate limited. Retrying in ${waitTime / 1000} seconds...`);
+                  console.warn(
+                    `Rate limited. Retrying in ${waitTime / 1000} seconds...`
+                  );
                   await new Promise((resolve) => setTimeout(resolve, waitTime));
                   continue;
                 } else {
-                  const errorMsg = 'Too many requests. Please wait a moment and refresh the page.';
+                  const errorMsg =
+                    'Too many requests. Please wait a moment and refresh the page.';
                   setStreamError(errorMsg);
                   return;
                 }
               }
-              
+
               // Network/CORS errors
-              if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('CORS') || apiError.message === 'Network Error') {
-                const errorMsg = 'Cannot connect to server. Please check if the backend is running and CORS is configured correctly.';
+              if (
+                apiError.code === 'ERR_NETWORK' ||
+                apiError.message?.includes('CORS') ||
+                apiError.message === 'Network Error'
+              ) {
+                const errorMsg =
+                  'Cannot connect to server. Please check if the backend is running and CORS is configured correctly.';
                 setStreamError(errorMsg);
                 return;
               }
-              
+
               // For other errors
               console.error('Failed to fetch Stream token:', error);
               if (attempt === maxRetries - 1) {
-                const errorMsg = 'Failed to get Stream token. Please ensure you are authenticated.';
+                const errorMsg =
+                  'Failed to get Stream token. Please ensure you are authenticated.';
                 setStreamError(errorMsg);
                 return;
               }
@@ -140,7 +153,9 @@ const InterviewRoom = () => {
         setStreamError(null); // Clear any previous errors
       } catch (error) {
         console.error('Failed to initialize Stream client:', error);
-        setStreamError('Failed to initialize video client. Please refresh the page.');
+        setStreamError(
+          'Failed to initialize video client. Please refresh the page.'
+        );
       }
     };
 
@@ -163,9 +178,15 @@ const InterviewRoom = () => {
 
     myCall.join({ create: true }).catch((err) => {
       console.error('Failed to join the call', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to join the call';
-      if (errorMessage.includes('rate limit') || errorMessage.includes('Too many requests')) {
-        setStreamError('Too many requests. Please wait a moment and refresh the page.');
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to join the call';
+      if (
+        errorMessage.includes('rate limit') ||
+        errorMessage.includes('Too many requests')
+      ) {
+        setStreamError(
+          'Too many requests. Please wait a moment and refresh the page.'
+        );
       } else if (errorMessage.includes('token')) {
         setStreamError('Authentication error. Please refresh the page.');
       } else {
@@ -259,17 +280,17 @@ const InterviewRoom = () => {
                 </>
               ) : (
                 <>
-              <h3 className="text-xl font-semibold mb-4">
-                Preparing video call...
-              </h3>
-              <p className="text-gray-300 mb-4">
-                {!import.meta.env.VITE_STREAM_API_KEY &&
-                  'Stream API key is not configured'}
-              </p>
-              {interview.roomSlug && (
-                <p className="text-sm text-gray-400">
-                  Room ID: {interview.roomSlug}
-                </p>
+                  <h3 className="text-xl font-semibold mb-4">
+                    Preparing video call...
+                  </h3>
+                  <p className="text-gray-300 mb-4">
+                    {!import.meta.env.VITE_STREAM_API_KEY &&
+                      'Stream API key is not configured'}
+                  </p>
+                  {interview.roomSlug && (
+                    <p className="text-sm text-gray-400">
+                      Room ID: {interview.roomSlug}
+                    </p>
                   )}
                 </>
               )}

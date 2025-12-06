@@ -41,4 +41,3 @@ export const createStreamClient = (
 };
 
 export default createStreamClient;
-

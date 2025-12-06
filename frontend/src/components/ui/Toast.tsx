@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
-import { HiCheckCircle, HiXCircle, HiInformationCircle, HiExclamation } from 'react-icons/hi';
+import {
+  HiCheckCircle,
+  HiXCircle,
+  HiInformationCircle,
+  HiExclamation,
+} from 'react-icons/hi';
 import { HiOutlineX } from 'react-icons/hi';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -76,7 +81,10 @@ interface ToastContainerProps {
   onClose: (id: string) => void;
 }
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose }) => {
+export const ToastContainer: React.FC<ToastContainerProps> = ({
+  toasts,
+  onClose,
+}) => {
   if (toasts.length === 0) return null;
 
   return (
@@ -89,4 +97,3 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onClose 
     </div>
   );
 };
-

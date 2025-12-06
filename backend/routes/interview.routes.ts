@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import {
   authenticate,
   authorize,
@@ -10,7 +10,7 @@ import {
   generateStreamTokenController,
 } from '../controllers/interview.controller';
 
-const router = Router();
+const router: IRouter = Router();
 
 router.use(authenticate);
 router.use(authorize('company', 'graduate'));

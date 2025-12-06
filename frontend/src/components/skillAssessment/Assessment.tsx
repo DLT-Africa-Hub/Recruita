@@ -26,8 +26,12 @@ const Assessment: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [backendScore, setBackendScore] = useState<number | undefined>(undefined);
-  const [backendPassed, setBackendPassed] = useState<boolean | undefined>(undefined);
+  const [backendScore, setBackendScore] = useState<number | undefined>(
+    undefined
+  );
+  const [backendPassed, setBackendPassed] = useState<boolean | undefined>(
+    undefined
+  );
   // const [attempt, setAttempt] = useState(1); // Reserved for future retake functionality
   const [timeRemaining, setTimeRemaining] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
@@ -56,7 +60,9 @@ const Assessment: React.FC = () => {
     }
 
     try {
-      const response = await graduateApi.submitAssessment({ answers: allAnswers });
+      const response = await graduateApi.submitAssessment({
+        answers: allAnswers,
+      });
 
       // Store the backend-calculated score and passed status
       if (typeof response.score === 'number') {
@@ -84,9 +90,7 @@ const Assessment: React.FC = () => {
     setError('');
     try {
       const token =
-        typeof window !== 'undefined'
-          ? sessionStorage.getItem('token')
-          : null;
+        typeof window !== 'undefined' ? sessionStorage.getItem('token') : null;
       if (!token) {
         setError('Authentication required. Please log in again.');
         navigate('/login', { replace: true });
@@ -194,9 +198,16 @@ const Assessment: React.FC = () => {
       // Prevent Ctrl+C, Ctrl+A, Ctrl+X, Ctrl+V, Ctrl+S, F12 (DevTools)
       if (
         (e.ctrlKey || e.metaKey) &&
-        (e.key === 'c' || e.key === 'C' || e.key === 'a' || e.key === 'A' || 
-         e.key === 'x' || e.key === 'X' || e.key === 'v' || e.key === 'V' ||
-         e.key === 's' || e.key === 'S')
+        (e.key === 'c' ||
+          e.key === 'C' ||
+          e.key === 'a' ||
+          e.key === 'A' ||
+          e.key === 'x' ||
+          e.key === 'X' ||
+          e.key === 'v' ||
+          e.key === 'V' ||
+          e.key === 's' ||
+          e.key === 'S')
       ) {
         e.preventDefault();
         return false;
@@ -286,12 +297,10 @@ const Assessment: React.FC = () => {
 
   if (showResults) {
     // Use backend score if available, otherwise fall back to local calculation
-    const scorePercentage = backendScore !== undefined 
-      ? backendScore 
-      : calculateScore().percentage;
-    const passed = backendPassed !== undefined 
-      ? backendPassed 
-      : scorePercentage >= 60;
+    const scorePercentage =
+      backendScore !== undefined ? backendScore : calculateScore().percentage;
+    const passed =
+      backendPassed !== undefined ? backendPassed : scorePercentage >= 60;
 
     return (
       <div className="flex justify-between items-center h-full pb-20 md:justify-center w-full flex-col md:gap-[70px] font-inter">
@@ -387,18 +396,28 @@ const Assessment: React.FC = () => {
         </div>
 
         <div className="flex flex-col w-full gap-2.5 text-left md:text-center max-w-[542px] mx-auto">
-          <h2 
+          <h2
             className="font-semibold text-[20px] md:text-[24px] text-[#1C1C1C] leading-relaxed wrap-break-word select-none"
-            style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+            style={{
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              MozUserSelect: 'none',
+              msUserSelect: 'none',
+            }}
             onContextMenu={(e) => e.preventDefault()}
             onDragStart={(e) => e.preventDefault()}
           >
             {currentQuestion.question}
           </h2>
           {currentQuestion.skill && (
-            <p 
+            <p
               className="text-[14px] text-[#1C1C1CBF] font-normal select-none"
-              style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+              style={{
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+              }}
               onContextMenu={(e) => e.preventDefault()}
               onDragStart={(e) => e.preventDefault()}
             >
@@ -431,9 +450,14 @@ const Assessment: React.FC = () => {
                   <div className="h-full w-full bg-button rounded-full" />
                 )}
               </div>
-              <p 
+              <p
                 className="text-[#1C1C1C] text-[15px] leading-relaxed wrap-break-word text-left flex-1 select-none"
-                style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
+                style={{
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none',
+                }}
                 onContextMenu={(e) => e.preventDefault()}
                 onDragStart={(e) => e.preventDefault()}
               >

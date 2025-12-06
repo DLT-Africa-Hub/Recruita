@@ -13,4 +13,3 @@ export const interviewApi = {
 };
 
 export default interviewApi;
-

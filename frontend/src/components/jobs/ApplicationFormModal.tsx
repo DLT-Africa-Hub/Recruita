@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { FaUpload, FaFilePdf, FaTimes, FaExclamationTriangle } from 'react-icons/fa';
+import {
+  FaUpload,
+  FaFilePdf,
+  FaTimes,
+  FaExclamationTriangle,
+} from 'react-icons/fa';
 import BaseModal from '../ui/BaseModal';
 import { Input, Textarea, Button } from '../ui';
 import { graduateApi } from '../../api/graduate';
@@ -56,10 +61,15 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     enabled: isOpen,
   });
 
-  const hasProfileCV = profileData?.cv && Array.isArray(profileData.cv) && profileData.cv.length > 0;
+  const hasProfileCV =
+    profileData?.cv &&
+    Array.isArray(profileData.cv) &&
+    profileData.cv.length > 0;
 
   // Handle CV upload
-  const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -69,7 +79,10 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     ];
-    if (!allowedMime.includes(file.type) && !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)) {
+    if (
+      !allowedMime.includes(file.type) &&
+      !/\.(pdf|docx?|PDF|DOCX?)$/.test(file.name)
+    ) {
       setUploadError('Only PDF, DOC, and DOCX files are allowed');
       return;
     }
@@ -147,7 +160,12 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     }
   };
 
-  const { submitApplication, isSubmitting, submitError: submissionError, resetError } = useApplicationSubmission({
+  const {
+    submitApplication,
+    isSubmitting,
+    submitError: submissionError,
+    resetError,
+  } = useApplicationSubmission({
     jobId,
     onSuccess: () => {
       setCoverLetter('');
@@ -178,17 +196,19 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate CV if not in profile
     if (!hasProfileCV && !uploadedResume) {
       showError('Please upload your CV to complete your application.');
       return;
     }
-    
+
     // Validate required extra requirements
     const missingRequired = extraRequirements
       .filter((req) => req.required)
-      .find((req) => !extraAnswers[req.label] || !extraAnswers[req.label].trim());
+      .find(
+        (req) => !extraAnswers[req.label] || !extraAnswers[req.label].trim()
+      );
 
     if (missingRequired) {
       showError(`Please fill in the required field: ${missingRequired.label}`);
@@ -198,7 +218,8 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
     await submitApplication({
       resume: uploadedResume || undefined,
       coverLetter,
-      extraAnswers: Object.keys(extraAnswers).length > 0 ? extraAnswers : undefined,
+      extraAnswers:
+        Object.keys(extraAnswers).length > 0 ? extraAnswers : undefined,
     });
   };
 
@@ -231,7 +252,8 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
                   CV Required
                 </h3>
                 <p className="text-[14px] text-amber-800">
-                  You don't have a CV in your profile. Please upload your CV below to complete your application.
+                  You don't have a CV in your profile. Please upload your CV
+                  below to complete your application.
                 </p>
               </div>
             </div>
@@ -243,7 +265,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
               {hasProfileCV ? 'Upload CV (optional)' : 'Upload CV *'}
             </label>
             <p className="text-[#1C1C1C80] text-[14px] font-normal">
-              {hasProfileCV 
+              {hasProfileCV
                 ? 'You can upload an additional CV for this application'
                 : 'Upload your CV to complete your application. You can also save it to your profile for future use.'}
             </p>
@@ -265,9 +287,15 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
                       : 'border-fade hover:bg-[#F8F8F8]'
                   }`}
                 >
-                  <FaUpload className={`text-[18px] ${!hasProfileCV ? 'text-amber-700' : 'text-[#1C1C1C80]'}`} />
+                  <FaUpload
+                    className={`text-[18px] ${!hasProfileCV ? 'text-amber-700' : 'text-[#1C1C1C80]'}`}
+                  />
                   <span className="text-[14px]">
-                    {isUploadingResume ? 'Uploading...' : !hasProfileCV ? 'Upload CV (Required)' : 'Choose CV file'}
+                    {isUploadingResume
+                      ? 'Uploading...'
+                      : !hasProfileCV
+                        ? 'Upload CV (Required)'
+                        : 'Choose CV file'}
                   </span>
                 </label>
                 {!hasProfileCV && (
@@ -325,18 +353,26 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
                 <Textarea
                   label={req.label}
                   rows={4}
-                  placeholder={req.placeholder || `Enter ${req.label.toLowerCase()}...`}
+                  placeholder={
+                    req.placeholder || `Enter ${req.label.toLowerCase()}...`
+                  }
                   value={extraAnswers[req.label] || ''}
-                  onChange={(e) => handleExtraAnswerChange(req.label, e.target.value)}
+                  onChange={(e) =>
+                    handleExtraAnswerChange(req.label, e.target.value)
+                  }
                   required={req.required}
                 />
               ) : (
                 <Input
                   type={req.type === 'url' ? 'url' : 'text'}
                   label={req.label}
-                  placeholder={req.placeholder || `Enter ${req.label.toLowerCase()}...`}
+                  placeholder={
+                    req.placeholder || `Enter ${req.label.toLowerCase()}...`
+                  }
                   value={extraAnswers[req.label] || ''}
-                  onChange={(e) => handleExtraAnswerChange(req.label, e.target.value)}
+                  onChange={(e) =>
+                    handleExtraAnswerChange(req.label, e.target.value)
+                  }
                   required={req.required}
                 />
               )}
@@ -345,9 +381,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
 
           {submissionError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-[14px] text-red-600">
-                {submissionError}
-              </p>
+              <p className="text-[14px] text-red-600">{submissionError}</p>
             </div>
           )}
 
@@ -381,4 +415,3 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({
 };
 
 export default ApplicationFormModal;
-

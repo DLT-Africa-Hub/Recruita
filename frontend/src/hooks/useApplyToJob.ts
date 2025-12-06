@@ -10,7 +10,10 @@ interface UseApplyToJobOptions {
 interface UseApplyToJobReturn {
   hasApplied: boolean;
   checkingApplied: boolean;
-  handleApply: (company: Company, onModalOpen?: (companyId: number) => void) => void;
+  handleApply: (
+    company: Company,
+    onModalOpen?: (companyId: number) => void
+  ) => void;
   resetAppliedStatus: () => void;
 }
 
@@ -97,4 +100,3 @@ export const useApplyToJob = ({
     resetAppliedStatus,
   };
 };
-

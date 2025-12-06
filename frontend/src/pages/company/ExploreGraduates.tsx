@@ -402,7 +402,7 @@ const ExploreGraduates = () => {
                       {graduate.location}
                     </p>
                   )}
-                  
+
                   {graduate.salaryPerAnnum && (
                     <p className="text-[14px] text-[#1C1C1C80] mb-3 font-medium">
                       {formatSalaryPerAnnum(graduate.salaryPerAnnum)}

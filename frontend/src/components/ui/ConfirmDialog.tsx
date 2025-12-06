@@ -46,13 +46,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <div className="p-6">
         <h3 className="text-lg font-semibold text-[#1C1C1C] mb-2">{title}</h3>
         <p className="text-sm text-[#1C1C1C80] mb-6">{message}</p>
-        
+
         <div className="flex gap-3 justify-end">
-          <Button
-            variant="secondary"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <Button variant="secondary" onClick={onCancel} disabled={isLoading}>
             {cancelText}
           </Button>
           <Button
@@ -67,4 +63,3 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </BaseModal>
   );
 };
-

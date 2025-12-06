@@ -128,4 +128,3 @@ const NotificationDetailsModal = ({
 };
 
 export default NotificationDetailsModal;
-

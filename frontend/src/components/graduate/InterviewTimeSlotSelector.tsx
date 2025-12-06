@@ -1,8 +1,20 @@
 import { useState } from 'react';
-import { HiVideoCamera, HiClock, HiCalendar, HiGlobeAlt, HiCheck, HiLocationMarker, HiBriefcase } from 'react-icons/hi';
+import {
+  HiVideoCamera,
+  HiClock,
+  HiCalendar,
+  HiGlobeAlt,
+  HiCheck,
+  HiLocationMarker,
+  HiBriefcase,
+} from 'react-icons/hi';
 import { Button } from '../ui';
 import { COMMON_TIMEZONES } from '../../constants/timezones';
-import { formatDateLong, getTimeUntilDeadline, formatDuration } from '../../utils/date.utils';
+import {
+  formatDateLong,
+  getTimeUntilDeadline,
+  formatDuration,
+} from '../../utils/date.utils';
 
 export interface TimeSlotOption {
   id: string;
@@ -73,7 +85,6 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
     }
   };
 
-
   const handleConfirm = async () => {
     if (!selectedSlotId) {
       setError('Please select a time slot');
@@ -85,13 +96,18 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
 
     try {
       await onSelectSlot(interview.id, selectedSlotId, graduateTimezone);
-      setSuccess('Time slot confirmed! You will receive a confirmation notification.');
+      setSuccess(
+        'Time slot confirmed! You will receive a confirmation notification.'
+      );
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
       setError(
         error?.response?.data?.message ||
-        error?.message ||
-        'Failed to confirm time slot. Please try again.'
+          error?.message ||
+          'Failed to confirm time slot. Please try again.'
       );
     }
   };
@@ -104,7 +120,7 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
   const canConfirm = hasSelectedSlot && !isSelecting && !isDeadlinePassed;
   const showConfirmButton = !success;
 
-  const timeUntilDeadline = interview.selectionDeadline 
+  const timeUntilDeadline = interview.selectionDeadline
     ? getTimeUntilDeadline(interview.selectionDeadline)
     : null;
 
@@ -144,21 +160,25 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
         </div>
 
         {interview.selectionDeadline && (
-          <div className={`mt-4 p-3 rounded-xl border ${
-            isDeadlinePassed 
-              ? 'bg-red-50 border-red-200' 
-              : timeUntilDeadline 
-                ? 'bg-amber-50 border-amber-200' 
-                : 'bg-blue-50 border-blue-200'
-          }`}>
+          <div
+            className={`mt-4 p-3 rounded-xl border ${
+              isDeadlinePassed
+                ? 'bg-red-50 border-red-200'
+                : timeUntilDeadline
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-blue-50 border-blue-200'
+            }`}
+          >
             <div className="flex items-center gap-2">
-              <HiClock className={`text-base ${
-                isDeadlinePassed 
-                  ? 'text-red-600' 
-                  : timeUntilDeadline 
-                    ? 'text-amber-600' 
-                    : 'text-blue-600'
-              }`} />
+              <HiClock
+                className={`text-base ${
+                  isDeadlinePassed
+                    ? 'text-red-600'
+                    : timeUntilDeadline
+                      ? 'text-amber-600'
+                      : 'text-blue-600'
+                }`}
+              />
               <div className="flex-1">
                 {isDeadlinePassed ? (
                   <span className="text-sm font-medium text-red-700">
@@ -167,12 +187,16 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
                 ) : (
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-medium text-[#1C1C1C]">
-                      {timeUntilDeadline 
-                        ? `Select within ${timeUntilDeadline}` 
+                      {timeUntilDeadline
+                        ? `Select within ${timeUntilDeadline}`
                         : 'Deadline approaching'}
                     </span>
                     <span className="text-xs text-[#1C1C1C80]">
-                      Deadline: {formatDateLong(interview.selectionDeadline, graduateTimezone)}
+                      Deadline:{' '}
+                      {formatDateLong(
+                        interview.selectionDeadline,
+                        graduateTimezone
+                      )}
                     </span>
                   </div>
                 )}
@@ -230,7 +254,8 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
               Available Time Slots
             </label>
             <p className="text-xs text-[#1C1C1C80]">
-              Select your preferred interview time. Click on a time slot to select it.
+              Select your preferred interview time. Click on a time slot to
+              select it.
             </p>
           </div>
 
@@ -239,8 +264,11 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
               const isSelected = selectedSlotId === slot.id;
               const isPast = new Date(slot.date) < new Date();
               const slotDate = new Date(slot.date);
-              const isToday = slotDate.toDateString() === new Date().toDateString();
-              const isTomorrow = slotDate.toDateString() === new Date(Date.now() + 86400000).toDateString();
+              const isToday =
+                slotDate.toDateString() === new Date().toDateString();
+              const isTomorrow =
+                slotDate.toDateString() ===
+                new Date(Date.now() + 86400000).toDateString();
 
               return (
                 <button
@@ -252,50 +280,62 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
                     isPast
                       ? 'border-[#E5E7EB] bg-gray-50 opacity-50 cursor-not-allowed'
                       : isSelected
-                      ? 'border-button bg-gradient-to-br from-[#DBFFC0] to-[#C8F5A8] shadow-md shadow-button/20 scale-[1.02]'
-                      : 'border-[#E5E7EB] bg-white hover:border-button/60 hover:shadow-md hover:bg-button/5 active:scale-[0.99]'
+                        ? 'border-button bg-gradient-to-br from-[#DBFFC0] to-[#C8F5A8] shadow-md shadow-button/20 scale-[1.02]'
+                        : 'border-[#E5E7EB] bg-white hover:border-button/60 hover:shadow-md hover:bg-button/5 active:scale-[0.99]'
                   }`}
                 >
                   {/* Selection indicator bar */}
                   {isSelected && !isPast && (
                     <div className="absolute top-0 left-0 right-0 h-1 bg-button" />
                   )}
-                  
+
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1">
                       {/* Time indicator */}
-                      <div className={`shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center ${
-                        isSelected && !isPast
-                          ? 'bg-button text-white'
-                          : isPast
-                          ? 'bg-gray-200 text-gray-500'
-                          : 'bg-button/10 text-button'
-                      }`}>
+                      <div
+                        className={`shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center ${
+                          isSelected && !isPast
+                            ? 'bg-button text-white'
+                            : isPast
+                              ? 'bg-gray-200 text-gray-500'
+                              : 'bg-button/10 text-button'
+                        }`}
+                      >
                         <span className="text-xs font-bold leading-tight">
-                          {slotDate.toLocaleString('en-US', { 
-                            timeZone: graduateTimezone,
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true 
-                          }).split(' ')[0]}
+                          {
+                            slotDate
+                              .toLocaleString('en-US', {
+                                timeZone: graduateTimezone,
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true,
+                              })
+                              .split(' ')[0]
+                          }
                         </span>
                         <span className="text-[10px] opacity-80">
-                          {slotDate.toLocaleString('en-US', { 
-                            timeZone: graduateTimezone,
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            hour12: true 
-                          }).split(' ')[1]}
+                          {
+                            slotDate
+                              .toLocaleString('en-US', {
+                                timeZone: graduateTimezone,
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true,
+                              })
+                              .split(' ')[1]
+                          }
                         </span>
                       </div>
 
                       <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`font-semibold ${
-                            isSelected && !isPast
-                              ? 'text-[#1C1C1C] text-base'
-                              : 'text-[#1C1C1C]'
-                          }`}>
+                          <span
+                            className={`font-semibold ${
+                              isSelected && !isPast
+                                ? 'text-[#1C1C1C] text-base'
+                                : 'text-[#1C1C1C]'
+                            }`}
+                          >
                             {formatDate(slot.date, graduateTimezone)}
                           </span>
                           {isToday && !isPast && (
@@ -315,13 +355,15 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-[#1C1C1C80]">
-                          <span className="font-medium">{formatDuration(slot.duration)}</span>
+                          <span className="font-medium">
+                            {formatDuration(slot.duration)}
+                          </span>
                           <span className="text-[#1C1C1C60]">•</span>
                           <span>{slot.timezone}</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Selection indicator */}
                     {isSelected && !isPast && (
                       <div className="shrink-0 w-8 h-8 rounded-full bg-button flex items-center justify-center shadow-lg shadow-button/30">
@@ -347,8 +389,8 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
               onClick={handleConfirm}
               disabled={!canConfirm}
               className={`w-full py-3.5 text-base font-semibold shadow-lg transition-all ${
-                canConfirm 
-                  ? 'hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]' 
+                canConfirm
+                  ? 'hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
                   : ''
               }`}
               variant="primary"
@@ -397,4 +439,3 @@ const InterviewTimeSlotSelector: React.FC<InterviewTimeSlotSelectorProps> = ({
 };
 
 export default InterviewTimeSlotSelector;
-

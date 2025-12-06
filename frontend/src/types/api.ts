@@ -85,7 +85,12 @@ export interface ApiApplication {
   interviewRoomSlug?: string;
   interviewId?: {
     _id?: string;
-    status?: 'pending_selection' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+    status?:
+      | 'pending_selection'
+      | 'scheduled'
+      | 'in_progress'
+      | 'completed'
+      | 'cancelled';
     scheduledAt?: string | Date;
     selectedTimeSlot?: {
       date: string | Date;
@@ -180,4 +185,3 @@ export interface WorkExperience {
   description?: string;
   [key: string]: unknown;
 }
-

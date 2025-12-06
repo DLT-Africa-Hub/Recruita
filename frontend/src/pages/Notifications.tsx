@@ -22,7 +22,6 @@ const Notifications: React.FC = () => {
     useState<NotificationItem | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-
   const {
     data: notificationsData,
     isLoading: loading,
@@ -166,7 +165,10 @@ const Notifications: React.FC = () => {
 
   const error = useMemo(() => {
     if (!queryError) return null;
-    const err = queryError as { response?: { data?: { message?: string } }; message?: string };
+    const err = queryError as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
     return (
       err.response?.data?.message ||
       'Failed to load notifications. Please try again.'

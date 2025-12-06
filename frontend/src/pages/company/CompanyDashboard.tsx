@@ -21,10 +21,11 @@ const CompanyDashboard = () => {
   const [isMultiSlotModalOpen, setIsMultiSlotModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: matchesResponse, isLoading: loadingMatches } = useCompanyMatches({
-    page: 1,
-    limit: 100,
-  });
+  const { data: matchesResponse, isLoading: loadingMatches } =
+    useCompanyMatches({
+      page: 1,
+      limit: 100,
+    });
 
   const scheduleInterviewMutation = useMutation({
     mutationFn: async ({

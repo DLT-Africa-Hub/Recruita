@@ -10,9 +10,9 @@ export const useToast = () => {
     (message: string, type: ToastType = 'info', duration?: number) => {
       const id = `toast-${++toastIdCounter}`;
       const newToast: Toast = { id, message, type, duration };
-      
+
       setToasts((prev) => [...prev, newToast]);
-      
+
       return id;
     },
     []
@@ -23,22 +23,26 @@ export const useToast = () => {
   }, []);
 
   const success = useCallback(
-    (message: string, duration?: number) => showToast(message, 'success', duration),
+    (message: string, duration?: number) =>
+      showToast(message, 'success', duration),
     [showToast]
   );
 
   const error = useCallback(
-    (message: string, duration?: number) => showToast(message, 'error', duration || 7000),
+    (message: string, duration?: number) =>
+      showToast(message, 'error', duration || 7000),
     [showToast]
   );
 
   const info = useCallback(
-    (message: string, duration?: number) => showToast(message, 'info', duration),
+    (message: string, duration?: number) =>
+      showToast(message, 'info', duration),
     [showToast]
   );
 
   const warning = useCallback(
-    (message: string, duration?: number) => showToast(message, 'warning', duration),
+    (message: string, duration?: number) =>
+      showToast(message, 'warning', duration),
     [showToast]
   );
 
@@ -51,4 +55,3 @@ export const useToast = () => {
     removeToast,
   };
 };
-

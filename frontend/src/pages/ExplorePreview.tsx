@@ -3,7 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import { graduateApi } from '../api/graduate';
-import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../utils/job.utils';
+import {
+  DEFAULT_JOB_IMAGE,
+  formatSalaryRange,
+  formatJobType,
+  getSalaryType,
+} from '../utils/job.utils';
 import { PageLoader, ErrorState } from '../components/ui';
 import { ApiError } from '../types/api';
 
@@ -50,9 +55,10 @@ const ExplorePreview = () => {
 
   // Transform API data to component format
   const job = matchData.job;
-  const matchScore = matchData.score > 1
-    ? Math.min(100, Math.round(matchData.score))
-    : Math.min(100, Math.round(matchData.score * 100));
+  const matchScore =
+    matchData.score > 1
+      ? Math.min(100, Math.round(matchData.score))
+      : Math.min(100, Math.round(matchData.score * 100));
 
   const jobType = job.jobType || 'Full time';
   const salaryRange = formatSalaryRange(job.salary);
@@ -60,20 +66,22 @@ const ExplorePreview = () => {
   const formattedJobType = formatJobType(jobType);
 
   // Extract company name from populated companyId
-  const companyName = 
-    (typeof job.companyId === 'object' && job.companyId !== null && 'companyName' in job.companyId)
+  const companyName =
+    typeof job.companyId === 'object' &&
+    job.companyId !== null &&
+    'companyName' in job.companyId
       ? (job.companyId as any).companyName
       : job.companyName || 'Company';
-  
+
   const jobTitle = job.title || 'Position';
   const location = job.location || 'Location not specified';
   const skills = job.requirements?.skills || [];
-  const description = job.description || job.descriptionHtml || 'No description available.';
+  const description =
+    job.description || job.descriptionHtml || 'No description available.';
 
   const handleBack = () => {
     navigate('/explore');
   };
-
 
   const handleApply = () => {
     if (job.id) {
@@ -161,7 +169,9 @@ const ExplorePreview = () => {
             <p className="text-center w-full font-semibold">{location}</p>
             <div className="h-[20px] bg-black w-0.5" />
             <p className="text-center w-full font-semibold">
-              {salaryRange === 'Not specified' ? '—' : `${salaryRange} ${salaryType}`}
+              {salaryRange === 'Not specified'
+                ? '—'
+                : `${salaryRange} ${salaryType}`}
             </p>
           </div>
 
@@ -183,4 +193,3 @@ const ExplorePreview = () => {
 };
 
 export default ExplorePreview;
-

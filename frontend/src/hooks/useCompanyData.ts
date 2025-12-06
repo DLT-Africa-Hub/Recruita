@@ -23,7 +23,9 @@ interface UseCompanyMatchesOptions {
 /**
  * Hook to fetch company applications
  */
-export const useCompanyApplications = (options: UseCompanyApplicationsOptions = {}) => {
+export const useCompanyApplications = (
+  options: UseCompanyApplicationsOptions = {}
+) => {
   const {
     page = 1,
     limit = 100,
@@ -55,7 +57,13 @@ export const useCompanyApplications = (options: UseCompanyApplicationsOptions = 
  * Hook to fetch company matches
  */
 export const useCompanyMatches = (options: UseCompanyMatchesOptions = {}) => {
-  const { page = 1, limit = 100, search, refetchInterval, enabled = true } = options;
+  const {
+    page = 1,
+    limit = 100,
+    search,
+    refetchInterval,
+    enabled = true,
+  } = options;
 
   return useQuery({
     queryKey: ['companyMatches', { page, limit, search }],
@@ -109,4 +117,3 @@ export const extractMatches = (response: unknown): ApiMatch[] => {
   }
   return [];
 };
-

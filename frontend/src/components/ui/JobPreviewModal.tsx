@@ -3,7 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { PiBuildingApartmentLight } from 'react-icons/pi';
 import { BsSend } from 'react-icons/bs';
 import LoadingSpinner from './LoadingSpinner';
-import { DEFAULT_JOB_IMAGE, formatSalaryRange, formatJobType, getSalaryType } from '../../utils/job.utils';
+import {
+  DEFAULT_JOB_IMAGE,
+  formatSalaryRange,
+  formatJobType,
+  getSalaryType,
+} from '../../utils/job.utils';
 import { stripHtml } from '../../utils/text.utils';
 import api from '../../api/client';
 import { useApplyToJob } from '../../hooks/useApplyToJob';
@@ -65,7 +70,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
       try {
         const response = await api.get(`/graduates/matches`);
         const matches = response.data.matches || [];
-        const match = matches.find((m: { job?: { id?: string } }) => m.job?.id === jobId);
+        const match = matches.find(
+          (m: { job?: { id?: string } }) => m.job?.id === jobId
+        );
         if (match?.job) {
           return match.job as JobData;
         }
@@ -82,17 +89,23 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 
   // Convert JobData to Company format for application flow
   const convertJobToCompany = (job: JobData, jobIdStr: string): Company => {
-    const matchPercentage = typeof matchScore === 'number' 
-      ? Math.round(matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100)
-      : 0;
-    
+    const matchPercentage =
+      typeof matchScore === 'number'
+        ? Math.round(
+            matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100
+          )
+        : 0;
+
     const salaryRange = formatSalaryRange(job.salary);
     const salaryType = job.jobType ? getSalaryType(job.jobType) : 'Annual';
-    const wage = salaryRange === 'Not specified' 
-      ? '—' 
-      : `${salaryRange.replace(/[k$]/g, '')} ${salaryType}`;
-    
-    const formattedJobType = job.jobType ? formatJobType(job.jobType) : 'Full-time';
+    const wage =
+      salaryRange === 'Not specified'
+        ? '—'
+        : `${salaryRange.replace(/[k$]/g, '')} ${salaryType}`;
+
+    const formattedJobType = job.jobType
+      ? formatJobType(job.jobType)
+      : 'Full-time';
 
     return {
       id: parseInt(jobIdStr) || 0, // Use jobId as id, or generate unique id
@@ -140,7 +153,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
   const skills = job?.requirements?.skills || [];
   const salaryRange = formatSalaryRange(job?.salary);
   const salaryType = job?.jobType ? getSalaryType(job.jobType) : 'Annual';
-  const formattedJobType = job?.jobType ? formatJobType(job.jobType) : 'Full-time';
+  const formattedJobType = job?.jobType
+    ? formatJobType(job.jobType)
+    : 'Full-time';
 
   const handleApply = () => {
     if (hasApplied || !job || !jobId) return;
@@ -224,7 +239,9 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               {typeof matchScore === 'number' && (
                 <div className="flex items-center h-[49px] bg-fade text-[#1C1C1CBF] text-[16px] py-[15px] px-6 rounded-[70px]">
                   {Math.round(
-                    matchScore > 1 ? Math.min(matchScore, 100) : matchScore * 100
+                    matchScore > 1
+                      ? Math.min(matchScore, 100)
+                      : matchScore * 100
                   )}
                   % match
                 </div>
@@ -238,11 +255,14 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
               </p>
               {hasApplied && (
                 <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-[14px] text-green-800">
-                  You have already applied for this job. Sit tight — we will notify you when the company responds.
+                  You have already applied for this job. Sit tight — we will
+                  notify you when the company responds.
                 </div>
               )}
               <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {job.description ? stripHtml(job.description) : 'No description available.'}
+                {job.description
+                  ? stripHtml(job.description)
+                  : 'No description available.'}
               </p>
             </div>
 
@@ -272,7 +292,10 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                 </p>
                 <div className="h-[20px] bg-black w-0.5" />
                 <p className="text-center w-full font-semibold">
-                  {salaryRange === 'Not specified' ? '—' : salaryRange.replace(/[k$]/g, '')} {salaryType}
+                  {salaryRange === 'Not specified'
+                    ? '—'
+                    : salaryRange.replace(/[k$]/g, '')}{' '}
+                  {salaryType}
                 </p>
               </div>
 
@@ -290,10 +313,10 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
                 >
                   <BsSend className="text-[24px]" />
                   <p>
-                    {checkingApplied 
-                      ? 'Checking...' 
-                      : hasApplied 
-                        ? 'Application Submitted' 
+                    {checkingApplied
+                      ? 'Checking...'
+                      : hasApplied
+                        ? 'Application Submitted'
                         : 'Apply'}
                   </p>
                 </button>
@@ -307,4 +330,3 @@ const JobPreviewModal: React.FC<JobPreviewModalProps> = ({
 };
 
 export default JobPreviewModal;
-

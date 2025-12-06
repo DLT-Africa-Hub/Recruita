@@ -24,7 +24,11 @@ interface CompanyCardProps {
   onPreviewClick?: (companyId: number) => void;
 }
 
-type MatchVariant = 'match-great' | 'match-strong' | 'match-good' | 'match-fair';
+type MatchVariant =
+  | 'match-great'
+  | 'match-strong'
+  | 'match-good'
+  | 'match-fair';
 
 const BADGE_STYLES: Record<MatchVariant, { container: string; dot: string }> = {
   'match-great': {
@@ -83,11 +87,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           alt={company.name}
           defaultImage="job"
         />
-        
+
         <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-xs border border-white/30 p-3 rounded-full shadow-lg">
           <PiBuildingApartmentLight className="text-[18px] text-[#F8F8F8]" />
         </div>
-        
+
         <div
           className={`absolute top-2 right-2 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[50px] rounded-full border border-transparent shadow-sm ${badgeConfig.container}`}
         >
@@ -113,9 +117,13 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       </div>
 
       <div className="flex flex-col sm:flex-row w-full items-center justify-center gap-2 sm:gap-3 text-center">
-        <p className="text-sm sm:text-base text-[#1C1C1CBF]">{company.contract}</p>
+        <p className="text-sm sm:text-base text-[#1C1C1CBF]">
+          {company.contract}
+        </p>
         <div className="hidden sm:block h-1 w-1 bg-[#1C1C1C33] rounded-full" />
-        <p className="text-xs sm:text-sm text-[#1C1C1CBF]">{company.location}</p>
+        <p className="text-xs sm:text-sm text-[#1C1C1CBF]">
+          {company.location}
+        </p>
         <div className="hidden sm:block h-1 w-1 bg-[#1C1C1C33] rounded-full" />
         <p className="text-sm sm:text-base text-[#1C1C1CBF]">{company.wage}</p>
       </div>

@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type IRouter } from 'express';
 import { authenticate } from '../middleware/auth.middleware';
 import {
   getAllMessages,
@@ -9,7 +9,7 @@ import {
   markAsRead,
 } from '../controllers/messages.controller';
 
-const router = Router();
+const router: IRouter = Router();
 
 router.use(authenticate);
 

@@ -11,8 +11,6 @@ interface Props {
   onNext: () => void;
 }
 
-
-
 const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
   const [countryCode, setCountryCode] = useState('+234');
 
@@ -31,12 +29,7 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
       (form.phoneNo?.trim() ?? '') &&
       (form.cv?.length ?? 0) > 0
     );
-  }, [
-    form.firstName,
-    form.lastName,
-    form.phoneNo,
-    form.cv, 
-  ]);
+  }, [form.firstName, form.lastName, form.phoneNo, form.cv]);
 
   return (
     <div className="flex items-center justify-center w-full flex-col gap-6 md:gap-8 font-inter max-w-[542px] mx-auto">
@@ -58,27 +51,27 @@ const Personalnfo: React.FC<Props> = ({ form, onChange, onNext }) => {
       >
         <div className="flex items-center gap-2.5 w-full">
           <div className="flex-1">
-          <Input
-            label="First Name"
-            required
-            type="text"
-            placeholder="John"
-            name="firstName"
-            value={form.firstName}
-            onChange={(e) => handleInputChange('firstName', e.target.value)}
-          />
+            <Input
+              label="First Name"
+              required
+              type="text"
+              placeholder="John"
+              name="firstName"
+              value={form.firstName}
+              onChange={(e) => handleInputChange('firstName', e.target.value)}
+            />
           </div>
 
           <div className="flex-1">
-          <Input
-            label="Last Name"
-            required
-            type="text"
-            placeholder="Doe"
-            name="lastName"
-            value={form.lastName}
-            onChange={(e) => handleInputChange('lastName', e.target.value)}
-          />
+            <Input
+              label="Last Name"
+              required
+              type="text"
+              placeholder="Doe"
+              name="lastName"
+              value={form.lastName}
+              onChange={(e) => handleInputChange('lastName', e.target.value)}
+            />
           </div>
         </div>
 

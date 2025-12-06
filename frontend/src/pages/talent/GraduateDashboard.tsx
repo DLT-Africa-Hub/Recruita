@@ -4,7 +4,12 @@ import CompanyCard, { Company } from '../../components/explore/CompanyCard';
 import CompanyFlatCard from '../../components/explore/CompanyFlatCard';
 import CompanyPreviewModal from '../../components/explore/CompanyPreviewModal';
 import { graduateApi } from '../../api/graduate';
-import { PageLoader, ErrorState, SectionHeader, EmptyState } from '../../components/ui';
+import {
+  PageLoader,
+  ErrorState,
+  SectionHeader,
+  EmptyState,
+} from '../../components/ui';
 import { ApiError } from '../../types/api';
 import {
   DEFAULT_JOB_IMAGE,
@@ -54,7 +59,9 @@ const normalizeMatchScore = (score: number | undefined): number => {
 
 const GraduateDashboard = () => {
   const queryClient = useQueryClient();
-  const [selectedCompany, setSelectedCompany] = useState<(Company & { jobId: string }) | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<
+    (Company & { jobId: string }) | null
+  >(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const {
@@ -110,7 +117,10 @@ const GraduateDashboard = () => {
     []
   );
 
-  const { availableOpportunities, companyOffers }: {
+  const {
+    availableOpportunities,
+    companyOffers,
+  }: {
     availableOpportunities: (Company & { jobId: string })[];
     companyOffers: (Company & { jobId: string })[];
   } = useMemo(() => {
@@ -126,7 +136,9 @@ const GraduateDashboard = () => {
       standardMatches.push(transformMatchToCompany(match, index));
     });
 
-    const sortedStandard = [...standardMatches].sort((a, b) => b.match - a.match);
+    const sortedStandard = [...standardMatches].sort(
+      (a, b) => b.match - a.match
+    );
 
     return {
       availableOpportunities: sortedStandard.slice(0, 4),
@@ -149,7 +161,7 @@ const GraduateDashboard = () => {
     if (buttonText === 'Preview') {
       setSelectedCompany(company as Company & { jobId: string });
       setIsModalOpen(true);
-    } 
+    }
   };
 
   const handleCloseModal = () => {
@@ -165,20 +177,12 @@ const GraduateDashboard = () => {
 
   return (
     <div className="py-[20px] px-[20px]  lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] items-start justify-center overflow-y-auto h-full">
-      {error && (
-        <ErrorState
-          message={error}
-          variant="inline"
-        />
-      )}
+      {error && <ErrorState message={error} variant="inline" />}
 
-      {loading && (
-        <PageLoader message="Loading opportunities..." />
-      )}
+      {loading && <PageLoader message="Loading opportunities..." />}
 
       {!loading && (
         <>
-        
           <div className="flex flex-col gap-[20px] w-full md:gap-[30px]">
             <SectionHeader title="AI Matched Opportunities" />
 
@@ -212,9 +216,7 @@ const GraduateDashboard = () => {
                     key={company.id}
                     company={company}
                     buttonText="Preview"
-                    onButtonClick={() =>
-                      handleButtonClick(company, 'Preview')
-                    }
+                    onButtonClick={() => handleButtonClick(company, 'Preview')}
                   />
                 ))}
               </div>

@@ -76,10 +76,9 @@ const GraduateOnboarding: React.FC = () => {
         if (graduate) {
           const hasCompletedAssessment =
             graduate.assessmentData?.submittedAt != null;
-          navigate(
-            hasCompletedAssessment ? '/graduate' : '/assessment',
-            { replace: true }
-          );
+          navigate(hasCompletedAssessment ? '/graduate' : '/assessment', {
+            replace: true,
+          });
           return;
         }
 

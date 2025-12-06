@@ -30,47 +30,59 @@ export const transformApplication = (
   }`.trim();
 
   // Check if there's an active interview (scheduled, in_progress, or pending_selection)
-  const interview = app.interviewId as {
-    _id?: string;
-    status?: 'pending_selection' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-    scheduledAt?: string | Date;
-    selectedTimeSlot?: {
-      date: string | Date;
-      timezone: string;
-    };
-    suggestedTimeSlots?: Array<{
-      date: string | Date;
-      duration: number;
-      timezone: string;
-    }>;
-    durationMinutes?: number;
-  } | undefined;
+  const interview = app.interviewId as
+    | {
+        _id?: string;
+        status?:
+          | 'pending_selection'
+          | 'scheduled'
+          | 'in_progress'
+          | 'completed'
+          | 'cancelled';
+        scheduledAt?: string | Date;
+        selectedTimeSlot?: {
+          date: string | Date;
+          timezone: string;
+        };
+        suggestedTimeSlots?: Array<{
+          date: string | Date;
+          duration: number;
+          timezone: string;
+        }>;
+        durationMinutes?: number;
+      }
+    | undefined;
 
   const interviewStatus = interview?.status;
-  
+
   // Determine if there's an active interview
   // Active means: pending_selection, scheduled, or in_progress (not completed or cancelled)
-  const hasActiveInterview = interviewStatus 
-    ? ['pending_selection', 'scheduled', 'in_progress'].includes(interviewStatus)
+  const hasActiveInterview = interviewStatus
+    ? ['pending_selection', 'scheduled', 'in_progress'].includes(
+        interviewStatus
+      )
     : false;
 
   // Get interview scheduled date from interview object or application field
   let interviewScheduledAt: string | undefined = undefined;
   if (interview) {
     if (interview.selectedTimeSlot?.date) {
-      interviewScheduledAt = typeof interview.selectedTimeSlot.date === 'string'
-        ? interview.selectedTimeSlot.date
-        : interview.selectedTimeSlot.date.toISOString();
+      interviewScheduledAt =
+        typeof interview.selectedTimeSlot.date === 'string'
+          ? interview.selectedTimeSlot.date
+          : interview.selectedTimeSlot.date.toISOString();
     } else if (interview.scheduledAt) {
-      interviewScheduledAt = typeof interview.scheduledAt === 'string'
-        ? interview.scheduledAt
-        : interview.scheduledAt.toISOString();
+      interviewScheduledAt =
+        typeof interview.scheduledAt === 'string'
+          ? interview.scheduledAt
+          : interview.scheduledAt.toISOString();
     }
   }
   if (!interviewScheduledAt && app.interviewScheduledAt) {
-    interviewScheduledAt = typeof app.interviewScheduledAt === 'string'
-      ? app.interviewScheduledAt
-      : app.interviewScheduledAt.toISOString();
+    interviewScheduledAt =
+      typeof app.interviewScheduledAt === 'string'
+        ? app.interviewScheduledAt
+        : app.interviewScheduledAt.toISOString();
   }
 
   return {
@@ -161,21 +173,23 @@ export const transformMatch = (
     cv: (() => {
       // Handle different CV formats from different API endpoints
       if (!graduate.cv) return undefined;
-      
+
       // If it's a string, return it directly
       if (typeof graduate.cv === 'string') return graduate.cv;
-      
+
       // If it's an array (from getAllMatches), find the display CV or first CV
       if (Array.isArray(graduate.cv)) {
-        const displayCV = graduate.cv.find((cv: { onDisplay?: boolean }) => cv.onDisplay) || graduate.cv[0];
+        const displayCV =
+          graduate.cv.find((cv: { onDisplay?: boolean }) => cv.onDisplay) ||
+          graduate.cv[0];
         return displayCV?.fileUrl;
       }
-      
+
       // If it's an object with fileUrl (from getAvailableGraduates)
       if (typeof graduate.cv === 'object' && 'fileUrl' in graduate.cv) {
         return (graduate.cv as { fileUrl?: string }).fileUrl;
       }
-      
+
       return undefined;
     })(),
     matchPercentage: matchScore,
@@ -185,4 +199,3 @@ export const transformMatch = (
     directContact: job.directContact !== false, // Default to true
   };
 };
-

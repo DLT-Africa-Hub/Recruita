@@ -42,7 +42,15 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
     }
   };
   return (
-    <div className="flex items-center gap-6 p-5 border border-fade rounded-[12px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group cursor-pointer" onClick={() => handleButtonClick(company.id, buttonText === 'Preview' ? 'Preview' : 'Get in Touch')}>
+    <div
+      className="flex items-center gap-6 p-5 border border-fade rounded-[12px] bg-white hover:border-button/30 hover:shadow-lg transition-all duration-200 group cursor-pointer"
+      onClick={() =>
+        handleButtonClick(
+          company.id,
+          buttonText === 'Preview' ? 'Preview' : 'Get in Touch'
+        )
+      }
+    >
       <div className="w-[140px] h-[140px] sm:w-[160px] sm:h-[160px] relative overflow-hidden rounded-[12px] shrink-0 group-hover:scale-105 transition-transform duration-300">
         <ImageWithFallback
           src={company.image}
@@ -79,7 +87,9 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 text-[15px] text-[#1C1C1CBF]">
-            <span className="font-medium text-[#1C1C1C]">{company.contract}</span>
+            <span className="font-medium text-[#1C1C1C]">
+              {company.contract}
+            </span>
             <span className="h-3 w-px bg-fade" />
             <span className="truncate">{company.location}</span>
           </div>
@@ -88,7 +98,8 @@ const CompanyFlatCard: React.FC<CompanyCardProps> = ({
             <div className="flex items-center gap-2 p-3 rounded-[8px] bg-[#EFFFE2] border border-[#1B77001A] w-fit">
               <span className="text-[15px] font-semibold text-button">
                 {company.wage.split(' ')[0]}
-                {company.wage.includes('Annual') || company.wage.includes('Project') ? (
+                {company.wage.includes('Annual') ||
+                company.wage.includes('Project') ? (
                   <span className="text-[13px] font-medium text-[#1B770080] ml-1.5">
                     {company.wage.includes('Annual') ? 'Annual' : 'Project'}
                   </span>
