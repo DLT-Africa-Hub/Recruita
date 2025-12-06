@@ -1,5 +1,4 @@
 import BaseModal from '../ui/BaseModal';
-import { Button } from '../ui';
 import { NotificationItem } from '../../types/notification';
 
 interface NotificationDetailsModalProps {
