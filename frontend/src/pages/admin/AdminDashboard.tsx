@@ -7,7 +7,7 @@ import { FiTrendingUp } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { MdPendingActions } from 'react-icons/md';
 import { GiBrain } from 'react-icons/gi';
-import ActivityItem from '../../components/admin/dashboard/activity-list';
+import ActivityItem, { ActivityItemProps } from '../../components/admin/dashboard/activity-list';
 import HiringCompany from '../../components/admin/dashboard/hiring-company';
 import adminApi from '@/api/admin';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,17 +59,15 @@ const AdminDashboard = () => {
 
   const { data: activityData, isLoading: activityLoading } = useQuery({
     queryKey: ['userActivityLogs'],
-    queryFn: adminApi.getUserActivityLogs,
+    queryFn: () => adminApi.getUserActivityLogs(),
   });
 
   // ✅ Top hiring companies
-  const {
-    data: companiesStatsData,
-    isLoading: companiesStatsLoading,
-  } = useQuery({
-    queryKey: ['companiesStats', { page: 1, limit: 5 }],
-    queryFn: () => adminApi.getCompaniesStats({ page: 1, limit: 5 }),
-  });
+  const { data: companiesStatsData, isLoading: companiesStatsLoading } =
+    useQuery({
+      queryKey: ['companiesStats', { page: 1, limit: 5 }],
+      queryFn: () => adminApi.getCompaniesStats({ page: 1, limit: 5 }),
+    });
 
   const isLoading =
     talentLoading ||
@@ -140,26 +138,20 @@ const AdminDashboard = () => {
       action: log.action,
     })) || [];
 
-  
   const hiringCompanies: HiringCompanyStats[] =
-  (companiesStatsData?.data as CompanyStatsApi[] | undefined)
-    ?.map((company) => ({
-      name: company.companyName || 'Unnamed Company',
-      jobs: company.postedJobs ?? 0,
-      hired: company.hiredCandidates ?? 0,
-    }))
-    ?.sort((a, b) => {
-  
-      if (b.jobs !== a.jobs) {
-        return b.jobs - a.jobs;
-      }
+    (companiesStatsData?.data as CompanyStatsApi[] | undefined)
+      ?.map((company) => ({
+        name: company.companyName || 'Unnamed Company',
+        jobs: company.postedJobs ?? 0,
+        hired: company.hiredCandidates ?? 0,
+      }))
+      ?.sort((a, b) => {
+        if (b.jobs !== a.jobs) {
+          return b.jobs - a.jobs;
+        }
 
-   
-      return b.hired - a.hired;
-    }) || [];
-
-
-   
+        return b.hired - a.hired;
+      }) || [];
 
   if (isLoading) {
     return (
@@ -195,7 +187,7 @@ const AdminDashboard = () => {
 
           <div className="flex flex-col gap-[25px] overflow-y-scroll">
             {activities.length > 0 ? (
-              activities.map((activity, index) => (
+              activities.map((activity: ActivityItemProps, index: number) => (
                 <ActivityItem
                   key={index}
                   activity={activity.activity}
@@ -220,20 +212,20 @@ const AdminDashboard = () => {
           </p>
 
           <div className="flex flex-col gap-[25px] overflow-y-scroll">
-          {hiringCompanies.length > 0 ? (
-  hiringCompanies.map((company) => (
-    <HiringCompany
-      key={company.name}
-      name={company.name}
-      jobs={company.jobs}
-      hired={company.hired}
-    />
-  ))
-) : (
-  <p className="text-[#1C1C1CBF] text-center py-4">
-    No hiring companies yet
-  </p>
-)}
+            {hiringCompanies.length > 0 ? (
+              hiringCompanies.map((company) => (
+                <HiringCompany
+                  key={company.name}
+                  name={company.name}
+                  jobs={company.jobs}
+                  hired={company.hired}
+                />
+              ))
+            ) : (
+              <p className="text-[#1C1C1CBF] text-center py-4">
+                No hiring companies yet
+              </p>
+            )}
           </div>
         </div>
       </div>

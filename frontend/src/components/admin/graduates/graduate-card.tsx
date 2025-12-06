@@ -18,10 +18,10 @@ const GraduateCard: React.FC<Props> = ({
   profilePictureUrl,
   location,
   salaryPerAnnum,
-  onClick
+  onClick,
 }) => {
   return (
-    <div className="flex flex-col border border-fade rounded-[10px] bg-white p-[20px] gap-[24px] max-w-[367px]" >
+    <div className="flex flex-col border border-fade rounded-[10px] bg-white p-[20px] gap-[24px] max-w-[367px]">
       <div className="flex items-center gap-[18px]">
         <ImageWithFallback
           src={profilePictureUrl || ''}
@@ -29,19 +29,28 @@ const GraduateCard: React.FC<Props> = ({
           className="w-[63px] h-[63px] rounded-[10px]"
         />
         <div className="flex flex-col gap-[4px] font-inter">
-          <p className="font-semibold text-[20px]">{name || "no name"}</p>
+          <p className="font-semibold text-[20px]">{name || 'no name'}</p>
           <p className="text-[14px] text-[#1C1C1CBF]">{position}</p>
         </div>
-
-      
       </div>
-      <div className='flex justify-between'>
-      <div className='flex flex-col gap-1'>
-        
-        <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]"><GiRank2/>{expLevel}</p>
-        {location && <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]"><CiLocationOn/>{location}</p>}
-      </div>
-      {rank && <p className="text-[14px] border-2 border-button text-button bg-fade text-center self-start p-1.5 rounded-[20px]">Rank: {rank}</p>}
+      <div className="flex justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]">
+            <GiRank2 />
+            {expLevel}
+          </p>
+          {location && (
+            <p className="text-[14px] flex items-center gap-1 text-[#1C1C1CBF]">
+              <CiLocationOn />
+              {location}
+            </p>
+          )}
+        </div>
+        {rank && (
+          <p className="text-[14px] border-2 border-button text-button bg-fade text-center self-start p-1.5 rounded-[20px]">
+            Rank: {rank}
+          </p>
+        )}
       </div>
 
       {skills.length > 0 && (
@@ -63,11 +72,16 @@ const GraduateCard: React.FC<Props> = ({
       {salaryPerAnnum && (
         <div className="flex w-full justify-between">
           <p className="text-[14px] text-[#1C1C1CBF]">Expected Salary</p>
-          <p className="text-button text-[14px]">{formatSalaryPerAnnum(salaryPerAnnum)}</p>
+          <p className="text-button text-[14px]">
+            {formatSalaryPerAnnum(salaryPerAnnum)}
+          </p>
         </div>
       )}
 
-      <button className="bg-button text-white p-[14px] rounded-[10px]" onClick={onClick}>
+      <button
+        className="bg-button text-white p-[14px] rounded-[10px]"
+        onClick={onClick}
+      >
         View Profile
       </button>
     </div>

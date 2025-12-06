@@ -9,8 +9,6 @@ import {
 } from 'react-icons/fi';
 import adminApi from '@/api/admin';
 
-
-
 export interface ActivityItemProps {
   activity: string;
   time: string;
@@ -75,8 +73,6 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
     }
   };
 
-
-
   const fetchApplicationOrMatchDetail = async () => {
     if (!metadata?.jobId || !metadata?.graduateId) return;
 
@@ -108,8 +104,6 @@ const ActivityItem: React.FC<ActivityItemProps> = ({
       setLoadingDetail(false);
     }
   };
-
-
 
   const handleOpenModal = () => {
     setIsModalOpen(true);

@@ -18,7 +18,7 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
 
   const handleRequestVerification = async () => {
     if (cooldown || loading) return;
-    
+
     setLoading(true);
     setError('');
     try {
@@ -32,14 +32,19 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
       console.error('Request verification error:', err);
       const error = err as ApiError;
       if (error.response?.status === 429) {
-        setError('Too many requests. Please wait a moment before trying again.');
+        setError(
+          'Too many requests. Please wait a moment before trying again.'
+        );
         setCooldown(true);
         setTimeout(() => {
           setCooldown(false);
           setError('');
         }, 60000); // 60 second cooldown on rate limit
       } else {
-        setError(error.response?.data?.message || 'Failed to send email. Please try again.');
+        setError(
+          error.response?.data?.message ||
+            'Failed to send email. Please try again.'
+        );
       }
     } finally {
       setLoading(false);
@@ -55,7 +60,7 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
     <div className="w-full bg-yellow-50 border-b-2 border-yellow-400 px-4 py-3 z-50 sticky top-0">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <svg
               className="w-5 h-5 text-yellow-600"
               fill="none"
@@ -95,7 +100,13 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
             disabled={loading || success || cooldown}
             className="px-4 py-1.5 bg-yellow-600 text-white text-sm font-medium rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Sending...' : success ? 'Sent!' : cooldown ? 'Wait...' : 'Send Email'}
+            {loading
+              ? 'Sending...'
+              : success
+                ? 'Sent!'
+                : cooldown
+                  ? 'Wait...'
+                  : 'Send Email'}
           </button>
           <button
             onClick={onOpenModal}
@@ -110,4 +121,3 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
 };
 
 export default EmailVerificationBanner;
-

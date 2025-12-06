@@ -161,7 +161,9 @@ const Companies = () => {
     {
       header: 'Status',
       accessor: 'status',
-      render: (v: unknown) => <StatusBadge status={v as CompanyRow['status']} />,
+      render: (v: unknown) => (
+        <StatusBadge status={v as CompanyRow['status']} />
+      ),
       sortable: true,
       align: 'left',
     },

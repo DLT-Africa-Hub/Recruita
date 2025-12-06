@@ -34,7 +34,9 @@ const Graduates: React.FC = () => {
     position: '',
     location: '',
   });
-  const [selectedGraduateId, setSelectedGraduateId] = useState<string | null>(null);
+  const [selectedGraduateId, setSelectedGraduateId] = useState<string | null>(
+    null
+  );
 
   // Tell useQuery what type it returns: Graduate[]
   const {
@@ -58,7 +60,8 @@ const Graduates: React.FC = () => {
       // map response into Graduate[] — make sure it always returns an array
       const mapped: Graduate[] = (response?.data || []).map((grad: any) => ({
         id: grad._id ?? grad.id ?? '',
-        name: grad.name ?? `${grad.firstName ?? ''} ${grad.lastName ?? ''}`.trim(),
+        name:
+          grad.name ?? `${grad.firstName ?? ''} ${grad.lastName ?? ''}`.trim(),
         position: grad.position ?? '',
         rank: grad.rank,
         expLevel: grad.expLevel ?? '',
@@ -70,7 +73,7 @@ const Graduates: React.FC = () => {
 
       return mapped;
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 
   const handleFilterChange = (field: keyof Filters, value: string) => {
@@ -86,36 +89,47 @@ const Graduates: React.FC = () => {
     setSearchQuery('');
   };
 
-  const hasActiveFilters = Boolean(filters.rank || filters.position || filters.location || searchQuery);
-  const activeFilterCount = [filters.rank, filters.position, filters.location, searchQuery].filter(Boolean).length;
+  const hasActiveFilters = Boolean(
+    filters.rank || filters.position || filters.location || searchQuery
+  );
+  const activeFilterCount = [
+    filters.rank,
+    filters.position,
+    filters.location,
+    searchQuery,
+  ].filter(Boolean).length;
 
   return (
     <div className="py-[20px] px-[20px] lg:px-0 lg:pr-[20px] flex flex-col gap-[43px] font-inter items-start overflow-y-auto h-full">
       {/* Header */}
-      <div className='flex flex-col gap-2.5'>
+      <div className="flex flex-col gap-2.5">
         <p className="text-[#1C1C1C] font-semibold text-[26px]">Graduates</p>
-        <p className='text-[#1C1C1CBF] font-medium text-[18px]'>Manage all registered graduates</p>
+        <p className="text-[#1C1C1CBF] font-medium text-[18px]">
+          Manage all registered graduates
+        </p>
       </div>
 
       {/* Search & Filters */}
-      <div className='flex flex-col gap-[18px] w-full'>
+      <div className="flex flex-col gap-[18px] w-full">
         {/* Search Bar and Filter Toggle */}
-        <div className='flex gap-[20px] w-full'>
+        <div className="flex gap-[20px] w-full">
           {/* Search Input */}
-          <div className='flex items-center border w-full border-fade rounded-[10px]'>
-            <p className='text-fade p-[15px]'><SearchIcon /></p>
-            <div className='w-px h-[20px] bg-fade' />
-            <input 
-              type="text" 
-              placeholder='Search by name, rank, position, or location' 
+          <div className="flex items-center border w-full border-fade rounded-[10px]">
+            <p className="text-fade p-[15px]">
+              <SearchIcon />
+            </p>
+            <div className="w-px h-[20px] bg-fade" />
+            <input
+              type="text"
+              placeholder="Search by name, rank, position, or location"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='w-full outline-none text-[16px] p-[15px] placeholder:text-fade' 
+              className="w-full outline-none text-[16px] p-[15px] placeholder:text-fade"
             />
             {searchQuery && (
-              <button 
+              <button
                 onClick={() => setSearchQuery('')}
-                className='text-fade hover:text-gray-600 p-[15px]'
+                className="text-fade hover:text-gray-600 p-[15px]"
                 aria-label="Clear search"
               >
                 <X size={20} />
@@ -129,7 +143,7 @@ const Graduates: React.FC = () => {
             className="flex items-center gap-2 px-[20px] py-[15px] border rounded-[10px] cursor-pointer transition-colors border-fade text-fade"
             aria-pressed={showFilters}
           >
-            <span className='text-[20px]'>
+            <span className="text-[20px]">
               <IoFilterOutline />
             </span>
             {activeFilterCount > 0 && (
@@ -141,11 +155,13 @@ const Graduates: React.FC = () => {
         </div>
 
         {showFilters && (
-          <div className='flex flex-col gap-4 p-4 border border-fade rounded-[10px] bg-gray-50'>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+          <div className="flex flex-col gap-4 p-4 border border-fade rounded-[10px] bg-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Rank Filter */}
-              <div className='flex flex-col gap-2'>
-                <label className='text-sm font-medium text-[#1C1C1C]'>Rank</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-[#1C1C1C]">
+                  Rank
+                </label>
                 <select
                   value={filters.rank}
                   onChange={(e) => handleFilterChange('rank', e.target.value)}
@@ -159,17 +175,23 @@ const Graduates: React.FC = () => {
               </div>
 
               {/* Position Filter */}
-              <div className='flex flex-col gap-2'>
-                <label className='text-sm font-medium text-[#1C1C1C]'>Position</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-[#1C1C1C]">
+                  Position
+                </label>
                 <select
                   value={filters.position}
-                  onChange={(e) => handleFilterChange('position', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange('position', e.target.value)
+                  }
                   className="border border-fade p-3 rounded-[10px] outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">All Positions</option>
                   <option value="frontend developer">Frontend Developer</option>
                   <option value="backend developer">Backend Developer</option>
-                  <option value="fullstack developer">Fullstack Developer</option>
+                  <option value="fullstack developer">
+                    Fullstack Developer
+                  </option>
                   <option value="mobile developer">Mobile Developer</option>
                   <option value="devops engineer">DevOps Engineer</option>
                   <option value="data engineer">Data Engineer</option>
@@ -179,13 +201,17 @@ const Graduates: React.FC = () => {
               </div>
 
               {/* Location Filter */}
-              <div className='flex flex-col gap-2'>
-                <label className='text-sm font-medium text-[#1C1C1C]'>Location</label>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-[#1C1C1C]">
+                  Location
+                </label>
                 <input
                   type="text"
                   placeholder="Enter location"
                   value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange('location', e.target.value)
+                  }
                   className="border border-fade p-3 rounded-[10px] outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -193,10 +219,10 @@ const Graduates: React.FC = () => {
 
             {/* Clear Filters Button */}
             {hasActiveFilters && (
-              <div className='flex justify-end'>
+              <div className="flex justify-end">
                 <button
                   onClick={clearFilters}
-                  className='text-sm text-blue-600 hover:text-blue-700 font-medium'
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
                   Clear all filters
                 </button>
@@ -207,8 +233,9 @@ const Graduates: React.FC = () => {
 
         {/* Results Count */}
         {!isLoading && graduatesData && (
-          <div className='text-sm text-[#1C1C1CBF]'>
-            Found {graduatesData.length} graduate{graduatesData.length !== 1 ? 's' : ''}
+          <div className="text-sm text-[#1C1C1CBF]">
+            Found {graduatesData.length} graduate
+            {graduatesData.length !== 1 ? 's' : ''}
           </div>
         )}
       </div>
@@ -226,14 +253,18 @@ const Graduates: React.FC = () => {
       ) : !graduatesData || graduatesData.length === 0 ? (
         <EmptyState
           title="No graduates found"
-          description={hasActiveFilters ? "Try adjusting your filters or search terms" : "No graduates have registered yet"}
+          description={
+            hasActiveFilters
+              ? 'Try adjusting your filters or search terms'
+              : 'No graduates have registered yet'
+          }
         />
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px] w-full'>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px] w-full">
           {graduatesData.map((grad) => (
-            <GraduateCard 
-              key={grad.id} 
-              {...grad} 
+            <GraduateCard
+              key={grad.id}
+              {...grad}
               onClick={() => setSelectedGraduateId(grad.id)}
             />
           ))}
@@ -242,8 +273,8 @@ const Graduates: React.FC = () => {
 
       {/* Modal */}
       {selectedGraduateId && (
-        <GraduateModal 
-          graduateId={selectedGraduateId} 
+        <GraduateModal
+          graduateId={selectedGraduateId}
           onClose={() => setSelectedGraduateId(null)}
         />
       )}

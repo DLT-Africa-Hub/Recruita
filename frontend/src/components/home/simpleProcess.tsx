@@ -49,7 +49,7 @@ const SimpleProcess = () => {
             <div className="flex flex-col gap-[30px] lg:gap-[45px] p-5">
               {/* Icon */}
               <div className=" top-6 left-6">
-                <div className="w-12 h-12 border border-[#1B7700]/30 rounded-[24px] flex items-center justify-center bg-white">
+                <div className="w-12 h-12 border border-button/30 rounded-[24px] flex items-center justify-center bg-white">
                   <Briefcase className="w-6 h-6 text-[#1C1C1C]" />
                 </div>
               </div>
@@ -162,7 +162,7 @@ const SimpleProcess = () => {
           {/* Right Column - Stacked Cards */}
           <div className="flex flex-col gap-6">
             {/* For Companies Card */}
-            <div className="bg-gradient-to-br from-[#ADED9A] to-[#6B9B5A] rounded-[20px] p-6 lg:p-8 relative flex-1">
+            <div className="bg-linear-to-br from-[#ADED9A] to-[#6B9B5A] rounded-[20px] p-6 lg:p-8 relative flex-1">
               <div className="flex flex-col gap-4">
                 {/* Icon with white round outline */}
                 <div className="w-12 h-12 border-2 border-[#03000300]  rounded-[24px] flex items-center justify-center bg-white/20">
@@ -189,7 +189,7 @@ const SimpleProcess = () => {
             </div>
 
             {/* For Contractors Card */}
-            <div className="bg-gradient-to-br from-[#ADED9A] to-[#6B9B5A] rounded-[20px] p-6 lg:p-8 relative flex-1">
+            <div className="bg-linear-to-br from-[#ADED9A] to-[#6B9B5A] rounded-[20px] p-6 lg:p-8 relative flex-1">
               <div className="flex flex-col gap-4">
                 {/* Icon with white round outline */}
                 <div className="w-12 h-12 border-2 border-[#03000300] rounded-[24px] flex items-center justify-center bg-white/20">
