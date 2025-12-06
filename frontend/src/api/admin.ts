@@ -218,7 +218,24 @@ export const adminApi = {
     return response.data;
   },
 
-  
+  // Application Management
+  sendMessageToApplicant: async (applicationId: string, message: string) => {
+    const response = await api.post(`/admin/applications/${applicationId}/message`, {
+      message,
+    });
+    return response.data;
+  },
+
+  scheduleInterviewForApplicant: async (
+    applicationId: string,
+    payload: { scheduledAt: string; durationMinutes?: number }
+  ) => {
+    const response = await api.post(
+      `/admin/applications/${applicationId}/schedule-interview`,
+      payload
+    );
+    return response.data;
+  },
 };
 
 

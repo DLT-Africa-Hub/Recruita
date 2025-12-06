@@ -6,10 +6,38 @@ import Match, { IMatch } from '../models/Match.model';
 import Graduate, { IGraduate } from '../models/Graduate.model';
 import Company from '../models/Company.model';
 import Application, { IApplication } from '../models/Application.model';
+import MessageModel from '../models/Message.model';
+import Interview, { IInterview } from '../models/Interview.model';
 import {
   buildPaginationMeta,
   parsePaginationParams,
 } from '../utils/pagination.utils';
+import {
+  buildInterviewRoomUrl,
+  generateInterviewSlug,
+} from '../utils/interview.utils';
+import { createNotification } from '../services/notification.service';
+
+// Type definitions for populated data
+interface PopulatedJob {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  directContact: boolean;
+  companyId: mongoose.Types.ObjectId | PopulatedCompany;
+}
+
+interface PopulatedCompany {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  companyName: string;
+}
+
+interface PopulatedGraduate {
+  _id: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId;
+  firstName: string;
+  lastName: string;
+}
 
 const sanitizeQueryString = (value: unknown): string | null => {
   if (typeof value !== 'string') {
@@ -581,25 +609,26 @@ export const getApplicationActivityDetail = async (
   try {
     const { jobId, graduateId } = req.query;
 
- 
     if (!jobId || !graduateId) {
       res.fail('jobId and graduateId are required', 400);
       return;
     }
 
+    const jobIdString = typeof jobId === 'string' ? jobId : String(jobId);
+    const graduateIdString = typeof graduateId === 'string' ? graduateId : String(graduateId);
 
-    if (!mongoose.Types.ObjectId.isValid(jobId)) {
+    if (!mongoose.Types.ObjectId.isValid(jobIdString)) {
       res.fail('Invalid jobId', 400);
       return;
     }
 
-    if (!mongoose.Types.ObjectId.isValid(graduateId)) {
+    if (!mongoose.Types.ObjectId.isValid(graduateIdString)) {
       res.fail('Invalid graduateId', 400);
       return;
     }
 
-  
-    const graduate = await Graduate.findById(graduateId)
+
+    const graduate = await Graduate.findById(graduateIdString)
       .select('firstName lastName')
       .lean();
 
@@ -608,8 +637,7 @@ export const getApplicationActivityDetail = async (
       return;
     }
 
-
-    const job = await Job.findById(jobId)
+    const job = await Job.findById(jobIdString)
       .select('title companyId')
       .populate('companyId', 'companyName')
       .lean();
@@ -619,7 +647,7 @@ export const getApplicationActivityDetail = async (
       return;
     }
 
-   
+
     const company = job.companyId as unknown as { companyName: string } | null;
 
     if (!company) {
@@ -853,12 +881,15 @@ export const getAllCompanies = async (
     ]);
 
     // Format response with status derived from user emailVerified
-    const formattedCompanies = companies.map((company: any) => {
+    const formattedCompanies = companies.map((company) => {
       const user = company.userId;
       let status: 'Active' | 'Pending' | 'Suspended' = 'Pending';
-      
-      if (user?.emailVerified) {
-        status = 'Active';
+
+      if (user && typeof user === 'object' && !(user instanceof mongoose.Types.ObjectId)) {
+        const userObj = user as { emailVerified?: boolean };
+        if (userObj.emailVerified) {
+          status = 'Active';
+        }
       }
 
       return {
@@ -868,8 +899,8 @@ export const getAllCompanies = async (
         size: company.companySize,
         location: company.location || 'Not specified',
         jobs: company.postedJobs || 0,
-        candidates: Array.isArray(company.hiredCandidates) 
-          ? company.hiredCandidates.length 
+        candidates: Array.isArray(company.hiredCandidates)
+          ? company.hiredCandidates.length
           : 0,
         status,
         joined: company.createdAt,
@@ -924,7 +955,10 @@ export const getCompanyDetails = async (
       .sort({ createdAt: -1 })
       .lean();
 
-    const user = company.userId as any;
+    const userId = company.userId;
+    const user = userId && typeof userId === 'object' && !(userId instanceof mongoose.Types.ObjectId)
+      ? userId as { email?: string; emailVerified?: boolean; lastLoginAt?: Date }
+      : null;
 
     res.success({
       company: {
@@ -936,18 +970,18 @@ export const getCompanyDetails = async (
         website: company.website,
         location: company.location,
         postedJobs: company.postedJobs || 0,
-        hiredCandidates: Array.isArray(company.hiredCandidates) 
-          ? company.hiredCandidates.length 
+        hiredCandidates: Array.isArray(company.hiredCandidates)
+          ? company.hiredCandidates.length
           : 0,
         status: user?.emailVerified ? 'Active' : 'Pending',
         joined: company.createdAt,
         updatedAt: company.updatedAt,
       },
-      user: {
-        email: user?.email,
-        emailVerified: user?.emailVerified,
-        lastLogin: user?.lastLoginAt,
-      },
+      user: user ? {
+        email: user.email,
+        emailVerified: user.emailVerified,
+        lastLogin: user.lastLoginAt,
+      } : null,
       jobs: jobs.map(job => ({
         id: job._id.toString(),
         title: job.title,
@@ -959,7 +993,7 @@ export const getCompanyDetails = async (
       applications: applications.map((app: any) => ({
         id: app._id.toString(),
         jobTitle: app.jobId?.title,
-        candidateName: app.graduateId 
+        candidateName: app.graduateId
           ? `${app.graduateId.firstName} ${app.graduateId.lastName}`
           : 'Unknown',
         status: app.status,
@@ -1010,10 +1044,15 @@ export const toggleCompanyStatus = async (
     user.emailVerifiedAt = active ? new Date() : undefined;
     await user.save();
 
+    const companyIdString =
+      company._id && company._id instanceof mongoose.Types.ObjectId
+        ? company._id.toString()
+        : String(company._id || companyId);
+
     res.success({
       message: `Company ${active ? 'activated' : 'deactivated'} successfully`,
       company: {
-        id: company._id.toString(),
+        id: companyIdString,
         name: company.companyName,
         status: active ? 'Active' : 'Suspended',
       },
@@ -1091,10 +1130,10 @@ export const getAllJobs = async (
       applicationCounts.map((item) => [item._id.toString(), item.count])
     );
 
-    const jobsWithCounts = jobs.map((job: any) => ({
+    const jobsWithCounts = jobs.map((job) => ({
       ...job,
       applicantsCount: countMap.get(job._id.toString()) || 0,
-      views: job.views || 0,
+      views: (job as { views?: number }).views || 0,
     }));
 
     res.success(jobsWithCounts, {
@@ -1154,11 +1193,11 @@ export const getJobById = async (
         id: app._id.toString(),
         candidate: app.graduateId
           ? {
-              id: app.graduateId._id.toString(),
-              name: `${app.graduateId.firstName} ${app.graduateId.lastName}`,
-              email: app.graduateId.email,
-              profilePicture: app.graduateId.profilePictureUrl,
-            }
+            id: app.graduateId._id.toString(),
+            name: `${app.graduateId.firstName} ${app.graduateId.lastName}`,
+            email: app.graduateId.email,
+            profilePicture: app.graduateId.profilePictureUrl,
+          }
           : null,
         status: app.status,
         appliedAt: app.createdAt,
@@ -1207,12 +1246,17 @@ export const updateJobStatus = async (
       return;
     }
 
+    const companyId = job.companyId;
+    const companyName = companyId && typeof companyId === 'object' && !(companyId instanceof mongoose.Types.ObjectId)
+      ? (companyId as { companyName: string }).companyName
+      : 'Unknown';
+
     res.success({
       message: `Job status updated to ${status} successfully`,
       job: {
         id: job._id.toString(),
         title: job.title,
-        company: (job.companyId as any)?.companyName,
+        company: companyName,
         status: job.status,
       },
     });
@@ -1510,28 +1554,431 @@ export const getJobApplications = async (
     ]);
 
     res.success(
-      applications.map((app: any) => ({
-        id: app._id.toString(),
-        candidate: app.graduateId
-          ? {
-              id: app.graduateId._id.toString(),
-              name: `${app.graduateId.firstName} ${app.graduateId.lastName}`,
-              email: app.graduateId.email,
-              profilePicture: app.graduateId.profilePictureUrl,
-              rank: app.graduateId.rank,
-              position: app.graduateId.position,
-            }
-          : null,
-        status: app.status,
-        appliedAt: app.createdAt,
-        updatedAt: app.updatedAt,
-      })),
+      applications.map((app) => {
+        const graduateId = app.graduateId;
+        const graduateData = graduateId && typeof graduateId === 'object' && !(graduateId instanceof mongoose.Types.ObjectId)
+          ? graduateId as { _id: mongoose.Types.ObjectId; firstName: string; lastName: string; email: string; profilePictureUrl?: string; rank?: string; position?: string }
+          : null;
+        
+        return {
+          id: app._id.toString(),
+          candidate: graduateData
+            ? {
+                id: graduateData._id.toString(),
+                name: `${graduateData.firstName} ${graduateData.lastName}`,
+                email: graduateData.email,
+                profilePicture: graduateData.profilePictureUrl,
+                rank: graduateData.rank,
+                position: graduateData.position,
+              }
+            : null,
+          status: app.status,
+          appliedAt: app.createdAt,
+          updatedAt: app.updatedAt,
+        };
+      }),
       {
         pagination: buildPaginationMeta(page, limit, total),
       }
     );
   } catch (error) {
     console.error('Get job applications error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+/**
+ * Send a message from admin to an applicant
+ * POST /api/admin/applications/:applicationId/message
+ */
+export const sendMessageToApplicant = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.fail('Unauthorized', 401);
+      return;
+    }
+
+    const { applicationId } = req.params;
+    const { message } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      res.fail('Invalid application ID', 400);
+      return;
+    }
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      res.fail('Message is required', 400);
+      return;
+    }
+
+    // Get application with graduate info
+    const application = await Application.findById(applicationId)
+      .populate({
+        path: 'graduateId',
+        select: 'userId firstName lastName',
+      })
+      .populate({
+        path: 'jobId',
+        select: 'title directContact companyId',
+      })
+      .lean();
+
+    if (!application) {
+      res.fail('Application not found', 404);
+      return;
+    }
+
+    // Verify job is handled by admin (directContact is false)
+    const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
+    const jobData =
+      typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)
+        ? job
+        : null;
+    
+    if (!jobData || jobData.directContact !== false) {
+      res.fail(
+        'This job is not managed by DLT Africa. Only jobs with admin handling can be messaged by admins.',
+        403
+      );
+      return;
+    }
+
+    const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
+    const graduateData =
+      typeof graduate === 'object' &&
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
+        ? graduate
+        : null;
+    if (!graduateData?.userId) {
+      res.fail('Graduate profile is missing a linked user account', 400);
+      return;
+    }
+
+    const graduateUserId =
+      graduateData.userId instanceof mongoose.Types.ObjectId
+        ? graduateData.userId
+        : new mongoose.Types.ObjectId(String(graduateData.userId));
+
+    const adminUserId = new mongoose.Types.ObjectId(userId);
+
+    // Create message from admin to graduate
+    const newMessage = await MessageModel.create({
+      senderId: adminUserId,
+      receiverId: graduateUserId,
+      message: message.trim(),
+      type: 'text',
+      applicationId: new mongoose.Types.ObjectId(applicationId),
+    });
+
+    res.success(newMessage, { message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Send message to applicant error:', error);
+    res.fail('Internal server error', 500);
+  }
+};
+
+/**
+ * Schedule interview for an application (admin)
+ * POST /api/admin/applications/:applicationId/schedule-interview
+ */
+export const scheduleInterviewForApplicant = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.fail('Unauthorized', 401);
+      return;
+    }
+
+    const { applicationId } = req.params;
+    const { scheduledAt, durationMinutes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
+      res.fail('Invalid application ID', 400);
+      return;
+    }
+
+    if (!scheduledAt) {
+      res.fail('Scheduled time is required', 400);
+      return;
+    }
+
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) {
+      res.fail('Invalid date format', 400);
+      return;
+    }
+
+    if (scheduledDate < new Date()) {
+      res.fail('Interview cannot be scheduled in the past', 400);
+      return;
+    }
+
+    // Get application with all necessary info
+    const application = await Application.findById(applicationId)
+      .populate({
+        path: 'jobId',
+        select: 'companyId title directContact',
+        populate: {
+          path: 'companyId',
+          select: 'userId companyName',
+        },
+      })
+      .populate({
+        path: 'graduateId',
+        select: 'userId firstName lastName',
+      });
+
+    if (!application) {
+      res.fail('Application not found', 404);
+      return;
+    }
+
+    const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
+    const jobData =
+      typeof job === 'object' && job && !(job instanceof mongoose.Types.ObjectId)
+        ? job
+        : null;
+    
+    if (!jobData || jobData.directContact !== false) {
+      res.fail(
+        'This job is not managed by DLT Africa. Only jobs with admin handling can have interviews scheduled by admins.',
+        403
+      );
+      return;
+    }
+
+    const company = jobData.companyId as PopulatedCompany | mongoose.Types.ObjectId;
+    const companyData =
+      typeof company === 'object' &&
+      company &&
+      !(company instanceof mongoose.Types.ObjectId)
+        ? company
+        : null;
+    
+    if (!companyData) {
+      res.fail('Company not found for this job', 404);
+      return;
+    }
+
+    const graduate = application.graduateId as PopulatedGraduate | mongoose.Types.ObjectId;
+    const graduateData =
+      typeof graduate === 'object' &&
+      graduate &&
+      !(graduate instanceof mongoose.Types.ObjectId)
+        ? graduate
+        : null;
+    
+    if (!graduateData?.userId) {
+      res.fail('Graduate profile is missing a linked user account', 400);
+      return;
+    }
+
+    const graduateUserId =
+      graduateData.userId instanceof mongoose.Types.ObjectId
+        ? graduateData.userId
+        : new mongoose.Types.ObjectId(String(graduateData.userId));
+
+    const graduateId =
+      graduateData._id instanceof mongoose.Types.ObjectId
+        ? graduateData._id
+        : new mongoose.Types.ObjectId(String(graduateData._id));
+
+    const companyId =
+      companyData._id instanceof mongoose.Types.ObjectId
+        ? companyData._id
+        : new mongoose.Types.ObjectId(String(companyData._id));
+
+    const companyUserId =
+      companyData.userId instanceof mongoose.Types.ObjectId
+        ? companyData.userId
+        : new mongoose.Types.ObjectId(String(companyData.userId));
+
+    // Check for existing active interviews
+    const existingActiveInterviews = await Interview.find({
+      companyId: companyId,
+      graduateId: graduateId,
+      status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
+    }).lean();
+
+    if (existingActiveInterviews.length > 0) {
+      const pendingSelection = existingActiveInterviews.find(
+        (interview) => interview.status === 'pending_selection'
+      );
+      if (pendingSelection) {
+        res.fail(
+          'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.',
+          400
+        );
+        return;
+      }
+
+      const inProgress = existingActiveInterviews.find(
+        (interview) => interview.status === 'in_progress'
+      );
+      if (inProgress) {
+        res.fail(
+          'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.',
+          400
+        );
+        return;
+      }
+
+      const scheduled = existingActiveInterviews.find(
+        (interview) => interview.status === 'scheduled'
+      );
+      if (scheduled) {
+        res.fail(
+          'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.',
+          400
+        );
+        return;
+      }
+    }
+
+    // Validate duration
+    const allowedDurations = [15, 30, 45, 60];
+    const durationNumber =
+      typeof durationMinutes === 'number'
+        ? durationMinutes
+        : typeof durationMinutes === 'string'
+          ? Number(durationMinutes)
+          : 30;
+    const validatedDuration = allowedDurations.includes(Math.floor(durationNumber))
+      ? Math.floor(durationNumber)
+      : 30;
+
+    // Check if there's already an interview for this application
+    let interview: IInterview | null = await Interview.findOne({ applicationId: application._id });
+
+    if (
+      interview &&
+      ['pending_selection', 'scheduled', 'in_progress'].includes(interview.status)
+    ) {
+      res.fail(
+        'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.',
+        400
+      );
+      return;
+    }
+
+    const roomSlug = interview?.roomSlug ?? generateInterviewSlug();
+    const roomUrl = buildInterviewRoomUrl(roomSlug);
+
+    if (!interview) {
+      const jobIdValue =
+        jobData._id instanceof mongoose.Types.ObjectId
+          ? jobData._id
+          : new mongoose.Types.ObjectId(String(jobData._id));
+      
+      interview = new Interview({
+        applicationId: application._id,
+        jobId: jobIdValue,
+        companyId: companyId,
+        companyUserId: companyUserId,
+        graduateId: graduateId,
+        graduateUserId: graduateUserId,
+        scheduledAt: scheduledDate,
+        durationMinutes: validatedDuration,
+        status: 'scheduled',
+        roomSlug,
+        roomUrl,
+        provider: 'stream',
+        createdBy: new mongoose.Types.ObjectId(userId),
+      });
+    } else {
+      if (interview.status === 'completed' || interview.status === 'cancelled') {
+        interview.scheduledAt = scheduledDate;
+        interview.durationMinutes = validatedDuration;
+        interview.status = 'scheduled';
+        interview.roomSlug = roomSlug;
+        interview.roomUrl = roomUrl;
+        interview.updatedBy = new mongoose.Types.ObjectId(userId);
+        interview.startedAt = undefined;
+        interview.endedAt = undefined;
+      } else {
+        res.fail(
+          'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.',
+          400
+        );
+        return;
+      }
+    }
+
+    await interview.save();
+
+    // Update application
+    application.interviewScheduledAt = scheduledDate;
+    application.interviewLink = roomUrl;
+    application.interviewRoomSlug = roomSlug;
+    application.interviewId = interview._id as mongoose.Types.ObjectId;
+    application.status = 'interviewed';
+    if (!application.reviewedAt) {
+      application.reviewedAt = new Date();
+    }
+    await application.save();
+
+    // Send notifications
+    const graduateName = `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim() || 'A candidate';
+    const formattedDate = scheduledDate.toLocaleString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+
+    const interviewId = interview._id as mongoose.Types.ObjectId;
+
+    try {
+      await Promise.all([
+        createNotification({
+          userId: graduateUserId,
+          type: 'interview',
+          title: 'Interview Scheduled',
+          message: `Your interview for "${jobData.title || 'the position'}" at ${companyData.companyName} is set for ${formattedDate}.`,
+          relatedId: interviewId,
+          relatedType: 'interview',
+          email: {
+            subject: `Interview Scheduled: ${jobData.title || 'Position'} at ${companyData.companyName}`,
+            text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData.title || 'the position'}" at ${companyData.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Talent Hub Interviews tab when it's time.\n\nBest of luck!`,
+          },
+        }),
+        createNotification({
+          userId: companyUserId,
+          type: 'interview',
+          title: 'Interview Scheduled',
+          message: `An interview with ${graduateName || 'a candidate'} for "${jobData.title || 'the position'}" has been scheduled for ${formattedDate} by DLT Africa admin.`,
+          relatedId: interviewId,
+          relatedType: 'interview',
+        }),
+      ]);
+    } catch (error) {
+      console.error('Failed to send interview scheduling notification:', error);
+    }
+
+    res.success({
+      message: 'Interview scheduled successfully',
+      application: application.toObject({ versionKey: false }),
+      interview: {
+        id: interviewId.toString(),
+        scheduledAt: interview.scheduledAt,
+        status: interview.status,
+        roomSlug: interview.roomSlug,
+        roomUrl: interview.roomUrl,
+        durationMinutes: interview.durationMinutes,
+      },
+    });
+  } catch (error) {
+    console.error('Schedule interview for applicant error:', error);
     res.fail('Internal server error', 500);
   }
 };

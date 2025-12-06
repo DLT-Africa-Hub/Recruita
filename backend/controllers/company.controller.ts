@@ -7,6 +7,7 @@ import Match from '../models/Match.model';
 import Graduate from '../models/Graduate.model';
 import Application from '../models/Application.model';
 import Interview, { InterviewStatus } from '../models/Interview.model';
+import MessageModel from '../models/Message.model';
 import { AIServiceError, generateJobEmbedding } from '../services/aiService';
 import { queueJobMatching } from '../services/aiMatching.service';
 import {
@@ -729,6 +730,29 @@ Job ID: ${jobId}
           },
         });
       }
+
+      // Create a chat message from company to first admin to initiate discussion
+      if (adminUsers.length > 0) {
+        try {
+          const firstAdmin = adminUsers[0];
+          const firstAdminId =
+            firstAdmin._id instanceof mongoose.Types.ObjectId
+              ? firstAdmin._id
+              : new mongoose.Types.ObjectId(String(firstAdmin._id));
+
+          const companyUserIdObj = new mongoose.Types.ObjectId(companyUserId);
+
+          await MessageModel.create({
+            senderId: companyUserIdObj,
+            receiverId: firstAdminId,
+            message: `Hello! We've just posted a new job: "${validatedTitle}". Since we've selected DLT Africa to handle applications, we'd like to discuss the details and any specific requirements you might need. Please let us know if you have any questions or need additional information about this position.`,
+            type: 'text',
+          });
+        } catch (messageError) {
+          console.error('Failed to create chat message for job posting:', messageError);
+          // Don't fail the job creation if message creation fails
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to send job creation notification:', error);
@@ -1117,6 +1141,29 @@ Job ID: ${job._id}
             text: `A job posting has been updated to require admin handling.\n\n${jobDetailsText}\n\nAs the admin, you will:\n- Review and manage all applications\n- Schedule interview processes\n- Vet all applicants\n- Notify the company about the best candidates\n\nPlease access the admin panel to begin managing this job.`,
           },
         });
+      }
+
+      // Create a chat message from company to first admin to initiate discussion
+      if (adminUsers.length > 0) {
+        try {
+          const firstAdmin = adminUsers[0];
+          const firstAdminId =
+            firstAdmin._id instanceof mongoose.Types.ObjectId
+              ? firstAdmin._id
+              : new mongoose.Types.ObjectId(String(firstAdmin._id));
+
+          const companyUserIdObj = new mongoose.Types.ObjectId(userId);
+
+          await MessageModel.create({
+            senderId: companyUserIdObj,
+            receiverId: firstAdminId,
+            message: `Hello! We've updated our job posting "${job.title}" to have DLT Africa handle applications. We'd like to discuss the details and any specific requirements you might need. Please let us know if you have any questions or need additional information about this position.`,
+            type: 'text',
+          });
+        } catch (messageError) {
+          console.error('Failed to create chat message for job update:', messageError);
+          // Don't fail the job update if message creation fails
+        }
       }
     } catch (error) {
       console.error('Failed to send admin notification for job update:', error);

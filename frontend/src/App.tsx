@@ -285,7 +285,7 @@ function App() {
               <Route
                 path="/messages"
                 element={
-                  <ProtectedRoute allowedRoles={['company', 'graduate']}>
+                  <ProtectedRoute allowedRoles={['company', 'graduate', 'admin']}>
                     <EmailVerificationGuard>
                       <Layout>
                         <Messages />

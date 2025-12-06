@@ -41,6 +41,10 @@ import {
   // Graduate Management
   getAllGraduates,
   getGraduateById,
+  
+  // Application Management
+  sendMessageToApplicant,
+  scheduleInterviewForApplicant,
 } from '../controllers/admin.controller';
 
 import {
@@ -104,6 +108,12 @@ router.get('/companies-stats', companiesStatsProvider);
 // ============================================
 router.get('/graduates', getAllGraduates);
 router.get('/graduates/:graduateId', getGraduateById);
+
+// ============================================
+// APPLICATION MANAGEMENT ROUTES
+// ============================================
+router.post('/applications/:applicationId/message', sendMessageToApplicant);
+router.post('/applications/:applicationId/schedule-interview', scheduleInterviewForApplicant);
 
 // ============================================
 // STATISTICS & MONITORING ROUTES

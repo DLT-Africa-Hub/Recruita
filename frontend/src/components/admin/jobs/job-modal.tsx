@@ -10,10 +10,13 @@ import {
   CheckCircle,
   XCircle,
   Trash2,
+  MessageSquare,
+  Calendar,
 } from 'lucide-react';
 import { adminApi } from '../../../api/admin';
-import { LoadingSpinner, EmptyState } from '../../ui';
+import { LoadingSpinner, EmptyState, Button } from '../../ui';
 import { toast } from 'react-hot-toast';
+import { ApiError } from '../../../types/api';
 
 interface JobDetailsModalProps {
   jobId: string;
@@ -27,7 +30,16 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   onClose,
 }) => {
   const queryClient = useQueryClient();
-  const [selectedTab, setSelectedTab] = useState<'overview' | 'applications'>('overview');
+  const [selectedTab, setSelectedTab] = useState<'overview' | 'applications'>(
+    'overview'
+  );
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [durationMinutes, setDurationMinutes] = useState(30);
 
   const {
     data: jobData,
@@ -59,8 +71,52 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['adminJobs'] });
       onClose();
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete job');
+    onError: (error: unknown) => {
+      const err = error as ApiError;
+      toast.error(err.response?.data?.message || 'Failed to delete job');
+    },
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (data: { applicationId: string; message: string }) =>
+      adminApi.sendMessageToApplicant(data.applicationId, data.message),
+    onSuccess: () => {
+      toast.success('Message sent successfully');
+      setShowMessageModal(false);
+      setMessageText('');
+      setSelectedApplication(null);
+      queryClient.invalidateQueries({ queryKey: ['adminJob', jobId] });
+    },
+    onError: (error: unknown) => {
+      const err = error as ApiError;
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    },
+  });
+
+  const scheduleInterviewMutation = useMutation({
+    mutationFn: (data: {
+      applicationId: string;
+      scheduledAt: string;
+      durationMinutes: number;
+    }) =>
+      adminApi.scheduleInterviewForApplicant(data.applicationId, {
+        scheduledAt: data.scheduledAt,
+        durationMinutes: data.durationMinutes,
+      }),
+    onSuccess: () => {
+      toast.success('Interview scheduled successfully');
+      setShowScheduleModal(false);
+      setScheduleDate('');
+      setScheduleTime('');
+      setDurationMinutes(30);
+      setSelectedApplication(null);
+      queryClient.invalidateQueries({ queryKey: ['adminJob', jobId] });
+    },
+    onError: (error: unknown) => {
+      const err = error as ApiError;
+      toast.error(
+        err.response?.data?.message || 'Failed to schedule interview'
+      );
     },
   });
 
@@ -238,11 +294,16 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                     <div className="lg:col-span-2 space-y-6">
                       {/* Job Details Card */}
                       <div className="bg-gray-50 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Job Details</h3>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Job Details
+                        </h3>
 
                         <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="flex items-start gap-3">
-                            <Building2 className="text-gray-400 mt-1" size={20} />
+                            <Building2
+                              className="text-gray-400 mt-1"
+                              size={20}
+                            />
                             <div>
                               <p className="text-sm text-gray-600">Company</p>
                               <p className="font-medium">
@@ -265,12 +326,17 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                             <Clock className="text-gray-400 mt-1" size={20} />
                             <div>
                               <p className="text-sm text-gray-600">Job Type</p>
-                              <p className="font-medium">{jobData.data.job.jobType}</p>
+                              <p className="font-medium">
+                                {jobData.data.job.jobType}
+                              </p>
                             </div>
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <DollarSign className="text-gray-400 mt-1" size={20} />
+                            <DollarSign
+                              className="text-gray-400 mt-1"
+                              size={20}
+                            />
                             <div>
                               <p className="text-sm text-gray-600">Salary</p>
                               <p className="font-medium">
@@ -283,7 +349,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                         </div>
 
                         <div className="border-t border-gray-200 pt-4">
-                          <p className="text-sm text-gray-600 mb-2">Preferred Rank</p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Preferred Rank
+                          </p>
                           <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
                             {jobData.data.job.preferedRank}
                           </span>
@@ -316,7 +384,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
 
                       {/* Requirements */}
                       <div className="bg-gray-50 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Requirements</h3>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Requirements
+                        </h3>
 
                         <div className="mb-4">
                           <p className="text-sm text-gray-600 mb-2">
@@ -337,8 +407,8 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                         </div>
 
                         {jobData.data.job.requirements.extraRequirements &&
-                          jobData.data.job.requirements.extraRequirements.length >
-                            0 && (
+                          jobData.data.job.requirements.extraRequirements
+                            .length > 0 && (
                             <div>
                               <p className="text-sm text-gray-600 mb-2">
                                 Additional Requirements
@@ -354,7 +424,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                                       <span>
                                         {req.label} ({req.type})
                                         {req.required && (
-                                          <span className="text-red-500 ml-1">*</span>
+                                          <span className="text-red-500 ml-1">
+                                            *
+                                          </span>
                                         )}
                                       </span>
                                     </li>
@@ -370,7 +442,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                     <div className="space-y-6">
                       {/* Stats Card */}
                       <div className="bg-gray-50 rounded-lg p-6">
-                        <h3 className="text-lg font-semibold mb-4">Statistics</h3>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Statistics
+                        </h3>
 
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
@@ -388,7 +462,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Clock size={20} className="text-yellow-400" />
-                              <span className="text-gray-600 text-sm">Pending</span>
+                              <span className="text-gray-600 text-sm">
+                                Pending
+                              </span>
                             </div>
                             <span className="font-semibold text-lg">
                               {jobData.data.stats.pending}
@@ -397,7 +473,10 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={20} className="text-purple-400" />
+                              <CheckCircle
+                                size={20}
+                                className="text-purple-400"
+                              />
                               <span className="text-gray-600 text-sm">
                                 Shortlisted
                               </span>
@@ -409,8 +488,13 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <CheckCircle size={20} className="text-green-400" />
-                              <span className="text-gray-600 text-sm">Hired</span>
+                              <CheckCircle
+                                size={20}
+                                className="text-green-400"
+                              />
+                              <span className="text-gray-600 text-sm">
+                                Hired
+                              </span>
                             </div>
                             <span className="font-semibold text-lg">
                               {jobData.data.stats.hired}
@@ -420,7 +504,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <XCircle size={20} className="text-red-400" />
-                              <span className="text-gray-600 text-sm">Rejected</span>
+                              <span className="text-gray-600 text-sm">
+                                Rejected
+                              </span>
                             </div>
                             <span className="font-semibold text-lg">
                               {jobData.data.stats.rejected}
@@ -532,59 +618,102 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Last Updated
                               </th>
+                              {jobData.data.job.directContact === false && (
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              )}
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {jobData.data.applications.map((application: any) => (
-                              <tr key={application.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    {application.candidate?.profilePicture ? (
-                                      <img
-                                        src={application.candidate.profilePicture}
-                                        alt={application.candidate.name}
-                                        className="h-10 w-10 rounded-full"
-                                      />
-                                    ) : (
-                                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                        <span className="text-gray-600 font-medium">
-                                          {application.candidate?.name?.charAt(0) ||
-                                            '?'}
-                                        </span>
-                                      </div>
-                                    )}
-                                    <div className="ml-4">
-                                      <div className="text-sm font-medium text-gray-900">
-                                        {application.candidate?.name || 'Unknown'}
-                                      </div>
-                                      <div className="text-sm text-gray-500">
-                                        {application.candidate?.email || 'No email'}
+                            {jobData.data.applications.map(
+                              (application: any) => (
+                                <tr
+                                  key={application.id}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      {application.candidate?.profilePicture ? (
+                                        <img
+                                          src={
+                                            application.candidate.profilePicture
+                                          }
+                                          alt={application.candidate.name}
+                                          className="h-10 w-10 rounded-full"
+                                        />
+                                      ) : (
+                                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                          <span className="text-gray-600 font-medium">
+                                            {application.candidate?.name?.charAt(
+                                              0
+                                            ) || '?'}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div className="ml-4">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {application.candidate?.name ||
+                                            'Unknown'}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                          {application.candidate?.email ||
+                                            'No email'}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span
-                                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getApplicationStatusColor(
-                                      application.status
-                                    )}`}
-                                  >
-                                    {application.status.charAt(0).toUpperCase() +
-                                      application.status.slice(1)}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(
-                                    application.appliedAt
-                                  ).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(
-                                    application.updatedAt
-                                  ).toLocaleDateString()}
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getApplicationStatusColor(
+                                        application.status
+                                      )}`}
+                                    >
+                                      {application.status
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                        application.status.slice(1)}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {new Date(
+                                      application.appliedAt
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {new Date(
+                                      application.updatedAt
+                                    ).toLocaleDateString()}
+                                  </td>
+                                  {jobData.data.job.directContact === false && (
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setSelectedApplication(application);
+                                            setShowMessageModal(true);
+                                          }}
+                                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                          title="Send Message"
+                                        >
+                                          <MessageSquare size={18} />
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setSelectedApplication(application);
+                                            setShowScheduleModal(true);
+                                          }}
+                                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                          title="Schedule Interview"
+                                        >
+                                          <Calendar size={18} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  )}
+                                </tr>
+                              )
+                            )}
                           </tbody>
                         </table>
                       </div>
@@ -596,6 +725,141 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
           </div>
         </div>
       </div>
+
+      {showMessageModal && selectedApplication && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Send Message</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              To: {selectedApplication.candidate?.name || 'Applicant'}
+            </p>
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Type your message here..."
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none h-32 mb-4"
+            />
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowMessageModal(false);
+                  setMessageText('');
+                  setSelectedApplication(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (messageText.trim()) {
+                    sendMessageMutation.mutate({
+                      applicationId: selectedApplication.id,
+                      message: messageText,
+                    });
+                  }
+                }}
+                disabled={!messageText.trim() || sendMessageMutation.isPending}
+              >
+                {sendMessageMutation.isPending ? 'Sending...' : 'Send'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Interview Modal */}
+      {showScheduleModal && selectedApplication && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Schedule Interview</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              With: {selectedApplication.candidate?.name || 'Applicant'}
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Time
+                </label>
+                <input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Duration (minutes)
+                </label>
+                <select
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                >
+                  <option value={15}>15 minutes</option>
+                  <option value={30}>30 minutes</option>
+                  <option value={45}>45 minutes</option>
+                  <option value={60}>60 minutes</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowScheduleModal(false);
+                  setScheduleDate('');
+                  setScheduleTime('');
+                  setDurationMinutes(30);
+                  setSelectedApplication(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (scheduleDate && scheduleTime) {
+                    const scheduledAt = new Date(
+                      `${scheduleDate}T${scheduleTime}`
+                    ).toISOString();
+                    scheduleInterviewMutation.mutate({
+                      applicationId: selectedApplication.id,
+                      scheduledAt,
+                      durationMinutes,
+                    });
+                  } else {
+                    toast.error('Please select both date and time');
+                  }
+                }}
+                disabled={
+                  !scheduleDate ||
+                  !scheduleTime ||
+                  scheduleInterviewMutation.isPending
+                }
+              >
+                {scheduleInterviewMutation.isPending
+                  ? 'Scheduling...'
+                  : 'Schedule'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
