@@ -53,6 +53,36 @@ const jwtSecretFromEnv =
   process.env.JWT_SECRET ||
   process.env.ACCESS_TOKEN_SECRET;
 
+// Provide a development default (at least 32 characters) only in non-production environments
+// In production, this must be set via environment variable for security
+const getJwtSecret = (): string => {
+  if (jwtSecretFromEnv) {
+    if (jwtSecretFromEnv.length < 32) {
+      throw new Error(
+        `JWT_ACCESS_SECRET must be at least 32 characters long for security. Current length: ${jwtSecretFromEnv.length}. Please set a longer secret in your environment variables.`
+      );
+    }
+    return jwtSecretFromEnv;
+  }
+
+  // Only allow default in development/test environments
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    process.env.NODE_ENV !== 'prod'
+  ) {
+    const defaultSecret = 'dev-jwt-secret-key-min-32-chars-required!!';
+    console.warn(
+      '[Security] JWT_ACCESS_SECRET not set. Using development default. This should NEVER be used in production!'
+    );
+    return defaultSecret;
+  }
+
+  // Production: fail early with clear error
+  throw new Error(
+    'JWT_ACCESS_SECRET (or JWT_SECRET/ACCESS_TOKEN_SECRET) environment variable is required and must be at least 32 characters long. Please set this in your environment variables.'
+  );
+};
+
 const parsePositiveIntOrUndefined = (
   value: string | undefined
 ): number | undefined => {
@@ -83,7 +113,7 @@ const configSchema = z.object({
 });
 
 const parsedConfig = configSchema.parse({
-  jwtAccessSecret: jwtSecretFromEnv,
+  jwtAccessSecret: getJwtSecret(),
   enforceHttps: parseBoolean(
     process.env.ENFORCE_HTTPS,
     process.env.NODE_ENV === 'production'

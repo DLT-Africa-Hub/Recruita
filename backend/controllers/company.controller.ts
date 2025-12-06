@@ -1362,11 +1362,30 @@ export const updateMatchStatus = async (
         ? graduate
         : null;
     if (graduateData?.userId) {
+      // Handle both ObjectId and populated User object
+      let userIdValue: mongoose.Types.ObjectId | string;
+      if (graduateData.userId instanceof mongoose.Types.ObjectId) {
+        userIdValue = graduateData.userId;
+      } else if (
+        typeof graduateData.userId === 'object' &&
+        graduateData.userId !== null &&
+        '_id' in graduateData.userId
+      ) {
+        // Populated User object
+        userIdValue =
+          graduateData.userId._id instanceof mongoose.Types.ObjectId
+            ? graduateData.userId._id
+            : new mongoose.Types.ObjectId(graduateData.userId._id as string);
+      } else {
+        // Fallback: try to extract from string or other format
+        userIdValue = String(graduateData.userId);
+      }
+
       await createNotification({
         userId:
-          graduateData.userId instanceof mongoose.Types.ObjectId
-            ? graduateData.userId.toString()
-            : String(graduateData.userId),
+          userIdValue instanceof mongoose.Types.ObjectId
+            ? userIdValue.toString()
+            : userIdValue,
         type: 'match',
         title:
           validatedStatus === 'accepted' ? 'Match accepted' : 'Match rejected',

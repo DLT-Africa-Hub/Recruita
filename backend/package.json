@@ -8,6 +8,8 @@
     "dev": "tsx watch index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "dev:test": "tsx watch index.test.ts",
+    "start:test": "tsx index.test.ts",
     "lint": "eslint . --ext .ts --ignore-pattern node_modules --ignore-pattern dist",
     "format": "prettier --write \"**/*.ts\" --ignore-path .gitignore",
     "type-check": "tsc --noEmit",
