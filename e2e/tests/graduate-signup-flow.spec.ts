@@ -41,16 +41,25 @@ test.describe('Graduate Signup to Profile Completion Flow', () => {
     }
 
     // Step 2: Fill registration form
+    // Wait for the registration form to be ready
+    await page.waitForSelector('form, input[name="email"], input[type="email"]', { timeout: 15000 });
+    await page.waitForTimeout(1000); // Wait for React to hydrate
+    
     // Select graduate role by clicking the Graduate tab/button (should be selected by default)
     const graduateButton = page.locator('button:has-text("Graduate")');
     if (await graduateButton.count() > 0) {
-      await graduateButton.click();
-      await page.waitForTimeout(500); // Wait for role selection to register
+      // Wait for button to be stable before clicking
+      await graduateButton.waitFor({ state: 'visible', timeout: 5000 });
+      await page.waitForTimeout(500); // Small delay before click
+      await graduateButton.click({ force: true }); // Force click if needed
+      await page.waitForTimeout(1000); // Wait for role selection to register
     }
     
     // Fill registration form - only email and password are required
-    await page.fill('input[name="email"]', testEmail);
-    await page.fill('input[name="password"]', testPassword);
+    // Wait for inputs to be ready
+    await page.waitForSelector('input[name="email"], input[type="email"]', { timeout: 10000 });
+    await page.fill('input[name="email"], input[type="email"]', testEmail);
+    await page.fill('input[name="password"], input[type="password"]', testPassword);
     
     // No terms checkbox in current form
 

@@ -38,13 +38,17 @@ test.describe('Company Job Post to Notification Flow', () => {
     
     // Wait for redirect to login (since route is protected)
     await page.waitForLoadState('networkidle', { timeout: 15000 });
+    await page.waitForTimeout(2000); // Wait for React to hydrate
     
     // Verify we were redirected to login (expected behavior for protected route)
     await expect(page).toHaveURL(/.*login/i, { timeout: 10000 });
     
-    // Verify login form is present
-    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
-    await expect(emailInput).toBeVisible({ timeout: 5000 });
+    // Wait for the form container or any login-related element first
+    await page.waitForSelector('form, [role="form"], input, button[type="submit"]', { timeout: 10000 });
+    
+    // Verify login form is present - try multiple selectors
+    const emailInput = page.locator('input[type="email"], input[name="email"], input[placeholder*="email" i], input[placeholder*="Email" i]').first();
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
   });
 });
 

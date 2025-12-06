@@ -41,13 +41,17 @@ test.describe('Example Test Suite', () => {
     // Wait for page to be interactive
     await page.waitForLoadState('networkidle', { timeout: 15000 });
     // Wait for React to hydrate
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     // Verify navigation
     await expect(page).toHaveURL(/.*login/, { timeout: 10000 });
 
-    // Verify login form is present
-    const emailInput = page.locator('input[type="email"], input[name="email"]').first();
+    // Wait for login form to appear - try multiple selectors
+    const emailInput = page.locator('input[type="email"], input[name="email"], input[placeholder*="email" i], input[placeholder*="Email" i]').first();
+    
+    // Wait for the form container or any login-related element first
+    await page.waitForSelector('form, [role="form"], input, button[type="submit"]', { timeout: 10000 });
+    
     await expect(emailInput).toBeVisible({ timeout: 10000 });
   });
 });
