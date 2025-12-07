@@ -62,13 +62,10 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
     isOpen,
   });
 
-  if (!company) return null;
-
-  const skills = ['React', 'TypeScript', 'JavaScript'];
-
   // Process description to render HTML properly
+  // Must be called before early return to follow React hooks rules
   const descriptionContent = useMemo(() => {
-    if (!company.description) {
+    if (!company?.description) {
       return { type: 'text' as const, content: 'No description available.' };
     }
 
@@ -79,7 +76,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
       return textarea.value;
     };
 
-    let description = decodeHtmlEntities(company.description);
+    const description = decodeHtmlEntities(company.description);
 
     // Check if description contains HTML tags
     const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);
@@ -91,7 +88,11 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
     } else {
       return { type: 'text' as const, content: description };
     }
-  }, [company.description]);
+  }, [company?.description]);
+
+  if (!company) return null;
+
+  const skills = ['React', 'TypeScript', 'JavaScript'];
 
   const handleApplyClick = () => {
     setCurrentStep('cv-selection');
@@ -293,7 +294,9 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                     prose-headings:text-[#1C1C1C] prose-headings:font-semibold
                     prose-h1:text-2xl prose-h1:font-bold prose-h1:my-4
                     prose-h2:text-xl prose-h2:font-semibold prose-h2:my-3"
-                  dangerouslySetInnerHTML={{ __html: descriptionContent.content }}
+                  dangerouslySetInnerHTML={{
+                    __html: descriptionContent.content,
+                  }}
                 />
               ) : (
                 <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">

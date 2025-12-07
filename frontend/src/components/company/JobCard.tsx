@@ -52,7 +52,7 @@ const JobCard: React.FC<JobCardProps> = ({
       return textarea.value;
     };
 
-    let description = decodeHtmlEntities(job.description);
+    const description = decodeHtmlEntities(job.description);
 
     // Check if description contains HTML tags
     const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);

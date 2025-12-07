@@ -469,7 +469,8 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
 
                           if (hasHtmlTags) {
                             // Sanitize HTML before rendering to prevent XSS attacks
-                            const sanitizedDescription = DOMPurify.sanitize(description);
+                            const sanitizedDescription =
+                              DOMPurify.sanitize(description);
                             return (
                               <div
                                 className="prose prose-sm max-w-none text-gray-700 
