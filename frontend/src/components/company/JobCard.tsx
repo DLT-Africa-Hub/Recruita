@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { CiMail } from 'react-icons/ci';
 import { HiOutlineBriefcase, HiOutlineLocationMarker } from 'react-icons/hi';
+import DOMPurify from 'dompurify';
 import { CompanyJob } from '../../data/jobs';
 import { jobStatusLabels } from '../../utils/job.utils';
-import { stripHtmlAndTruncate } from '../../utils/text.utils';
 import { Badge, ImageWithFallback } from '../ui';
 import type { BadgeVariant } from '../ui/Badge';
 
@@ -39,10 +39,32 @@ const JobCard: React.FC<JobCardProps> = ({
     onViewApplicants?.(job);
   };
 
-  // Strip HTML tags and truncate description
-  const truncatedDescription = job.description
-    ? stripHtmlAndTruncate(job.description, 150)
-    : 'No description provided.';
+  // Process description to render HTML properly
+  const descriptionContent = useMemo(() => {
+    if (!job.description) {
+      return { type: 'text' as const, content: 'No description provided.' };
+    }
+
+    // Decode HTML entities
+    const decodeHtmlEntities = (str: string): string => {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = str;
+      return textarea.value;
+    };
+
+    let description = decodeHtmlEntities(job.description);
+
+    // Check if description contains HTML tags
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);
+
+    if (hasHtmlTags) {
+      // Sanitize HTML before rendering
+      const sanitizedDescription = DOMPurify.sanitize(description);
+      return { type: 'html' as const, content: sanitizedDescription };
+    } else {
+      return { type: 'text' as const, content: description };
+    }
+  }, [job.description]);
 
   return (
     <article className="group flex max-w-[560px] flex-col gap-[18px] rounded-[20px] border border-fade bg-white p-[18px] shadow-[0_18px_40px_-24px_rgba(47,81,43,0.12)] transition-all hover:shadow-[0_24px_48px_-24px_rgba(47,81,43,0.18)] hover:border-button/20">
@@ -73,9 +95,23 @@ const JobCard: React.FC<JobCardProps> = ({
             <HiOutlineLocationMarker className="text-[16px]" />
             <span>{job.location}</span>
           </div>
-          <p className="text-[14px] leading-relaxed text-[#1C1C1CBF] line-clamp-2">
-            {truncatedDescription}
-          </p>
+          {descriptionContent.type === 'html' ? (
+            <div
+              className="text-[14px] leading-relaxed text-[#1C1C1CBF] line-clamp-2 prose prose-sm max-w-none
+                prose-p:text-[#1C1C1CBF] prose-p:my-0 prose-p:leading-relaxed
+                prose-strong:text-[#1C1C1C] prose-strong:font-semibold
+                prose-em:text-[#1C1C1CBF] prose-em:italic
+                prose-ul:text-[#1C1C1CBF] prose-ul:my-0 prose-ul:list-disc prose-ul:pl-4
+                prose-ol:text-[#1C1C1CBF] prose-ol:my-0 prose-ol:list-decimal prose-ol:pl-4
+                prose-li:text-[#1C1C1CBF] prose-li:my-0
+                prose-headings:text-[#1C1C1C] prose-headings:font-semibold prose-headings:my-0"
+              dangerouslySetInnerHTML={{ __html: descriptionContent.content }}
+            />
+          ) : (
+            <p className="text-[14px] leading-relaxed text-[#1C1C1CBF] line-clamp-2">
+              {descriptionContent.content}
+            </p>
+          )}
         </div>
 
         <Badge

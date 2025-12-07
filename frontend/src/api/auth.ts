@@ -45,6 +45,11 @@ export const authApi = {
     const response = await api.post('/auth/verify-email', { token });
     return response.data;
   },
+
+  refreshToken: async (refreshToken: string) => {
+    const response = await api.post('/auth/refresh', { refreshToken });
+    return response.data;
+  },
 };
 
 export default api;

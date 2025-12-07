@@ -50,10 +50,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const storedToken = sessionStorage.getItem('token');
     const storedUser = sessionStorage.getItem('user');
+    const storedRefreshToken = sessionStorage.getItem('refreshToken');
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+      // Ensure refresh token is stored if we have a token
+      if (!storedRefreshToken) {
+        // If we have a token but no refresh token, it might be from an old session
+        // We'll handle refresh on next API call
+      }
     }
   }, []);
 
@@ -63,6 +69,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('token', payload.accessToken);
       sessionStorage.setItem('user', JSON.stringify(payload.user));
+      // Store refresh token for token refresh
+      if (payload.refreshToken) {
+        sessionStorage.setItem('refreshToken', payload.refreshToken);
+      }
     }
     return payload;
   };
@@ -100,6 +110,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
+      sessionStorage.removeItem('refreshToken');
     }
   };
 

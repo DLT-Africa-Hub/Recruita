@@ -5,7 +5,8 @@ import {
   HiOutlineCurrencyDollar,
   HiOutlineClock,
 } from 'react-icons/hi2';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Company } from './CompanyCard';
 import BaseModal from '../ui/BaseModal';
 import { ActionButtonGroup } from '../ui';
@@ -14,7 +15,6 @@ import CoverLetterStep from './CoverLetterStep';
 import ConfirmationStep from './ConfirmationStep';
 import { useApplicationSubmission } from '../../hooks/useApplicationSubmission';
 import { useApplyToJob } from '../../hooks/useApplyToJob';
-import { stripHtml } from '../../utils/text.utils';
 import { ApiResume } from '../../types/api';
 
 interface CompanyPreviewModalProps {
@@ -65,6 +65,33 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
   if (!company) return null;
 
   const skills = ['React', 'TypeScript', 'JavaScript'];
+
+  // Process description to render HTML properly
+  const descriptionContent = useMemo(() => {
+    if (!company.description) {
+      return { type: 'text' as const, content: 'No description available.' };
+    }
+
+    // Decode HTML entities
+    const decodeHtmlEntities = (str: string): string => {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = str;
+      return textarea.value;
+    };
+
+    let description = decodeHtmlEntities(company.description);
+
+    // Check if description contains HTML tags
+    const hasHtmlTags = /<[a-z][\s\S]*>/i.test(description);
+
+    if (hasHtmlTags) {
+      // Sanitize HTML before rendering
+      const sanitizedDescription = DOMPurify.sanitize(description);
+      return { type: 'html' as const, content: sanitizedDescription };
+    } else {
+      return { type: 'text' as const, content: description };
+    }
+  }, [company.description]);
 
   const handleApplyClick = () => {
     setCurrentStep('cv-selection');
@@ -253,11 +280,26 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
                   Job Description
                 </p>
               </div>
-              <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
-                {company.description
-                  ? stripHtml(company.description)
-                  : 'No description available.'}
-              </p>
+              {descriptionContent.type === 'html' ? (
+                <div
+                  className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed prose max-w-none
+                    prose-p:text-[#1C1C1CBF] prose-p:leading-relaxed prose-p:my-3
+                    prose-strong:text-[#1C1C1C] prose-strong:font-semibold
+                    prose-em:text-[#1C1C1CBF] prose-em:italic
+                    prose-ul:text-[#1C1C1CBF] prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
+                    prose-ol:text-[#1C1C1CBF] prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
+                    prose-li:text-[#1C1C1CBF] prose-li:my-1
+                    prose-a:text-blue-600 prose-a:underline
+                    prose-headings:text-[#1C1C1C] prose-headings:font-semibold
+                    prose-h1:text-2xl prose-h1:font-bold prose-h1:my-4
+                    prose-h2:text-xl prose-h2:font-semibold prose-h2:my-3"
+                  dangerouslySetInnerHTML={{ __html: descriptionContent.content }}
+                />
+              ) : (
+                <p className="text-[16px] font-normal text-[#1C1C1CBF] leading-relaxed whitespace-pre-line">
+                  {descriptionContent.content}
+                </p>
+              )}
             </div>
 
             {/* Skills */}
