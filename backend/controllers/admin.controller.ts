@@ -715,7 +715,7 @@ export const companiesStatsProvider = async (
 
     const [companies, total] = await Promise.all([
       Company.find(filters)
-        .select('_id postedJobs hiredCandidates')
+        .select('_id postedJobs hiredCandidates companyName')
         .sort({ postedJobs: -1 })
         .skip(skip)
         .limit(limit)

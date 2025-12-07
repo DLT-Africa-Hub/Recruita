@@ -52,7 +52,7 @@ const pagesByRole: Record<string, Page[]> = {
     { page: 'Talents', link: 'admin/talents', icon: HiOutlineUsers },
     { page: 'Jobs', link: 'admin/jobs', icon: LuBriefcase },
     { page: 'Messages', link: 'messages', icon: HiOutlineChatBubbleLeftRight },
-    { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
+    // { page: 'App Status', link: 'app-status', icon: FaArrowTrendUp },
     { page: 'Notifications', link: 'admin/notifications', icon: BiBell },
     { page: 'Settings', link: 'admin/settings', icon: GoGear },
   ],

@@ -140,6 +140,8 @@ const AdminDashboard = () => {
         return b.hired - a.hired;
       }) || [];
 
+      console.log(companiesStatsData)
+
   if (isLoading) {
     return (
       <div className="max-w-[1200px] my-0 mx-auto p-8">
@@ -199,6 +201,7 @@ const AdminDashboard = () => {
           </p>
 
           <div className="flex flex-col gap-[25px] overflow-y-scroll">
+            {}
             {hiringCompanies.length > 0 ? (
               hiringCompanies.map((company) => (
                 <HiringCompany
