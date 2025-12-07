@@ -7,7 +7,7 @@ import { authApi } from '../api/auth';
  * This ensures users stay logged in even when idle
  */
 export const useTokenRefresh = () => {
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const isRefreshingRef = useRef(false);
 
   useEffect(() => {
@@ -56,11 +56,14 @@ export const useTokenRefresh = () => {
     checkAndRefreshToken();
 
     // Check every 5 minutes
-    intervalRef.current = setInterval(checkAndRefreshToken, 5 * 60 * 1000);
+    intervalRef.current = window.setInterval(
+      checkAndRefreshToken,
+      5 * 60 * 1000
+    );
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
       }
     };
   }, []);
