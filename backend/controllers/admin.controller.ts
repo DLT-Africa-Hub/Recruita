@@ -1228,7 +1228,7 @@ export const updateJobStatus = async (
       return;
     }
 
-    if (!['active', 'closed', 'draft'].includes(status)) {
+    if (typeof status !== "string" || !['active', 'closed', 'draft'].includes(status)) {
       res.fail('Invalid status. Must be active, closed, or draft', 400);
       return;
     }
