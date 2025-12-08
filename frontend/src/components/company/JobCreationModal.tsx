@@ -11,7 +11,6 @@ import { skills } from '../../utils/material.utils';
 import { companyApi } from '../../api/company';
 import { CURRENCIES } from '../../utils/job.utils';
 
-
 // Helper to remove all HTML tags thoroughly
 function stripHtmlTags(input: string): string {
   let previous: string;
@@ -458,8 +457,7 @@ const JobCreationModal = ({
                   .replace(/&nbsp;/g, ' ')
                   .trim()
                   .substring(0, 150)}
-                {stripHtmlTags(formData.description).length > 150 &&
-                  '...'}
+                {stripHtmlTags(formData.description).length > 150 && '...'}
               </div>
             </div>
           ) : (
