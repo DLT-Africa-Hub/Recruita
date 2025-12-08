@@ -239,7 +239,7 @@ export const getChatList = async (req: Request, res: Response) => {
             ? 'graduate'
             : otherUser.role === 'company'
               ? 'company'
-              : 'admin']: userData || { _id: otherUserId },
+              : 'admin']: userData ,
           lastMessage: {
             text: conv.lastMessage.message,
             message: conv.lastMessage.message,
