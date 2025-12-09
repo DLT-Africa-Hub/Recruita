@@ -229,7 +229,7 @@ export const getChatList = async (req: Request, res: Response) => {
           userData = {
             _id: otherUserId,
             email: otherUser.email || '',
-            username: otherUser.username || 'Unknown User',
+            username: 'Unknown User',
           };
         }
 
