@@ -2084,6 +2084,35 @@ export const updateApplicationStatus = async (
       application.notes = typeof notes === 'string' ? notes.trim() : undefined;
     }
     await application.save();
+
+    if (validatedStatus === 'hired') {
+      try {
+        let graduateId: mongoose.Types.ObjectId | null = null;
+
+        if (application.graduateId instanceof mongoose.Types.ObjectId) {
+          graduateId = application.graduateId;
+        } else if (
+          typeof application.graduateId === 'object' &&
+          application.graduateId !== null &&
+          '_id' in application.graduateId
+        ) {
+          const graduateObj = application.graduateId as { _id?: unknown };
+          const gradIdValue = graduateObj._id;
+          graduateId =
+            gradIdValue instanceof mongoose.Types.ObjectId
+              ? gradIdValue
+              : new mongoose.Types.ObjectId(String(gradIdValue));
+        }
+
+        if (graduateId) {
+          await Company.findByIdAndUpdate(company._id, {
+            $addToSet: { hiredCandidates: graduateId },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to update hiredCandidates:', error);
+      }
+    }
   }
 
   // Send notifications (only if not already sent by offer service)
@@ -2109,16 +2138,25 @@ export const updateApplicationStatus = async (
         await createNotification({
           userId: graduateUserId,
           type: 'application',
-          title: `Application ${validatedStatus === 'rejected' ? 'Rejected' : 'Updated'}`,
-          message: `Your application for "${jobData?.title || 'the position'}" has been ${validatedStatus}.`,
+          title: `Application ${validatedStatus === 'rejected' ? 'Rejected' : validatedStatus === 'hired' ? 'Hired!' : 'Updated'}`,
+          message:
+            validatedStatus === 'hired'
+              ? `Congratulations! You have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}.`
+              : `Your application for "${jobData?.title || 'the position'}" has been ${validatedStatus}.`,
           relatedId:
             application._id instanceof mongoose.Types.ObjectId
               ? application._id.toString()
               : String(application._id),
           relatedType: 'application',
           email: {
-            subject: `Application Update: ${jobData?.title || 'Position'}`,
-            text: `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`,
+            subject:
+              validatedStatus === 'hired'
+                ? `Congratulations! You've been hired at ${company.companyName}`
+                : `Application Update: ${jobData?.title || 'Position'}`,
+            text:
+              validatedStatus === 'hired'
+                ? `Congratulations! We are pleased to inform you that you have been hired for "${jobData?.title || 'the position'}" at ${company.companyName}. Welcome to the team!`
+                : `Your application for "${jobData?.title || 'the position'}" at ${company.companyName} has been ${validatedStatus}.`,
           },
         });
       }
@@ -2134,7 +2172,9 @@ export const updateApplicationStatus = async (
     message:
       validatedStatus === 'accepted'
         ? 'Application accepted and offer sent successfully'
-        : 'Application status updated successfully',
+        : validatedStatus === 'hired'
+          ? 'Candidate hired successfully'
+          : 'Application status updated successfully',
     application:
       updatedApplication || application.toObject({ versionKey: false }),
   });
@@ -2267,7 +2307,6 @@ export const scheduleInterview = async (
       ? graduateData.userId
       : new mongoose.Types.ObjectId(String(graduateData.userId));
 
-  // Get the graduate ID properly
   const graduateId =
     graduateData._id instanceof mongoose.Types.ObjectId
       ? graduateData._id
@@ -2277,8 +2316,6 @@ export const scheduleInterview = async (
             String(graduateData._id || graduateData.id || graduate)
           );
 
-  // Check if this company-graduate pair has an active interview (not completed or cancelled)
-  // This prevents scheduling multiple interviews with the same candidate until the current one is completed
   const existingActiveInterviews = await Interview.find({
     companyId: company._id,
     graduateId: graduateId,
@@ -2804,4 +2841,209 @@ export const getAvailableGraduates = async (
     console.error('Error fetching graduates:', error);
     res.status(500).json({ message: 'Failed to fetch graduates' });
   }
+};
+
+/**
+ * Get hired candidates count for company
+ * GET /api/companies/hired-candidates/count
+ */
+export const getHiredCandidatesCount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId })
+    .select('hiredCandidates')
+    .lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const count = company.hiredCandidates?.length || 0;
+
+  res.json({
+    count,
+    hiredCandidates: company.hiredCandidates || [],
+  });
+};
+
+/**
+ * Get hired candidates details for company
+ * GET /api/companies/hired-candidates
+ */
+export const getHiredCandidates = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ message: 'Unauthorized' });
+    return;
+  }
+
+  const company = await Company.findOne({ userId })
+    .select('hiredCandidates companyName')
+    .lean();
+
+  if (!company) {
+    res.status(404).json({ message: 'Company profile not found' });
+    return;
+  }
+
+  const { page = '1', limit = '10', search } = req.query;
+
+  const pagination = validatePagination(page as string, limit as string, res);
+  if (!pagination) return;
+
+  if (!company.hiredCandidates || company.hiredCandidates.length === 0) {
+    res.json({
+      hiredCandidates: [],
+      count: 0,
+      pagination: {
+        page: pagination.page,
+        limit: pagination.limit,
+        total: 0,
+        pages: 0,
+      },
+    });
+    return;
+  }
+
+  // Build query for hired graduates
+  const query: Record<string, unknown> = {
+    _id: { $in: company.hiredCandidates },
+  };
+
+  // Add search filter if provided
+  if (search && typeof search === 'string' && search.trim()) {
+    const searchRegex = new RegExp(_.escapeRegExp(search.trim()), 'i');
+    query.$or = [
+      { firstName: searchRegex },
+      { lastName: searchRegex },
+      { position: searchRegex },
+      { location: searchRegex },
+      { skills: { $in: [searchRegex] } },
+    ];
+  }
+
+  const skip = (pagination.page - 1) * pagination.limit;
+
+  const [graduates, total] = await Promise.all([
+    Graduate.find(query)
+      .select(
+        'firstName lastName position location skills education rank profilePictureUrl summary expLevel expYears workExperiences cv salaryPerAnnum userId'
+      )
+      .populate('userId', 'email')
+      .sort({ firstName: 1, lastName: 1 })
+      .skip(skip)
+      .limit(pagination.limit)
+      .lean(),
+    Graduate.countDocuments(query),
+  ]);
+
+  // For each hired candidate, get their application details with this company
+  const graduateIds = graduates.map((g) => g._id);
+  const companyJobs = await Job.find({ companyId: company._id })
+    .select('_id')
+    .lean();
+  const companyJobIds = companyJobs.map((job) => job._id);
+
+  // Get all hired applications for these graduates with this company
+  const hiredApplications = await Application.find({
+    graduateId: { $in: graduateIds },
+    jobId: { $in: companyJobIds },
+    status: 'hired',
+  })
+    .populate({
+      path: 'jobId',
+      select: 'title location jobType',
+    })
+    .select('graduateId jobId appliedAt reviewedAt')
+    .sort({ reviewedAt: -1 }) // Most recent hire first
+    .lean();
+
+  // Create a map of graduateId -> application details
+  const applicationMap = new Map();
+  hiredApplications.forEach((app) => {
+    const gradId = app.graduateId.toString();
+    if (!applicationMap.has(gradId)) {
+      applicationMap.set(gradId, app);
+    }
+  });
+
+  // Enrich graduate data with hire details
+  const enrichedGraduates = graduates.map((graduate) => {
+    const gradId = graduate._id.toString();
+    const application = applicationMap.get(gradId);
+
+    // Get the CV that's on display
+    const displayCV =
+      graduate.cv?.find((cv) => cv.onDisplay) || graduate.cv?.[0];
+
+    interface PopulatedJob {
+      title?: string;
+      location?: string;
+      jobType?: string;
+    }
+    const job = application?.jobId as PopulatedJob | undefined;
+
+    return {
+      id: gradId,
+      firstName: graduate.firstName,
+      lastName: graduate.lastName,
+      name: `${graduate.firstName} ${graduate.lastName}`,
+      position: graduate.position,
+      location: graduate.location,
+      skills: graduate.skills || [],
+      education: graduate.education,
+      rank: graduate.rank,
+      profilePictureUrl: graduate.profilePictureUrl,
+      summary: graduate.summary,
+      expLevel: graduate.expLevel,
+      expYears: graduate.expYears,
+      workExperiences: graduate.workExperiences || [],
+      cv: displayCV
+        ? {
+            fileUrl: displayCV.fileUrl,
+            fileName: displayCV.fileName,
+          }
+        : null,
+      salaryPerAnnum: graduate.salaryPerAnnum,
+      email:
+        graduate.userId &&
+        typeof graduate.userId === 'object' &&
+        'email' in graduate.userId
+          ? graduate.userId.email
+          : null,
+      hireDetails: application
+        ? {
+            jobTitle: job?.title,
+            jobLocation: job?.location,
+            jobType: job?.jobType,
+            hiredAt: application.reviewedAt,
+            appliedAt: application.appliedAt,
+          }
+        : null,
+    };
+  });
+
+  res.json({
+    hiredCandidates: enrichedGraduates,
+    count: total,
+    pagination: {
+      page: pagination.page,
+      limit: pagination.limit,
+      total,
+      pages: Math.ceil(total / pagination.limit),
+    },
+  });
 };

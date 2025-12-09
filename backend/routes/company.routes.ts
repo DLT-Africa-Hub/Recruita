@@ -16,6 +16,8 @@ import {
   scheduleInterview,
   getCompanyInterviews,
   getAvailableGraduates,
+  getHiredCandidates,
+  getHiredCandidatesCount,
 } from '../controllers/company.controller';
 import { suggestTimeSlots } from '../controllers/interview.controller';
 import {
@@ -86,3 +88,5 @@ router.put(
 );
 
 export default router;
+router.get('/hired-candidates/count', getHiredCandidatesCount);
+router.get('/hired-candidates', getHiredCandidates);

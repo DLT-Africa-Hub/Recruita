@@ -86,6 +86,7 @@ export const companyApi = {
     search?: string;
   }) => {
     const response = await api.get('/companies/applications', { params });
+    console.log(response);
     return response.data;
   },
 
@@ -96,6 +97,7 @@ export const companyApi = {
     upcoming?: 'true' | 'false';
   }) => {
     const response = await api.get('/companies/interviews', { params });
+
     return response.data;
   },
 
