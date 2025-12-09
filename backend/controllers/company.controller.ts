@@ -2088,7 +2088,7 @@ export const updateApplicationStatus = async (
     if (validatedStatus === 'hired') {
       try {
         let graduateId: mongoose.Types.ObjectId | null = null;
-        
+
         if (application.graduateId instanceof mongoose.Types.ObjectId) {
           graduateId = application.graduateId;
         } else if (
@@ -2098,9 +2098,10 @@ export const updateApplicationStatus = async (
         ) {
           const graduateObj = application.graduateId as { _id?: unknown };
           const gradIdValue = graduateObj._id;
-          graduateId = gradIdValue instanceof mongoose.Types.ObjectId
-            ? gradIdValue
-            : new mongoose.Types.ObjectId(String(gradIdValue));
+          graduateId =
+            gradIdValue instanceof mongoose.Types.ObjectId
+              ? gradIdValue
+              : new mongoose.Types.ObjectId(String(gradIdValue));
         }
 
         if (graduateId) {
@@ -2112,7 +2113,6 @@ export const updateApplicationStatus = async (
         console.error('Failed to update hiredCandidates:', error);
       }
     }
-
   }
 
   // Send notifications (only if not already sent by offer service)
@@ -2307,7 +2307,6 @@ export const scheduleInterview = async (
       ? graduateData.userId
       : new mongoose.Types.ObjectId(String(graduateData.userId));
 
-
   const graduateId =
     graduateData._id instanceof mongoose.Types.ObjectId
       ? graduateData._id
@@ -2316,7 +2315,6 @@ export const scheduleInterview = async (
         : new mongoose.Types.ObjectId(
             String(graduateData._id || graduateData.id || graduate)
           );
-
 
   const existingActiveInterviews = await Interview.find({
     companyId: company._id,
