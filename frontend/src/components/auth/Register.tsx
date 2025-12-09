@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import AuthForm from './AuthForm';
+
+interface ErrorResponse {
+  message?: string;
+  reason?: string;
+}
 
 const Register = () => {
   const [role, setRole] = useState<'graduate' | 'company'>('graduate');
@@ -14,6 +19,21 @@ const Register = () => {
   const { register, ingestAuthPayload } = useAuth();
   const navigate = useNavigate();
   const isFormValid = email.trim().length > 0 && password.trim().length > 0;
+
+  const formatErrorMessage = (
+    error: AxiosError<ErrorResponse> | Error
+  ): string => {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.message || 'An error occurred';
+      const reason = error.response?.data?.reason;
+
+      if (reason) {
+        return `${message}`;
+      }
+      return message;
+    }
+    return error.message || 'An unexpected error occurred';
+  };
 
   const google = useGoogleLogin({
     flow: 'auth-code',
@@ -40,7 +60,7 @@ const Register = () => {
           response?: { data?: { message?: string } };
         };
         console.error(error);
-        setError('Google login failed');
+        setError(formatErrorMessage(err as AxiosError<ErrorResponse>));
       }
     },
     onError: (err: { message?: string }) => {

@@ -2504,9 +2504,7 @@ export const updateApplicationStatus = async (
         return;
       }
     } else if (validatedStatus === 'hired') {
-      // If status is 'hired', update offer status and notify company
       try {
-        // Find and update offer if it exists
         const offer = await Offer.findOne({
           applicationId: new mongoose.Types.ObjectId(applicationId),
         });
@@ -2518,14 +2516,12 @@ export const updateApplicationStatus = async (
           await offer.save();
         }
 
-        // Close the job
         const job = await Job.findById(jobData?._id || application.jobId);
         if (job) {
           job.status = 'closed';
           await job.save();
         }
 
-        // Get company info from populated job data
         interface PopulatedCompany {
           _id?: mongoose.Types.ObjectId;
           userId?: mongoose.Types.ObjectId;
@@ -2540,7 +2536,6 @@ export const updateApplicationStatus = async (
 
         let companyData: PopulatedCompany | null = companyFromJob;
 
-        // If company wasn't populated, fetch it separately
         if (!companyData && jobData?.companyId) {
           const companyId =
             jobData.companyId instanceof mongoose.Types.ObjectId
@@ -2554,6 +2549,22 @@ export const updateApplicationStatus = async (
               .lean();
             companyData = company as PopulatedCompany | null;
           }
+        }
+
+        if (companyData?._id) {
+          const graduateObjectId =
+            typeof application.graduateId === 'object' &&
+            application.graduateId instanceof mongoose.Types.ObjectId
+              ? application.graduateId
+              : new mongoose.Types.ObjectId(String(application.graduateId));
+
+          await Company.findByIdAndUpdate(
+            companyData._id,
+            {
+              $addToSet: { hiredCandidates: graduateObjectId },
+            },
+            { new: true }
+          );
         }
 
         // Notify graduate

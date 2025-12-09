@@ -74,7 +74,7 @@ const DashboardHeader = () => {
           const response = await companyApi.getApplications({
             page: 1,
             limit: 1,
-            status: 'accepted',
+            status: 'hired',
           });
           return response;
         },
