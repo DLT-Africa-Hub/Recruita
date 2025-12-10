@@ -369,22 +369,34 @@ const matchGraduatesByRank = async (
       `[Rank Matching] Found ${matchingGraduates.length} graduates matching ranks: ${requiredRanks.join(', ')}`
     );
 
+    // Batch fetch existing matches to avoid N+1 queries
+    const graduateIds = matchingGraduates.map((g) => g._id);
+    const existingMatches = await Match.find({
+      graduateId: { $in: graduateIds },
+      jobId: jobId,
+    })
+      .select('graduateId')
+      .lean();
+
+    const existingGraduateIdsSet = new Set(
+      existingMatches.map((m) => m.graduateId?.toString())
+    );
+
+    // Filter out graduates that already have matches
+    const graduatesToMatch = matchingGraduates.filter(
+      (g) => !existingGraduateIdsSet.has(g._id.toString())
+    );
+
+    if (graduatesToMatch.length === 0) {
+      console.log(
+        `[Rank Matching] All graduates already have matches for job ${jobId}`
+      );
+      return;
+    }
+
     // Create matches for each graduate
-    const matchPromises = matchingGraduates.map(async (graduate) => {
+    const matchPromises = graduatesToMatch.map(async (graduate) => {
       try {
-        // Check if match already exists
-        const existingMatch = await Match.findOne({
-          graduateId: graduate._id,
-          jobId: jobId,
-        });
-
-        if (existingMatch) {
-          console.log(
-            `[Rank Matching] Match already exists for graduate ${graduate._id} and job ${jobId}`
-          );
-          return;
-        }
-
         // Create new match with a base score of 100 (rank-based match)
         const match = new Match({
           graduateId: graduate._id,

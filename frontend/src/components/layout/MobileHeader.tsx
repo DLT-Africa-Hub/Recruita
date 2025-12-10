@@ -174,7 +174,7 @@ const MobileHeader = () => {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="w-[32px] h-[32px] rounded-[8px] bg-gradient-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-semibold text-[14px] shadow-sm hover:shadow-md transition-shadow"
+              className="w-[32px] h-[32px] rounded-[8px] bg-linear-to-br from-orange-400 to-orange-500 flex items-center justify-center text-white font-semibold text-[14px] shadow-sm hover:shadow-md transition-shadow"
             >
               {displayName.charAt(0).toUpperCase()}
             </button>

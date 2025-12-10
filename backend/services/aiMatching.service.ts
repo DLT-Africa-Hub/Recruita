@@ -376,45 +376,65 @@ export const queueGraduateMatching = (
         return;
       }
 
+      // Filter valid matches and extract job IDs
+      const validMatches = matches.matches.filter((match) =>
+        mongoose.Types.ObjectId.isValid(match.id)
+      );
+      const jobIds = validMatches.map(
+        (match) => new mongoose.Types.ObjectId(match.id)
+      );
+
+      if (jobIds.length === 0) {
+        return;
+      }
+
+      // Batch fetch existing matches to avoid N+1 queries
+      const existingMatches = await Match.find({
+        graduateId: graduate._id,
+        jobId: { $in: jobIds },
+      })
+        .select('jobId')
+        .lean();
+
+      const existingJobIdsSet = new Set(
+        existingMatches.map((m) => m.jobId?.toString())
+      );
+
+      // Batch upsert all matches
       const matchResults = await Promise.all(
-        matches.matches
-          .filter((match) => mongoose.Types.ObjectId.isValid(match.id))
-          .map(async (match) => {
-            const jobId = new mongoose.Types.ObjectId(match.id);
-            const existingMatch = await Match.findOne({
+        validMatches.map(async (match) => {
+          const jobId = new mongoose.Types.ObjectId(match.id);
+          const isNew = !existingJobIdsSet.has(jobId.toString());
+
+          const updatedMatch = await Match.findOneAndUpdate(
+            {
               graduateId: graduate._id,
               jobId,
-            }).lean();
-
-            const updatedMatch = await Match.findOneAndUpdate(
-              {
-                graduateId: graduate._id,
-                jobId,
+            },
+            {
+              $set: {
+                score: scoreToPercentage(match.score),
               },
-              {
-                $set: {
-                  score: scoreToPercentage(match.score),
-                },
-                $setOnInsert: {
-                  status: 'pending',
-                },
+              $setOnInsert: {
+                status: 'pending',
               },
-              {
-                upsert: true,
-                new: true,
-              }
-            );
+            },
+            {
+              upsert: true,
+              new: true,
+            }
+          );
 
-            const normalizedMatchId = normalizeId(updatedMatch?._id);
-            const normalizedJobId = normalizeId(updatedMatch?.jobId);
+          const normalizedMatchId = normalizeId(updatedMatch?._id);
+          const normalizedJobId = normalizeId(updatedMatch?.jobId);
 
-            return {
-              matchId: normalizedMatchId,
-              jobId: normalizedJobId,
-              isNew: !existingMatch,
-              score: match.score,
-            };
-          })
+          return {
+            matchId: normalizedMatchId,
+            jobId: normalizedJobId,
+            isNew,
+            score: match.score,
+          };
+        })
       );
 
       const freshMatches = matchResults.filter(
@@ -549,6 +569,22 @@ export const queueJobMatching = (
 
     const matchOptions = buildMatchOptions();
 
+    // Batch fetch existing matches for all graduates to avoid N+1 queries
+    const graduateIds = graduates
+      .filter((g) => isVector(g.assessmentData?.embedding))
+      .map((g) => g._id);
+
+    const existingMatches = await Match.find({
+      graduateId: { $in: graduateIds },
+      jobId: job._id,
+    })
+      .select('graduateId')
+      .lean();
+
+    const existingMatchesSet = new Set(
+      existingMatches.map((m) => m.graduateId?.toString())
+    );
+
     for (const graduate of graduates) {
       if (!isVector(graduate.assessmentData?.embedding)) {
         continue;
@@ -572,10 +608,7 @@ export const queueJobMatching = (
           continue;
         }
 
-        const existingMatch = await Match.findOne({
-          graduateId: graduate._id,
-          jobId: job._id,
-        }).lean();
+        const existingMatch = existingMatchesSet.has(graduate._id.toString());
 
         const updatedMatch = await Match.findOneAndUpdate(
           {

@@ -221,12 +221,14 @@ api.interceptors.response.use(
         });
 
         // Only clear tokens and redirect if refresh truly failed
-        // Don't clear if it's a network error - user might come back online
+        // Don't clear if it's a network error or rate limit - user might come back online or rate limit will reset
         const isNetworkError = !error.response;
+        const isRateLimitError = error.response?.status === 429;
         const isAuthError =
           error.response?.status === 401 || error.response?.status === 403;
 
-        if (isAuthError || !isNetworkError) {
+        // Only logout on auth errors, not on network errors or rate limits
+        if (isAuthError && !isNetworkError && !isRateLimitError) {
           sessionStorage.removeItem('token');
           sessionStorage.removeItem('user');
           sessionStorage.removeItem('refreshToken');

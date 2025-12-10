@@ -165,41 +165,85 @@ export const getChatList = async (req: Request, res: Response) => {
       { $sort: { 'lastMessage.createdAt': -1 } },
     ]);
 
-    const conversationsWithDetails = await Promise.all(
-      conversations.map(async (conv) => {
-        const otherUserId = conv._id;
+    // Batch fetch all users to avoid N+1 queries
+    const otherUserIds = conversations.map((conv) => conv._id);
+    const otherUsers = await UserModel.find({
+      _id: { $in: otherUserIds },
+    }).lean();
 
-        const otherUser = await UserModel.findById(otherUserId).lean();
+    const userMap = new Map(
+      otherUsers.map((user) => [user._id.toString(), user])
+    );
+
+    // Separate users by role for batch fetching
+    const graduateUserIds: mongoose.Types.ObjectId[] = [];
+    const companyUserIds: mongoose.Types.ObjectId[] = [];
+
+    otherUsers.forEach((user) => {
+      if (user.role === 'graduate') {
+        graduateUserIds.push(user._id);
+      } else if (user.role === 'company') {
+        companyUserIds.push(user._id);
+      }
+    });
+
+    // Batch fetch graduates and companies
+    const [graduates, companies] = await Promise.all([
+      graduateUserIds.length > 0
+        ? GraduateModel.find({
+            userId: { $in: graduateUserIds },
+          })
+            .select('userId firstName lastName profilePictureUrl position')
+            .lean()
+        : [],
+      companyUserIds.length > 0
+        ? CompanyModel.find({
+            userId: { $in: companyUserIds },
+          })
+            .select('userId companyName industry website')
+            .lean()
+        : [],
+    ]);
+
+    // Create maps for quick lookup
+    const graduateMap = new Map(
+      graduates.map((g) => [g.userId?.toString(), g])
+    );
+    const companyMap = new Map(companies.map((c) => [c.userId?.toString(), c]));
+
+    type UserProfileData = {
+      _id: mongoose.Types.ObjectId;
+    } & (
+      | {
+          firstName?: string;
+          lastName?: string;
+          profilePictureUrl?: string;
+          position?: string;
+        }
+      | {
+          companyName?: string;
+          industry?: string;
+          website?: string;
+        }
+      | {
+          email?: string;
+          username?: string;
+        }
+    );
+
+    const conversationsWithDetails = conversations
+      .map((conv) => {
+        const otherUserId = conv._id;
+        const otherUser = userMap.get(otherUserId.toString());
+
         if (!otherUser) {
           return null;
         }
 
-        type UserProfileData = {
-          _id: mongoose.Types.ObjectId;
-        } & (
-          | {
-              firstName?: string;
-              lastName?: string;
-              profilePictureUrl?: string;
-              position?: string;
-            }
-          | {
-              companyName?: string;
-              industry?: string;
-              website?: string;
-            }
-          | {
-              email?: string;
-              username?: string;
-            }
-        );
-
         let userData: UserProfileData | null = null;
 
         if (otherUser.role === 'graduate') {
-          const graduate = await GraduateModel.findOne({
-            userId: otherUserId,
-          }).lean();
+          const graduate = graduateMap.get(otherUserId.toString());
           userData = {
             _id: otherUserId,
             firstName: graduate?.firstName || '',
@@ -208,9 +252,7 @@ export const getChatList = async (req: Request, res: Response) => {
             position: graduate?.position || '',
           };
         } else if (otherUser.role === 'company') {
-          const company = await CompanyModel.findOne({
-            userId: otherUserId,
-          }).lean();
+          const company = companyMap.get(otherUserId.toString());
           userData = {
             _id: otherUserId,
             companyName: company?.companyName || '',
@@ -249,7 +291,7 @@ export const getChatList = async (req: Request, res: Response) => {
           unreadCount: conv.unreadCount,
         };
       })
-    );
+      .filter((conv): conv is NonNullable<typeof conv> => conv !== null);
 
     const validConversations = conversationsWithDetails.filter(
       (conv) => conv !== null

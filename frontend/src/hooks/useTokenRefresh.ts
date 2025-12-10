@@ -44,8 +44,15 @@ export const useTokenRefresh = () => {
             console.log('Token refreshed proactively');
           }
         } catch (error) {
-          console.error('Failed to refresh token proactively:', error);
+          // Don't log rate limit errors as errors - they're expected and will retry
+          const isRateLimitError =
+            (error as { response?: { status?: number } })?.response?.status ===
+            429;
+          if (!isRateLimitError) {
+            console.error('Failed to refresh token proactively:', error);
+          }
           // Don't clear tokens here - let the 401 handler deal with it
+          // Rate limits will reset, so we'll retry on next check
         } finally {
           isRefreshingRef.current = false;
         }
