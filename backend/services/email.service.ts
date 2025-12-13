@@ -108,7 +108,8 @@ class EmailService {
       console.info(`To: ${message.to}`);
       console.info(`Subject: ${message.subject}`);
       if (message.text) {
-        console.info(`Text:\n${message.text}`);
+        // Remove CR/LF to prevent log injection from user-controlled content
+        console.info(`Text: ${message.text.replace(/[\r\n]+/g, ' ')}`);
       }
       if (message.html) {
         console.info(`HTML: [HTML content]`);
