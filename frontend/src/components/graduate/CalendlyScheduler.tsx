@@ -111,7 +111,9 @@ const CalendlyScheduler = ({
     () => availability?.eventTypes || [],
     [availability?.eventTypes]
   );
-  const companyTimezone = availability?.companyTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const companyTimezone =
+    availability?.companyTimezone ||
+    Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   // Auto-select "30 Minute Meeting" by default when event types are loaded
   useEffect(() => {

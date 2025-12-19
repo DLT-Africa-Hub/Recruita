@@ -167,42 +167,116 @@ const Interviews = () => {
   const calendlyApplications = useMemo(() => {
     if (!isGraduate || !applicationsData) return [];
 
+    // Get upcoming interviews to check for conflicts
+    const upcomingInterviews = (data?.interviews ?? []) as InterviewRecord[];
+    const now = Date.now();
+
     return applicationsData.filter((app: ApiApplication) => {
       // Check if company has Calendly enabled
       // Backend returns 'job' object with populated companyId
       const jobData = app.job || app.jobId;
       const companyData = jobData?.companyId;
-      
+      const jobId = jobData?._id?.toString() || jobData?.id?.toString();
+      const applicationId = app._id?.toString();
+
       // Handle both string (ObjectId) and object (populated) companyId
       let calendlyData: { enabled?: boolean; publicLink?: string } | undefined;
-      if (typeof companyData === 'object' && companyData !== null && 'calendly' in companyData) {
-        calendlyData = (companyData as { calendly?: { enabled?: boolean; publicLink?: string } }).calendly;
+      if (
+        typeof companyData === 'object' &&
+        companyData !== null &&
+        'calendly' in companyData
+      ) {
+        calendlyData = (
+          companyData as {
+            calendly?: { enabled?: boolean; publicLink?: string };
+          }
+        ).calendly;
       }
-      
+
       const hasCalendly = calendlyData?.enabled === true;
 
-      // Check if there's no active interview
+      // Check if there's no active interview on the application itself
       // Allow scheduling if there's no interview OR if the interview is completed/cancelled
       // interviewId can be either an ObjectId string or a populated object with status
       const interviewId = app.interviewId;
       const interviewStatus =
-        typeof interviewId === 'object' && interviewId !== null && 'status' in interviewId
+        typeof interviewId === 'object' &&
+        interviewId !== null &&
+        'status' in interviewId
           ? (interviewId as { status?: string }).status
           : undefined;
-      const activeInterviewStatuses = ['pending_selection', 'scheduled', 'in_progress'];
-      const hasNoActiveInterview =
+      const activeInterviewStatuses = [
+        'pending_selection',
+        'scheduled',
+        'in_progress',
+      ];
+      const hasNoActiveInterviewOnApp =
         !interviewId ||
         !interviewStatus ||
         !activeInterviewStatuses.includes(interviewStatus);
+
+      // Check if there's an upcoming interview for the same application/job that hasn't been completed
+      const hasUpcomingInterview = upcomingInterviews.some((interview) => {
+        // Check if interview is for the same application
+        if (interview.applicationId === applicationId) {
+          // Check if interview hasn't been completed
+          if (interview.status === 'completed') return false;
+
+          // Check if interview hasn't passed its end time
+          if (interview.scheduledAt) {
+            const scheduledTime = new Date(interview.scheduledAt).getTime();
+            const durationMs = (interview.durationMinutes || 30) * 60 * 1000;
+            const endTime = scheduledTime + durationMs;
+            if (!Number.isNaN(scheduledTime) && endTime >= now) {
+              return true; // There's an upcoming interview that hasn't ended
+            }
+          } else if (
+            interview.status &&
+            activeInterviewStatuses.includes(interview.status)
+          ) {
+            return true; // Interview is scheduled/in progress
+          }
+        }
+
+        // Also check by job ID if application ID doesn't match
+        if (jobId && interview.job?.id === jobId) {
+          // Check if interview hasn't been completed
+          if (interview.status === 'completed') return false;
+
+          // Check if interview hasn't passed its end time
+          if (interview.scheduledAt) {
+            const scheduledTime = new Date(interview.scheduledAt).getTime();
+            const durationMs = (interview.durationMinutes || 30) * 60 * 1000;
+            const endTime = scheduledTime + durationMs;
+            if (!Number.isNaN(scheduledTime) && endTime >= now) {
+              return true; // There's an upcoming interview that hasn't ended
+            }
+          } else if (
+            interview.status &&
+            activeInterviewStatuses.includes(interview.status)
+          ) {
+            return true; // Interview is scheduled/in progress
+          }
+        }
+
+        return false;
+      });
 
       // Only show for accepted/shortlisted applications
       const eligibleStatus =
         app.status &&
         ['accepted', 'shortlisted', 'reviewed'].includes(app.status);
 
-      return hasCalendly && hasNoActiveInterview && eligibleStatus && app._id;
+      // Only show if there's no active interview on the app AND no upcoming interview
+      return (
+        hasCalendly &&
+        hasNoActiveInterviewOnApp &&
+        !hasUpcomingInterview &&
+        eligibleStatus &&
+        app._id
+      );
     });
-  }, [applicationsData, isGraduate]);
+  }, [applicationsData, isGraduate, data?.interviews]);
 
   const selectSlotMutation = useMutation({
     mutationFn: async ({
@@ -498,7 +572,9 @@ const Interviews = () => {
                 const jobData = app.job || app.jobId;
                 const companyData = jobData?.companyId;
                 const companyName =
-                  (typeof companyData === 'object' && companyData !== null && 'companyName' in companyData)
+                  typeof companyData === 'object' &&
+                  companyData !== null &&
+                  'companyName' in companyData
                     ? (companyData as { companyName?: string }).companyName
                     : 'Company';
                 const jobTitle = jobData?.title || 'Position';

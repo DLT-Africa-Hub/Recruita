@@ -437,9 +437,7 @@ const CompanyPreviewModal: React.FC<CompanyPreviewModalProps> = ({
 
         {/* Step Content - Scrollable Container */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-[30px] sm:py-[45px] px-[15px] sm:px-[30px] lg:px-[60px] xl:px-[150px]">
-          <div className="flex flex-col gap-[20px]">
-            {renderStepContent()}
-          </div>
+          <div className="flex flex-col gap-[20px]">{renderStepContent()}</div>
         </div>
       </div>
     </div>

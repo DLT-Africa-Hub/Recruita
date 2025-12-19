@@ -62,21 +62,21 @@ export const formatSalaryRange = (salary?: {
   currency?: string;
 }): string => {
   if (!salary) return 'Not specified';
-  
+
   // Handle both formats: { amount, currency } and { min, max, currency }
   const minAmount = salary.min ?? salary.amount;
   const maxAmount = salary.max ?? salary.amount;
-  
+
   if (!minAmount && !maxAmount) return 'Not specified';
-  
+
   const symbol = getCurrencySymbol(salary.currency);
-  
+
   // If min and max are the same, or only one value exists, show single value
   if (minAmount === maxAmount || !maxAmount) {
     const amountInK = Math.round((minAmount || 0) / 1000);
     return `${symbol}${amountInK.toLocaleString()}k`;
   }
-  
+
   // Show range if min and max are different
   const minInK = Math.round((minAmount || 0) / 1000);
   const maxInK = Math.round((maxAmount || 0) / 1000);

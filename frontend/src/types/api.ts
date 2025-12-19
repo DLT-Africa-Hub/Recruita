@@ -75,15 +75,17 @@ export interface ApiApplication {
       currency?: string;
     };
     directContact?: boolean;
-    companyId?: string | {
-      _id?: string;
-      id?: string;
-      companyName?: string;
-      calendly?: {
-        enabled?: boolean;
-        publicLink?: string;
-      };
-    };
+    companyId?:
+      | string
+      | {
+          _id?: string;
+          id?: string;
+          companyName?: string;
+          calendly?: {
+            enabled?: boolean;
+            publicLink?: string;
+          };
+        };
     companyName?: string;
   };
   jobId?: {

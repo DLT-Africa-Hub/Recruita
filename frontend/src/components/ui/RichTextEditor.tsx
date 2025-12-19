@@ -25,7 +25,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   placeholder = 'Enter text...',
   label,
   required,
-  rows = 4,
 }) => {
   const editor = useEditor({
     extensions: [
