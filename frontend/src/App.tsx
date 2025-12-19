@@ -39,6 +39,8 @@ import Companies from './pages/admin/Companies';
 import Graduates from './pages/admin/Graduates';
 import Jobs from './pages/admin/Jobs';
 import ApplicationStatus from './pages/admin/AppStatus';
+import { SocketProvider } from './context/SocketContext';
+
 
 const ExplorePreviewRedirect = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,6 +53,7 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
+      <SocketProvider>
         <ToastProvider>
           <div className="App">
             <Routes>
@@ -414,6 +417,7 @@ function App() {
             </Routes>
           </div>
         </ToastProvider>
+        </SocketProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

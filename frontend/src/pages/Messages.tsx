@@ -28,11 +28,13 @@ interface Conversation {
 const Messages: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, refreshUnreadCount } = useSocket();
   const { id } = useParams<{ id?: string }>();
   const [activeChat, setActiveChat] = useState<Conversation | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+
 
   const {
     data: messagesResponse,
@@ -45,10 +47,10 @@ const Messages: React.FC = () => {
       const response = await messageApi.getMessages({ page: 1, limit: 100 });
       return response;
     },
-    refetchInterval: false, // Real-time updates via Socket.IO
+    refetchInterval: false, 
   });
 
-  // Listen for new messages and conversation updates
+ 
   useEffect(() => {
     if (!socket) return;
 
@@ -95,6 +97,20 @@ const Messages: React.FC = () => {
       >[];
     }
 
+    // Helper function to get first position from array or comma-separated string
+    const getFirstPosition = (position: string | string[] | undefined): string => {
+      if (!position) return '';
+      if (Array.isArray(position)) {
+        return position[0] || '';
+      }
+      if (typeof position === 'string') {
+        // If it's a comma-separated string, split and take first
+        const parts = position.split(',').map(p => p.trim()).filter(p => p);
+        return parts[0] || '';
+      }
+      return '';
+    };
+
     return conversationsData.map(
       (conv: Record<string, unknown>): Conversation => {
         let name = 'Unknown';
@@ -134,7 +150,7 @@ const Messages: React.FC = () => {
           const graduate = (conv.graduate || {}) as {
             firstName?: string;
             lastName?: string;
-            position?: string;
+            position?: string | string[];
             profilePictureUrl?: string;
           };
 
@@ -145,14 +161,15 @@ const Messages: React.FC = () => {
             profilePictureUrl?: string;
           };
 
-          console.log(admin);
+ 
 
           // Show graduate if available, otherwise show admin
           if (graduate.firstName || graduate.lastName) {
             const firstName = graduate.firstName || '';
             const lastName = graduate.lastName || '';
             name = `${firstName} ${lastName}`.trim() || 'Graduate';
-            role = graduate.position || '';
+            // Get first position from array or comma-separated string
+            role = getFirstPosition(graduate.position);
             image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
           } else if (admin.email) {
             name = admin.username || '';
@@ -172,11 +189,10 @@ const Messages: React.FC = () => {
           const graduate = (conv.graduate || {}) as {
             firstName?: string;
             lastName?: string;
-            position?: string;
+            position?: string | string[];
             profilePictureUrl?: string;
           };
 
-          // Prefer company if available, otherwise show graduate
           if (company.companyName) {
             name = company.companyName || 'Company';
             role = company.industry || '';
@@ -185,7 +201,8 @@ const Messages: React.FC = () => {
             const firstName = graduate.firstName || '';
             const lastName = graduate.lastName || '';
             name = `${firstName} ${lastName}`.trim() || 'Graduate';
-            role = graduate.position || '';
+            // Get first position from array or comma-separated string
+            role = getFirstPosition(graduate.position);
             image = graduate.profilePictureUrl || DEFAULT_PROFILE_IMAGE;
           } else {
             name = 'User';
@@ -268,7 +285,9 @@ const Messages: React.FC = () => {
     navigate('/messages', { replace: true });
     // Refetch messages to update unread counts
     refetch();
-  }, [navigate, refetch]);
+    // Refresh unread count from Socket.IO
+    refreshUnreadCount();
+  }, [navigate, refetch, refreshUnreadCount]);
 
   useEffect(() => {
     if (id && conversations.length > 0) {

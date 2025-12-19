@@ -152,7 +152,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const [isConfirmingHire, setIsConfirmingHire] = useState(false);
   const [showConfirmHireDialog, setShowConfirmHireDialog] = useState(false);
   const [showMarkHiredDialog, setShowMarkHiredDialog] = useState(false);
-  const { socket, isConnected, typingUsers, startTyping, stopTyping } =
+  const { socket, onlineUsers, typingUsers, startTyping, stopTyping, refreshUnreadCount } =
     useSocket();
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -160,6 +160,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
   const messagesRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
+
+  // Check if the company/user we're chatting with is online
+  const isCompanyOnline = company?.id ? onlineUsers.has(company.id as string) : false;
 
   const CLOUDINARY_UPLOAD_PRESET = import.meta.env
     .VITE_CLOUDINARY_UPLOAD_PRESET;
@@ -539,7 +542,9 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
           message.senderId === company.id &&
           message.receiverId === user?.id
         ) {
-          messageApi.markAsRead(company.id as string);
+          messageApi.markAsRead(company.id as string).then(() => {
+            refreshUnreadCount();
+          });
         }
       }
     };
@@ -566,7 +571,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
       socket.off('message:read', handleMessageRead);
       socket.emit('conversation:leave', company.id);
     };
-  }, [socket, company?.id, user?.id, queryClient]);
+  }, [socket, company?.id, user?.id, queryClient, refreshUnreadCount]);
 
   // Cleanup typing timeout on unmount or company change
   useEffect(() => {
@@ -594,10 +599,11 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
         messageApi.markAsRead(company.id as string).then(() => {
           queryClient.invalidateQueries({ queryKey: ['messages'] });
           queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+          refreshUnreadCount();
         });
       }
     }
-  }, [company?.id, messages, user, queryClient]);
+  }, [company?.id, messages, user, queryClient, refreshUnreadCount]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: {
@@ -841,22 +847,22 @@ const ChatModal: React.FC<ChatModalProps> = ({ company, onClose }) => {
             <div className="flex items-center gap-2">
               <div
                 className={`flex items-center gap-[5px] py-2.5 px-5 border-2 rounded-[20px] ${
-                  isConnected
+                  isCompanyOnline
                     ? 'border-[#5CFF0D] bg-[#EFFFE2]'
                     : 'border-gray-300 bg-gray-100'
                 }`}
               >
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    isConnected ? 'bg-[#5CFF0D]' : 'bg-gray-400'
+                    isCompanyOnline ? 'bg-[#5CFF0D]' : 'bg-gray-400'
                   }`}
                 ></span>
                 <p
                   className={`font-medium text-[14px] ${
-                    isConnected ? 'text-[#5CFF0D]' : 'text-gray-600'
+                    isCompanyOnline ? 'text-[#5CFF0D]' : 'text-gray-600'
                   }`}
                 >
-                  {isConnected ? 'online' : 'offline'}
+                  {isCompanyOnline ? 'online' : 'offline'}
                 </p>
               </div>
             </div>

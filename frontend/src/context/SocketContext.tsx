@@ -9,12 +9,14 @@ import React, {
 } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { messageApi } from '../api/message';
 
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   onlineUsers: Set<string>;
   typingUsers: Set<string>;
+  unreadMessageCount: number;
   sendMessage: (data: {
     receiverId: string;
     message: string;
@@ -24,6 +26,7 @@ interface SocketContextType {
   }) => void;
   startTyping: (receiverId: string) => void;
   stopTyping: (receiverId: string) => void;
+  refreshUnreadCount: () => Promise<void>;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -46,6 +49,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [unreadMessageCount, setUnreadMessageCount] = useState<number>(0);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -60,6 +64,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       setIsConnected(false);
       setOnlineUsers(new Set());
       setTypingUsers(new Set());
+      setUnreadMessageCount(0);
       // Clear typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -67,6 +72,17 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       }
       return;
     }
+
+    // Fetch unread message count
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await messageApi.getUnreadCount();
+        setUnreadMessageCount(response.totalUnread || 0);
+      } catch (error) {
+        console.error('Failed to fetch unread message count:', error);
+        setUnreadMessageCount(0);
+      }
+    };
 
     // Initialize socket connection
     const newSocket = io(
@@ -88,6 +104,8 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     newSocket.on('connect', () => {
       console.log('✅ Socket connected');
       setIsConnected(true);
+      // Refresh unread count on connect/reconnect
+      fetchUnreadCount();
     });
 
     newSocket.on('disconnect', () => {
@@ -129,7 +147,24 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       });
     });
 
+    // Handle new messages - increment unread count if message is for current user
+    newSocket.on('message:new', (message: { receiverId: string; senderId: string }) => {
+      if (user?.id && String(message.receiverId) === String(user.id)) {
+        // Increment unread count when receiving a new message
+        setUnreadMessageCount((prev) => prev + 1);
+      }
+    });
+
+    // Handle message read - refresh count (messages were marked as read)
+    newSocket.on('message:read', () => {
+      // Refresh unread count when messages are read
+      fetchUnreadCount();
+    });
+
     setSocket(newSocket);
+
+    // Fetch initial unread count
+    fetchUnreadCount();
 
     return () => {
       // Cleanup typing timeout
@@ -194,6 +229,15 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     [socket, isConnected]
   );
 
+  const refreshUnreadCount = useCallback(async () => {
+    try {
+      const response = await messageApi.getUnreadCount();
+      setUnreadMessageCount(response.totalUnread || 0);
+    } catch (error) {
+      console.error('Failed to refresh unread message count:', error);
+    }
+  }, []);
+
   return (
     <SocketContext.Provider
       value={{
@@ -201,9 +245,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         isConnected,
         onlineUsers,
         typingUsers,
+        unreadMessageCount,
         sendMessage,
         startTyping,
         stopTyping,
+        refreshUnreadCount,
       }}
     >
       {children}
