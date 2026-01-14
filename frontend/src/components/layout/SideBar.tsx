@@ -208,7 +208,11 @@ const SideBar: React.FC = () => {
               <button
                 onClick={() => {
                   const basePath =
-                    user?.role === 'company' ? '/company' : '/graduate';
+                    user?.role === 'company'
+                      ? '/company'
+                      : user?.role === 'admin'
+                        ? '/admin'
+                        : '/graduate';
                   setIsDropdownOpen(false);
                   navigate(`${basePath}/profile`);
                 }}

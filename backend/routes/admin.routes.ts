@@ -51,7 +51,6 @@ import {
   getAdminInterviews,
   // Calendly Integration
   getAdminCalendlyAuthUrl,
-  adminCalendlyOAuthCallback,
   getAdminCalendlyStatus,
   setAdminCalendlyPublicLink,
   disconnectAdminCalendly,
@@ -131,8 +130,9 @@ router.post('/graduates/:graduateId/message', sendMessageToGraduate);
 // ============================================
 // CALENDLY INTEGRATION ROUTES
 // ============================================
+// Note: The OAuth callback is handled by the unified callback at /companies/calendly/callback
+// which routes based on user role from the state token
 router.get('/calendly/connect', getAdminCalendlyAuthUrl);
-router.get('/calendly/callback', adminCalendlyOAuthCallback);
 router.get('/calendly/status', getAdminCalendlyStatus);
 router.post('/calendly/public-link', setAdminCalendlyPublicLink);
 router.delete('/calendly/disconnect', disconnectAdminCalendly);

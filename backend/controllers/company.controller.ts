@@ -3789,14 +3789,20 @@ export const getCalendlyAuthUrl = async (
 };
 
 /**
- * Handle Calendly OAuth callback
+ * Handle Calendly OAuth callback (Unified for both Company and Admin)
  * GET /api/v1/companies/calendly/callback
+ * This endpoint handles OAuth callbacks for both companies and admins
+ * by checking the user's role from the state token
  */
 export const calendlyOAuthCallback = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const redirectToProfile = (success: boolean, message?: string) => {
+  const redirectToProfile = (
+    success: boolean,
+    message?: string,
+    userRole?: 'company' | 'admin'
+  ) => {
     const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');
     const params = new URLSearchParams();
 
@@ -3809,7 +3815,10 @@ export const calendlyOAuthCallback = async (
       }
     }
 
-    const redirectUrl = `${trimmedBase}/company/profile?${params.toString()}`;
+    // Route to appropriate profile page based on user role
+    const profilePath =
+      userRole === 'admin' ? '/admin/profile' : '/company/profile';
+    const redirectUrl = `${trimmedBase}${profilePath}?${params.toString()}`;
     res.redirect(redirectUrl);
   };
 
@@ -3837,12 +3846,22 @@ export const calendlyOAuthCallback = async (
 
     const userId = stateToken.user;
 
+    // Get user to determine role (company or admin)
+    const User = (await import('../models/User.model')).default;
+    const user = await User.findById(userId).select('role');
+    if (!user) {
+      redirectToProfile(false, 'User not found');
+      return;
+    }
+
+    const userRole = user.role as 'company' | 'admin';
+
     // Consume the state token
     stateToken.consumedAt = new Date();
     await stateToken.save();
 
     if (!code || typeof code !== 'string') {
-      redirectToProfile(false, 'Authorization code is required');
+      redirectToProfile(false, 'Authorization code is required', userRole);
       return;
     }
 
@@ -3851,11 +3870,16 @@ export const calendlyOAuthCallback = async (
       !calendlyConfig.clientSecret ||
       !calendlyConfig.redirectUri
     ) {
-      redirectToProfile(false, 'Calendly OAuth configuration is incomplete');
+      redirectToProfile(
+        false,
+        'Calendly OAuth configuration is incomplete',
+        userRole
+      );
       return;
     }
 
     // Exchange authorization code for access token
+    // Use the same redirect URI for both company and admin (unified callback)
     const tokenResponse = await axios.post(
       'https://auth.calendly.com/oauth/token',
       {
@@ -3863,7 +3887,7 @@ export const calendlyOAuthCallback = async (
         client_id: calendlyConfig.clientId,
         client_secret: calendlyConfig.clientSecret,
         code,
-        redirect_uri: calendlyConfig.redirectUri,
+        redirect_uri: calendlyConfig.redirectUri, // Always use company callback URI
       },
       {
         headers: {
@@ -3875,7 +3899,7 @@ export const calendlyOAuthCallback = async (
     const { access_token, refresh_token, expires_in } = tokenResponse.data;
 
     if (!access_token) {
-      redirectToProfile(false, 'Failed to obtain access token');
+      redirectToProfile(false, 'Failed to obtain access token', userRole);
       return;
     }
 
@@ -3884,10 +3908,55 @@ export const calendlyOAuthCallback = async (
       calendlyService.encryptToken(access_token)
     );
 
-    // Find company profile
+    // Handle based on user role
+    if (userRole === 'admin') {
+      // Admin flow
+      const adminUser = await User.findById(userId).select(
+        '+calendly.accessToken +calendly.refreshToken'
+      );
+      if (!adminUser || adminUser.role !== 'admin') {
+        redirectToProfile(false, 'Admin user not found', userRole);
+        return;
+      }
+
+      const encryptedAccessToken =
+        calendlyService.encryptToken(access_token) || access_token;
+      const encryptedRefreshToken = refresh_token
+        ? calendlyService.encryptToken(refresh_token) || refresh_token
+        : undefined;
+
+      const tokenExpiresAt = expires_in
+        ? new Date(Date.now() + expires_in * 1000)
+        : undefined;
+
+      // Initialize calendly object if it doesn't exist
+      if (!adminUser.calendly) {
+        adminUser.calendly = {
+          enabled: false,
+        };
+      }
+
+      // Set all calendly fields
+      adminUser.calendly.userUri = userInfo.uri;
+      adminUser.calendly.accessToken = encryptedAccessToken;
+      adminUser.calendly.tokenExpiresAt = tokenExpiresAt;
+      adminUser.calendly.connectedAt = new Date();
+      adminUser.calendly.enabled = true;
+
+      if (encryptedRefreshToken) {
+        adminUser.calendly.refreshToken = encryptedRefreshToken;
+      }
+
+      await adminUser.save();
+
+      redirectToProfile(true, undefined, userRole);
+      return;
+    }
+
+    // Company flow (existing logic)
     const company = await Company.findOne({ userId });
     if (!company) {
-      redirectToProfile(false, 'Company profile not found');
+      redirectToProfile(false, 'Company profile not found', userRole);
       return;
     }
 
@@ -3933,7 +4002,7 @@ export const calendlyOAuthCallback = async (
     // Save the document - this is the most reliable way to save fields with select: false
     await companyDoc.save();
 
-    redirectToProfile(true);
+    redirectToProfile(true, undefined, userRole);
   } catch (error) {
     console.error('Calendly OAuth callback error:', error);
     let errorMessage = 'Internal server error';
@@ -3943,7 +4012,29 @@ export const calendlyOAuthCallback = async (
         error.response?.data?.message || error.message || errorMessage;
     }
 
-    redirectToProfile(false, errorMessage);
+    // Try to get user role for proper redirect
+    let fallbackUserRole: 'company' | 'admin' = 'company';
+    try {
+      const { state } = req.query;
+      if (state && typeof state === 'string') {
+        const stateHash = hashToken(state);
+        const stateToken = await Token.findOne({
+          tokenHash: stateHash,
+          type: TOKEN_TYPES.CALENDLY_OAUTH_STATE,
+        });
+        if (stateToken) {
+          const User = (await import('../models/User.model')).default;
+          const user = await User.findById(stateToken.user).select('role');
+          if (user && (user.role === 'admin' || user.role === 'company')) {
+            fallbackUserRole = user.role;
+          }
+        }
+      }
+    } catch {
+      // Ignore errors in error handling
+    }
+
+    redirectToProfile(false, errorMessage, fallbackUserRole);
   }
 };
 

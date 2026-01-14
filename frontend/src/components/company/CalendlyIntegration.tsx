@@ -21,8 +21,8 @@ const CalendlyIntegration = () => {
   const connectMutation = useMutation({
     mutationFn: async () => {
       const response = await companyApi.getCalendlyAuthUrl();
-      // Redirect to Calendly OAuth URL
-      window.location.href = response.authUrl;
+      // Open Calendly OAuth URL in a new tab
+      window.open(response.authUrl, '_blank', 'noopener,noreferrer');
     },
   });
 

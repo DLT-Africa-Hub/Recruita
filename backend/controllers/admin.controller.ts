@@ -1843,20 +1843,9 @@ export const getAdminCalendlyAuthUrl = async (
       metadata: { userId: userId.toString() },
     });
 
-    // Use admin-specific redirect URI (replace /companies/ with /admin/ if present, or append /admin/)
-    let adminRedirectUri = calendlyConfig.redirectUri;
-    if (adminRedirectUri.includes('/companies/')) {
-      adminRedirectUri = adminRedirectUri.replace('/companies/', '/admin/');
-    } else {
-      // If redirect URI doesn't have /companies/, append /admin/ before the last segment
-      const lastSlashIndex = adminRedirectUri.lastIndexOf('/');
-      if (lastSlashIndex > 0) {
-        adminRedirectUri =
-          adminRedirectUri.substring(0, lastSlashIndex) +
-          '/admin' +
-          adminRedirectUri.substring(lastSlashIndex);
-      }
-    }
+    // Use the unified callback endpoint (company callback handles both company and admin)
+    // The callback will route based on user role from the state token
+    const adminRedirectUri = calendlyConfig.redirectUri;
 
     const authUrl = new URL('https://auth.calendly.com/oauth/authorize');
     authUrl.searchParams.append('client_id', calendlyConfig.clientId);
@@ -1943,19 +1932,8 @@ export const adminCalendlyOAuthCallback = async (
     }
 
     // Exchange authorization code for access token
-    // Use the same redirect URI format as in getAdminCalendlyAuthUrl
-    let adminRedirectUri = calendlyConfig.redirectUri;
-    if (adminRedirectUri.includes('/companies/')) {
-      adminRedirectUri = adminRedirectUri.replace('/companies/', '/admin/');
-    } else {
-      const lastSlashIndex = adminRedirectUri.lastIndexOf('/');
-      if (lastSlashIndex > 0) {
-        adminRedirectUri =
-          adminRedirectUri.substring(0, lastSlashIndex) +
-          '/admin' +
-          adminRedirectUri.substring(lastSlashIndex);
-      }
-    }
+    // Use the unified callback endpoint (company callback handles both company and admin)
+    const adminRedirectUri = calendlyConfig.redirectUri;
 
     const tokenResponse = await axios.post(
       'https://auth.calendly.com/oauth/token',

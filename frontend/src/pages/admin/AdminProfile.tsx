@@ -55,7 +55,7 @@ const AdminProfile = () => {
 
         <div className="rounded-[20px] border border-fade bg-white p-[32px] shadow-sm">
           <div className="flex flex-col md:flex-row gap-[24px] items-start md:items-center">
-            <div className="w-[120px] h-[120px] rounded-[16px] overflow-hidden bg-gradient-to-br from-button/20 to-button/10 border-2 border-fade shrink-0 flex items-center justify-center">
+            <div className="w-[120px] h-[120px] rounded-[16px] overflow-hidden bg-linear-to-br from-button/20 to-button/10 border-2 border-fade shrink-0 flex items-center justify-center">
               <HiShieldCheck className="text-[60px] text-button" />
             </div>
             <div className="flex-1 min-w-0">
