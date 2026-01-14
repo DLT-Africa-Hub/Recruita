@@ -5,6 +5,7 @@ import Application from '../models/Application.model';
 import Company from '../models/Company.model';
 import Graduate from '../models/Graduate.model';
 import Job from '../models/Job.model';
+import User from '../models/User.model';
 import { createNotification } from '../services/notification.service';
 import {
   buildInterviewRoomUrl,
@@ -1092,12 +1093,11 @@ export const getCalendlyAvailability = async (
       return;
     }
 
-    // Get application and verify graduate access (candidate viewing company availability)
-    // Explicitly select calendly fields including accessToken and refreshToken (which have select: false)
+    // Get application and verify graduate access (candidate viewing company/admin availability)
     const application = await Application.findById(applicationId)
       .populate({
         path: 'jobId',
-        select: 'companyId title',
+        select: 'companyId title directContact',
         populate: {
           path: 'companyId',
           select:
@@ -1127,6 +1127,7 @@ export const getCalendlyAvailability = async (
     }
 
     const job = application.jobId as {
+      directContact?: boolean;
       companyId?: {
         _id?: mongoose.Types.ObjectId;
         userId?: mongoose.Types.ObjectId;
@@ -1141,12 +1142,8 @@ export const getCalendlyAvailability = async (
       };
     };
 
-    if (!job?.companyId?.calendly || !job.companyId.calendly.enabled) {
-      res.status(400).json({
-        message: 'Company has not connected their Calendly account',
-      });
-      return;
-    }
+    // Check if job is admin-managed
+    const isAdminManaged = job?.directContact === false;
 
     // Validate time range
     if (
@@ -1203,15 +1200,158 @@ export const getCalendlyAvailability = async (
       return;
     }
 
-    const companyCalendly = job.companyId.calendly as {
-      enabled?: boolean;
-      userUri?: string;
-      accessToken?: string;
-      refreshToken?: string;
-      tokenExpiresAt?: Date;
-      publicLink?: string;
-      connectedAt?: Date;
-    };
+    let calendlyUserUri: string | undefined;
+    let accessTokenToUse: string | undefined;
+    let refreshTokenToUse: string | undefined;
+    let tokenExpiresAt: Date | undefined;
+
+    if (isAdminManaged) {
+      // For admin-managed jobs, use admin's Calendly
+      const adminUser = await User.findOne({
+        role: 'admin',
+        'calendly.enabled': true,
+      }).select('+calendly.accessToken +calendly.refreshToken');
+
+      if (
+        !adminUser ||
+        !adminUser.calendly?.accessToken ||
+        !adminUser.calendly?.userUri
+      ) {
+        res.status(400).json({
+          message: 'Admin has not connected their Calendly account',
+        });
+        return;
+      }
+
+      calendlyUserUri = adminUser.calendly.userUri;
+      accessTokenToUse = adminUser.calendly.accessToken;
+      refreshTokenToUse = adminUser.calendly.refreshToken;
+      tokenExpiresAt = adminUser.calendly.tokenExpiresAt;
+
+      // Check if token is expired and refresh if needed
+      if (tokenExpiresAt && tokenExpiresAt < new Date()) {
+        if (!refreshTokenToUse) {
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+          });
+          return;
+        }
+
+        try {
+          const refreshResult =
+            await calendlyService.refreshAccessToken(refreshTokenToUse);
+
+          adminUser.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            adminUser.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            adminUser.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await adminUser.save();
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.error(
+            'Failed to refresh Calendly access token:',
+            refreshError
+          );
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+          });
+          return;
+        }
+      }
+    } else {
+      // For company-managed jobs, use company's Calendly
+      if (!job?.companyId?.calendly || !job.companyId.calendly.enabled) {
+        res.status(400).json({
+          message: 'Company has not connected their Calendly account',
+        });
+        return;
+      }
+
+      const companyCalendly = job.companyId.calendly as {
+        enabled?: boolean;
+        userUri?: string;
+        accessToken?: string;
+        refreshToken?: string;
+        tokenExpiresAt?: Date;
+        publicLink?: string;
+        connectedAt?: Date;
+      };
+
+      if (!companyCalendly.accessToken) {
+        res.status(400).json({
+          message:
+            'Company must connect Calendly via OAuth to view availability',
+        });
+        return;
+      }
+
+      if (!companyCalendly.userUri) {
+        res.status(400).json({
+          message: 'Company Calendly user URI is missing',
+        });
+        return;
+      }
+
+      calendlyUserUri = companyCalendly.userUri;
+      accessTokenToUse = companyCalendly.accessToken;
+      refreshTokenToUse = companyCalendly.refreshToken;
+      tokenExpiresAt = companyCalendly.tokenExpiresAt;
+      const companyId = (job.companyId as { _id?: mongoose.Types.ObjectId })
+        ._id;
+
+      // Check if token is expired and refresh if needed
+      if (tokenExpiresAt && tokenExpiresAt < new Date()) {
+        if (!refreshTokenToUse) {
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+          });
+          return;
+        }
+
+        try {
+          const refreshResult =
+            await calendlyService.refreshAccessToken(refreshTokenToUse);
+
+          // Update company with new tokens
+          if (companyId) {
+            const company = await Company.findById(companyId);
+            if (company && company.calendly) {
+              company.calendly.accessToken = refreshResult.accessToken;
+              if (refreshResult.refreshToken) {
+                company.calendly.refreshToken = refreshResult.refreshToken;
+              }
+              if (refreshResult.expiresIn) {
+                company.calendly.tokenExpiresAt = new Date(
+                  Date.now() + refreshResult.expiresIn * 1000
+                );
+              }
+              await company.save();
+            }
+          }
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.error(
+            'Failed to refresh Calendly access token:',
+            refreshError
+          );
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+          });
+          return;
+        }
+      }
+    }
 
     // Always fetch event types to return to frontend (even if eventTypeUri is provided)
     let eventTypesData: {
@@ -1223,70 +1363,6 @@ export const getCalendlyAvailability = async (
       }>;
     } | null = null;
     let eventTypeUriToUse = eventTypeUri as string | undefined;
-
-    if (!companyCalendly.accessToken) {
-      res.status(400).json({
-        message: 'Company must connect Calendly via OAuth to view availability',
-      });
-      return;
-    }
-
-    if (!companyCalendly.userUri) {
-      res.status(400).json({
-        message: 'Company Calendly user URI is missing',
-      });
-      return;
-    }
-
-    // Check if token is expired and refresh if needed
-    let accessTokenToUse = companyCalendly.accessToken;
-    const companyId = (job.companyId as { _id?: mongoose.Types.ObjectId })._id;
-
-    if (
-      companyCalendly.tokenExpiresAt &&
-      companyCalendly.tokenExpiresAt < new Date()
-    ) {
-      // Token is expired, try to refresh it
-      if (!companyCalendly.refreshToken) {
-        res.status(400).json({
-          message:
-            'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
-        });
-        return;
-      }
-
-      try {
-        const refreshResult = await calendlyService.refreshAccessToken(
-          companyCalendly.refreshToken
-        );
-
-        // Update company with new tokens
-        if (companyId) {
-          const company = await Company.findById(companyId);
-          if (company && company.calendly) {
-            company.calendly.accessToken = refreshResult.accessToken;
-            if (refreshResult.refreshToken) {
-              company.calendly.refreshToken = refreshResult.refreshToken;
-            }
-            if (refreshResult.expiresIn) {
-              company.calendly.tokenExpiresAt = new Date(
-                Date.now() + refreshResult.expiresIn * 1000
-              );
-            }
-            await company.save();
-          }
-        }
-
-        accessTokenToUse = refreshResult.accessToken;
-      } catch (refreshError) {
-        console.error('Failed to refresh Calendly access token:', refreshError);
-        res.status(400).json({
-          message:
-            'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
-        });
-        return;
-      }
-    }
 
     // Fetch event types from Calendly and get company timezone
     let companyTimezone = 'UTC'; // Default to UTC
@@ -1300,29 +1376,26 @@ export const getCalendlyAvailability = async (
         return;
       }
 
-      // Get company's timezone from Calendly user info
+      // Get timezone from Calendly user info (admin or company)
       try {
-        const companyUser =
+        const calendlyUser =
           await calendlyService.getCurrentUser(accessTokenToUse);
-        if (companyUser?.timezone) {
-          companyTimezone = companyUser.timezone;
+        if (calendlyUser?.timezone) {
+          companyTimezone = calendlyUser.timezone;
         }
       } catch (timezoneError) {
-        console.warn(
-          'Failed to get company timezone, using UTC:',
-          timezoneError
-        );
+        console.warn('Failed to get timezone, using UTC:', timezoneError);
         // Continue with UTC as default
       }
 
       const eventTypes = await calendlyService.getEventTypes(
-        companyCalendly.userUri,
+        calendlyUserUri!,
         accessTokenToUse
       );
 
       if (eventTypes.collection.length === 0) {
         res.status(400).json({
-          message: 'Company has no available Calendly event types',
+          message: `${isAdminManaged ? 'Admin' : 'Company'} has no available Calendly event types`,
         });
         return;
       }
@@ -1354,8 +1427,7 @@ export const getCalendlyAvailability = async (
     // Get available times
     if (!accessTokenToUse) {
       res.status(400).json({
-        message:
-          'Company Calendly access token is missing. Please reconnect Calendly.',
+        message: `${isAdminManaged ? 'Admin' : 'Company'} Calendly access token is missing. Please reconnect Calendly.`,
       });
       return;
     }
@@ -1472,7 +1544,8 @@ export const scheduleCalendlyInterview = async (
     const application = await Application.findById(applicationId)
       .populate({
         path: 'jobId',
-        select: 'companyId title interviewStages interviewStageTitles',
+        select:
+          'companyId title interviewStages interviewStageTitles directContact',
         populate: {
           path: 'companyId',
           select:
@@ -1508,6 +1581,7 @@ export const scheduleCalendlyInterview = async (
       _id: mongoose.Types.ObjectId;
       interviewStages?: 1 | 2 | 3;
       interviewStageTitles?: string[];
+      directContact?: boolean;
       companyId?: {
         _id?: mongoose.Types.ObjectId;
         userId?: mongoose.Types.ObjectId;
@@ -1522,106 +1596,174 @@ export const scheduleCalendlyInterview = async (
       };
       title?: string;
     };
-    const companyIdValue = job?.companyId?._id;
 
-    if (!companyIdValue) {
-      res.status(404).json({ message: 'Company not found' });
-      return;
-    }
+    // Check if job is admin-managed
+    const isAdminManaged = job?.directContact === false;
 
-    const companyId: mongoose.Types.ObjectId =
-      companyIdValue instanceof mongoose.Types.ObjectId
-        ? companyIdValue
-        : new mongoose.Types.ObjectId(String(companyIdValue));
+    let accessTokenToUse: string;
 
-    // Fetch company - the + syntax for nested select: false fields is tricky
-    // Fetch without select first, then the fields should be accessible
-    // The test shows this pattern works: Company.findOne({ userId }).select('+calendly.accessToken +calendly.refreshToken')
-    const companyDoc = await Company.findById(companyId).select(
-      '+calendly.accessToken +calendly.refreshToken'
-    );
+    if (isAdminManaged) {
+      // For admin-managed jobs, use admin's Calendly
+      // Find an admin user with Calendly connected
+      const adminUser = await User.findOne({
+        role: 'admin',
+        'calendly.enabled': true,
+      }).select('+calendly.accessToken +calendly.refreshToken');
 
-    if (!companyDoc) {
-      res.status(404).json({ message: 'Company not found' });
-      return;
-    }
-
-    // Access calendly fields - for nested select: false fields, we may need to use get()
-    // Try direct access first, then fallback to get() method
-    const calendly = companyDoc.calendly;
-    const accessToken =
-      calendly?.accessToken ?? companyDoc.get('calendly.accessToken');
-    const refreshToken =
-      calendly?.refreshToken ?? companyDoc.get('calendly.refreshToken');
-
-    const companyCalendly = calendly
-      ? {
-          enabled: calendly.enabled,
-          userUri: calendly.userUri,
-          accessToken: accessToken,
-          refreshToken: refreshToken,
-          tokenExpiresAt: calendly.tokenExpiresAt,
-        }
-      : undefined;
-
-    if (
-      !companyCalendly ||
-      !companyCalendly.enabled ||
-      !companyCalendly.accessToken
-    ) {
-      res.status(400).json({
-        message:
-          'Company must connect Calendly via OAuth to schedule interviews',
-      });
-      return;
-    }
-
-    // Check if token is expired and refresh if needed
-    let accessTokenToUse = companyCalendly.accessToken;
-
-    if (
-      companyCalendly.tokenExpiresAt &&
-      companyCalendly.tokenExpiresAt < new Date()
-    ) {
-      // Token is expired, try to refresh it
-      if (!companyCalendly.refreshToken) {
+      if (!adminUser || !adminUser.calendly?.accessToken) {
         res.status(400).json({
           message:
-            'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+            'Admin must connect Calendly via OAuth to schedule interviews for admin-managed jobs',
         });
         return;
       }
 
-      try {
-        const refreshResult = await calendlyService.refreshAccessToken(
-          companyCalendly.refreshToken
-        );
+      const adminCalendly = adminUser.calendly;
+      accessTokenToUse = adminCalendly.accessToken!;
 
-        // Update company with new tokens
-        if (companyId) {
-          const company = await Company.findById(companyId);
-          if (company && company.calendly) {
-            company.calendly.accessToken = refreshResult.accessToken;
-            if (refreshResult.refreshToken) {
-              company.calendly.refreshToken = refreshResult.refreshToken;
-            }
-            if (refreshResult.expiresIn) {
-              company.calendly.tokenExpiresAt = new Date(
-                Date.now() + refreshResult.expiresIn * 1000
-              );
-            }
-            await company.save();
-          }
+      if (
+        adminCalendly.tokenExpiresAt &&
+        adminCalendly.tokenExpiresAt < new Date()
+      ) {
+        if (!adminCalendly.refreshToken) {
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+          });
+          return;
         }
 
-        accessTokenToUse = refreshResult.accessToken;
-      } catch (refreshError) {
-        console.error('Failed to refresh Calendly access token:', refreshError);
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            adminCalendly.refreshToken
+          );
+
+          adminUser.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            adminUser.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            adminUser.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await adminUser.save();
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.error(
+            'Failed to refresh Calendly access token:',
+            refreshError
+          );
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+          });
+          return;
+        }
+      }
+    } else {
+      const companyIdValue = job?.companyId?._id;
+
+      if (!companyIdValue) {
+        res.status(404).json({ message: 'Company not found' });
+        return;
+      }
+
+      const companyId: mongoose.Types.ObjectId =
+        companyIdValue instanceof mongoose.Types.ObjectId
+          ? companyIdValue
+          : new mongoose.Types.ObjectId(String(companyIdValue));
+
+      // Fetch company - the + syntax for nested select: false fields is tricky
+      const companyDoc = await Company.findById(companyId).select(
+        '+calendly.accessToken +calendly.refreshToken'
+      );
+
+      if (!companyDoc) {
+        res.status(404).json({ message: 'Company not found' });
+        return;
+      }
+
+      // Access calendly fields - for nested select: false fields, we may need to use get()
+      const calendly = companyDoc.calendly;
+      const accessToken =
+        calendly?.accessToken ?? companyDoc.get('calendly.accessToken');
+      const refreshToken =
+        calendly?.refreshToken ?? companyDoc.get('calendly.refreshToken');
+
+      const companyCalendly = calendly
+        ? {
+            enabled: calendly.enabled,
+            userUri: calendly.userUri,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            tokenExpiresAt: calendly.tokenExpiresAt,
+          }
+        : undefined;
+
+      if (
+        !companyCalendly ||
+        !companyCalendly.enabled ||
+        !companyCalendly.accessToken
+      ) {
         res.status(400).json({
           message:
-            'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+            'Company must connect Calendly via OAuth to schedule interviews',
         });
         return;
+      }
+
+      accessTokenToUse = companyCalendly.accessToken;
+
+      // Check if token is expired and refresh if needed
+      if (
+        companyCalendly.tokenExpiresAt &&
+        companyCalendly.tokenExpiresAt < new Date()
+      ) {
+        // Token is expired, try to refresh it
+        if (!companyCalendly.refreshToken) {
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and no refresh token is available. Please reconnect Calendly.',
+          });
+          return;
+        }
+
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            companyCalendly.refreshToken
+          );
+
+          // Update company with new tokens
+          if (companyId) {
+            const company = await Company.findById(companyId);
+            if (company && company.calendly) {
+              company.calendly.accessToken = refreshResult.accessToken;
+              if (refreshResult.refreshToken) {
+                company.calendly.refreshToken = refreshResult.refreshToken;
+              }
+              if (refreshResult.expiresIn) {
+                company.calendly.tokenExpiresAt = new Date(
+                  Date.now() + refreshResult.expiresIn * 1000
+                );
+              }
+              await company.save();
+            }
+          }
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.error(
+            'Failed to refresh Calendly access token:',
+            refreshError
+          );
+          res.status(400).json({
+            message:
+              'Calendly access token has expired and could not be refreshed. Please reconnect Calendly.',
+          });
+          return;
+        }
       }
     }
 
@@ -1747,7 +1889,18 @@ export const scheduleCalendlyInterview = async (
       (endDate.getTime() - startDate.getTime()) / (1000 * 60)
     );
 
-    // Get company user ID
+    // Get company ID and user ID (even for admin-managed jobs, we need the company info)
+    const companyIdValue = job?.companyId?._id;
+    if (!companyIdValue) {
+      res.status(404).json({ message: 'Company not found' });
+      return;
+    }
+
+    const companyIdForInterview: mongoose.Types.ObjectId =
+      companyIdValue instanceof mongoose.Types.ObjectId
+        ? companyIdValue
+        : new mongoose.Types.ObjectId(String(companyIdValue));
+
     const companyUserIdValue =
       job.companyId &&
       typeof job.companyId === 'object' &&
@@ -1768,7 +1921,7 @@ export const scheduleCalendlyInterview = async (
     const interview = new Interview({
       applicationId: application._id,
       jobId: jobData._id || job._id,
-      companyId: companyId,
+      companyId: companyIdForInterview,
       companyUserId: companyUserIdValue,
       graduateId: graduate._id,
       graduateUserId: graduate.userId!,

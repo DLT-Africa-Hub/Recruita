@@ -11,7 +11,6 @@ import {
   XCircle,
   Trash2,
   MessageSquare,
-  Calendar,
   FileText,
   Check,
   X as XIcon,
@@ -39,14 +38,9 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
   );
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   const [showMessageModal, setShowMessageModal] = useState(false);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [messageText, setMessageText] = useState('');
-  const [scheduleError, setScheduleError] = useState('');
-  const [interviewSlots, setInterviewSlots] = useState<
-    Array<{ date: string; time: string; duration: number }>
-  >([{ date: '', time: '', duration: 30 }]);
 
   const {
     data: jobData,
@@ -97,48 +91,6 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
     onError: (error: unknown) => {
       const err = error as ApiError;
       toast.error(err.response?.data?.message || 'Failed to send message');
-    },
-  });
-
-  const scheduleInterviewMutation = useMutation({
-    mutationFn: async (data: {
-      applicationId: string;
-      slots: Array<{ date: string; time: string; duration: number }>;
-    }) => {
-      // Convert slots to the format expected by the API
-      const timeSlots = data.slots
-        .filter((slot) => slot.date && slot.time)
-        .map((slot) => ({
-          date: new Date(`${slot.date}T${slot.time}`).toISOString(),
-          duration: slot.duration,
-        }));
-
-      if (timeSlots.length === 0) {
-        throw new Error('Please provide at least one valid time slot');
-      }
-
-      // Use suggestTimeSlots to allow applicant to pick from multiple options
-      return adminApi.suggestTimeSlotsForApplicant(data.applicationId, {
-        timeSlots,
-        adminTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-    },
-    onSuccess: () => {
-      toast.success(
-        `Time slots suggested successfully. The applicant will be notified to select their preferred time.`
-      );
-      setShowScheduleModal(false);
-      setInterviewSlots([{ date: '', time: '', duration: 30 }]);
-      setSelectedApplication(null);
-      setScheduleError('');
-      queryClient.invalidateQueries({ queryKey: ['adminJob', jobId] });
-    },
-    onError: (error: unknown) => {
-      const err = error as ApiError;
-      const errorMessage =
-        err.response?.data?.message || 'Failed to suggest time slots';
-      setScheduleError(errorMessage);
-      toast.error(errorMessage);
     },
   });
 
@@ -927,21 +879,6 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                                             <XIcon size={18} />
                                           </button>
                                         )}
-                                        {/* Schedule Interview - Only if application exists */}
-                                        {application.id && (
-                                          <button
-                                            onClick={() => {
-                                              setSelectedApplication(
-                                                application
-                                              );
-                                              setShowScheduleModal(true);
-                                            }}
-                                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                            title="Schedule Interview"
-                                          >
-                                            <Calendar size={18} />
-                                          </button>
-                                        )}
                                       </div>
                                     </td>
                                   )}
@@ -1019,174 +956,6 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({
                 sendMessageToGraduateMutation.isPending
                   ? 'Sending...'
                   : 'Send'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Schedule Interview Modal */}
-      {showScheduleModal && selectedApplication && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Schedule Interview</h3>
-            <p className="text-sm text-gray-600 mb-2">
-              With: {selectedApplication.candidate?.name || 'Applicant'}
-            </p>
-            <p className="text-sm text-gray-600 mb-4">
-              Email: {selectedApplication.candidate?.email || 'No email'}
-            </p>
-            {scheduleError && (
-              <div className="mb-4 p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
-                {scheduleError}
-              </div>
-            )}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Note:</strong> You can suggest multiple time slots. The
-                applicant will be notified and can select their preferred time
-                from the options you provide.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {interviewSlots.map((slot, index) => (
-                <div
-                  key={index}
-                  className="border border-gray-200 rounded-lg p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-sm font-medium text-gray-700">
-                      Time Slot {index + 1}
-                    </h4>
-                    {interviewSlots.length > 1 && (
-                      <button
-                        onClick={() => {
-                          setInterviewSlots(
-                            interviewSlots.filter((_, i) => i !== index)
-                          );
-                        }}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date
-                      </label>
-                      <input
-                        type="date"
-                        value={slot.date}
-                        onChange={(e) => {
-                          const newSlots = [...interviewSlots];
-                          newSlots[index].date = e.target.value;
-                          setInterviewSlots(newSlots);
-                        }}
-                        min={new Date().toISOString().split('T')[0]}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Time
-                      </label>
-                      <input
-                        type="time"
-                        value={slot.time}
-                        onChange={(e) => {
-                          const newSlots = [...interviewSlots];
-                          newSlots[index].time = e.target.value;
-                          setInterviewSlots(newSlots);
-                          setScheduleError(''); // Clear error on change
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
-                        step="900"
-                      />
-                      {slot.time && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {(() => {
-                            const [hours, minutes] = slot.time.split(':');
-                            const hour = Number.parseInt(hours, 10);
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            const displayHour = hour % 12 || 12;
-                            return `${displayHour}:${minutes} ${ampm}`;
-                          })()}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Duration
-                      </label>
-                      <select
-                        value={slot.duration}
-                        onChange={(e) => {
-                          const newSlots = [...interviewSlots];
-                          newSlots[index].duration = Number(e.target.value);
-                          setInterviewSlots(newSlots);
-                        }}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
-                      >
-                        <option value={15}>15 min</option>
-                        <option value={30}>30 min</option>
-                        <option value={45}>45 min</option>
-                        <option value={60}>60 min</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <button
-                onClick={() => {
-                  setInterviewSlots([
-                    ...interviewSlots,
-                    { date: '', time: '', duration: 30 },
-                  ]);
-                }}
-                className="w-full py-2 px-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-gray-400 hover:text-gray-700 transition-colors"
-              >
-                + Add Another Time Slot
-              </button>
-            </div>
-            <div className="flex gap-3 justify-end mt-6">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowScheduleModal(false);
-                  setInterviewSlots([{ date: '', time: '', duration: 30 }]);
-                  setSelectedApplication(null);
-                  setScheduleError('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  setScheduleError(''); // Clear previous errors
-                  const validSlots = interviewSlots.filter(
-                    (slot) => slot.date && slot.time
-                  );
-                  if (validSlots.length === 0) {
-                    setScheduleError('Please add at least one valid time slot');
-                    return;
-                  }
-
-                  scheduleInterviewMutation.mutate({
-                    applicationId: selectedApplication.id,
-                    slots: validSlots,
-                  });
-                }}
-                disabled={
-                  interviewSlots.every((slot) => !slot.date || !slot.time) ||
-                  scheduleInterviewMutation.isPending
-                }
-              >
-                {scheduleInterviewMutation.isPending
-                  ? 'Scheduling...'
-                  : 'Schedule Interview'}
               </Button>
             </div>
           </div>

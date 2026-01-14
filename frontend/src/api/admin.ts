@@ -253,29 +253,26 @@ export const adminApi = {
     return response.data;
   },
 
-  scheduleInterviewForApplicant: async (
-    applicationId: string,
-    payload: { scheduledAt: string; durationMinutes?: number }
-  ) => {
-    const response = await api.post(
-      `/admin/applications/${applicationId}/schedule-interview`,
-      payload
-    );
+  // Calendly Integration
+  getCalendlyAuthUrl: async () => {
+    const response = await api.get('/admin/calendly/connect');
     return response.data;
   },
 
-  suggestTimeSlotsForApplicant: async (
-    applicationId: string,
-    payload: {
-      timeSlots: Array<{ date: string; duration: number }>;
-      adminTimezone?: string;
-      selectionDeadline?: string;
-    }
-  ) => {
-    const response = await api.post(
-      `/admin/applications/${applicationId}/suggest-time-slots`,
-      payload
-    );
+  getCalendlyStatus: async () => {
+    const response = await api.get('/admin/calendly/status');
+    return response.data;
+  },
+
+  setCalendlyPublicLink: async (publicLink: string) => {
+    const response = await api.post('/admin/calendly/public-link', {
+      publicLink,
+    });
+    return response.data;
+  },
+
+  disconnectCalendly: async () => {
+    const response = await api.delete('/admin/calendly/disconnect');
     return response.data;
   },
 

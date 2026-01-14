@@ -7,6 +7,7 @@ export { default as CompanyCandidates } from './pages/company/CompanyCandidates'
 export { default as CompanyJobs } from './pages/company/CompanyJobs';
 export { default as CompanyOnboarding } from './pages/company/CompanyOnboarding';
 export { default as AdminDashboard } from './pages/admin/AdminDashboard';
+export { default as AdminProfile } from './pages/admin/AdminProfile';
 export { default as ProtectedRoute } from './components/ProtectedRoute';
 export { default as AssessmentGuard } from './components/AssessmentGuard';
 export { default as CompanyRouteGuard } from './components/CompanyRouteGuard';

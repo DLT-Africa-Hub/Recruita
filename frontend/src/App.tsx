@@ -12,6 +12,7 @@ import {
   CompanyJobs,
   CompanyOnboarding,
   AdminDashboard,
+  AdminProfile,
   ProtectedRoute,
   AssessmentGuard,
   CompanyRouteGuard,
@@ -400,6 +401,18 @@ function App() {
                       <Layout>
                         <AdminDashboard />
                       </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <EmailVerificationGuard>
+                        <Layout>
+                          <AdminProfile />
+                        </Layout>
+                      </EmailVerificationGuard>
                     </ProtectedRoute>
                   }
                 />

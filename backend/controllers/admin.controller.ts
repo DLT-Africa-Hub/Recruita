@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+import axios from 'axios';
 import mongoose, { FilterQuery } from 'mongoose';
 import { Request, Response } from 'express';
 import User, { IUser } from '../models/User.model';
@@ -7,17 +9,20 @@ import Graduate, { IGraduate } from '../models/Graduate.model';
 import Company from '../models/Company.model';
 import Application, { IApplication } from '../models/Application.model';
 import MessageModel from '../models/Message.model';
-import Interview, { IInterview } from '../models/Interview.model';
+import Interview from '../models/Interview.model';
 import Offer from '../models/Offer.model';
 import {
   buildPaginationMeta,
   parsePaginationParams,
 } from '../utils/pagination.utils';
-import {
-  buildInterviewRoomUrl,
-  generateInterviewSlug,
-} from '../utils/interview.utils';
+import { calendlyConfig } from '../config/secrets';
+import calendlyService from '../services/calendly.service';
+import Token, { TOKEN_TYPES } from '../models/Token.model';
+import { hashToken, calculateExpiryDate } from '../utils/security.utils';
 import { createNotification } from '../services/notification.service';
+
+const CLIENT_BASE_URL =
+  process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:5174';
 
 // Type definitions for populated data
 interface PopulatedJob {
@@ -1797,324 +1802,511 @@ export const sendMessageToApplicant = async (
 };
 
 /**
- * Schedule interview for an application (admin)
- * POST /api/admin/applications/:applicationId/schedule-interview
+ * Get Calendly OAuth authorization URL (Admin)
+ * GET /api/admin/calendly/connect
  */
-export const scheduleInterviewForApplicant = async (
+export const getAdminCalendlyAuthUrl = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
-      res.fail('Unauthorized', 401);
+      res.status(401).json({ message: 'Unauthorized' });
       return;
     }
 
-    const { applicationId } = req.params;
-    const { scheduledAt, durationMinutes } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
-      res.fail('Invalid application ID', 400);
-      return;
-    }
-
-    if (!scheduledAt) {
-      res.fail('Scheduled time is required', 400);
-      return;
-    }
-
-    const scheduledDate = new Date(scheduledAt);
-    if (isNaN(scheduledDate.getTime())) {
-      res.fail('Invalid date format', 400);
-      return;
-    }
-
-    if (scheduledDate < new Date()) {
-      res.fail('Interview cannot be scheduled in the past', 400);
-      return;
-    }
-
-    // Get application with all necessary info
-    const application = await Application.findById(applicationId)
-      .populate({
-        path: 'jobId',
-        select: 'companyId title directContact',
-        populate: {
-          path: 'companyId',
-          select: 'userId companyName',
-        },
-      })
-      .populate({
-        path: 'graduateId',
-        select: 'userId firstName lastName',
+    if (!calendlyConfig.enabled) {
+      res.status(503).json({
+        message: 'Calendly integration is not configured',
       });
-
-    if (!application) {
-      res.fail('Application not found', 404);
       return;
     }
 
-    const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
-    const jobData =
-      typeof job === 'object' &&
-      job &&
-      !(job instanceof mongoose.Types.ObjectId)
-        ? job
-        : null;
-
-    if (!jobData || jobData.directContact !== false) {
-      res.fail(
-        'This job is not managed by DLT Africa. Only jobs with admin handling can have interviews scheduled by admins.',
-        403
-      );
+    if (!calendlyConfig.clientId || !calendlyConfig.redirectUri) {
+      res.status(500).json({
+        message: 'Calendly OAuth configuration is incomplete',
+      });
       return;
     }
 
-    const company = jobData.companyId as
-      | PopulatedCompany
-      | mongoose.Types.ObjectId;
-    const companyData =
-      typeof company === 'object' &&
-      company &&
-      !(company instanceof mongoose.Types.ObjectId)
-        ? company
-        : null;
+    // Generate state parameter for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
+    const stateHash = hashToken(state);
 
-    if (!companyData) {
-      res.fail('Company not found for this job', 404);
-      return;
-    }
-
-    const graduate = application.graduateId as
-      | PopulatedGraduate
-      | mongoose.Types.ObjectId;
-    const graduateData =
-      typeof graduate === 'object' &&
-      graduate &&
-      !(graduate instanceof mongoose.Types.ObjectId)
-        ? graduate
-        : null;
-
-    if (!graduateData?.userId) {
-      res.fail('Graduate profile is missing a linked user account', 400);
-      return;
-    }
-
-    const graduateUserId =
-      graduateData.userId instanceof mongoose.Types.ObjectId
-        ? graduateData.userId
-        : new mongoose.Types.ObjectId(String(graduateData.userId));
-
-    const graduateId =
-      graduateData._id instanceof mongoose.Types.ObjectId
-        ? graduateData._id
-        : new mongoose.Types.ObjectId(String(graduateData._id));
-
-    const companyId =
-      companyData._id instanceof mongoose.Types.ObjectId
-        ? companyData._id
-        : new mongoose.Types.ObjectId(String(companyData._id));
-
-    const companyUserId =
-      companyData.userId instanceof mongoose.Types.ObjectId
-        ? companyData.userId
-        : new mongoose.Types.ObjectId(String(companyData.userId));
-
-    // Check for existing active interviews
-    const existingActiveInterviews = await Interview.find({
-      companyId: companyId,
-      graduateId: graduateId,
-      status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
-    }).lean();
-
-    if (existingActiveInterviews.length > 0) {
-      const pendingSelection = existingActiveInterviews.find(
-        (interview) => interview.status === 'pending_selection'
-      );
-      if (pendingSelection) {
-        res.fail(
-          'An interview time slot selection is pending for this candidate. Please wait until they select a time or the current selection expires before scheduling another interview.',
-          400
-        );
-        return;
-      }
-
-      const inProgress = existingActiveInterviews.find(
-        (interview) => interview.status === 'in_progress'
-      );
-      if (inProgress) {
-        res.fail(
-          'This candidate already has an interview in progress. You cannot schedule another interview with them until the current one is completed.',
-          400
-        );
-        return;
-      }
-
-      const scheduled = existingActiveInterviews.find(
-        (interview) => interview.status === 'scheduled'
-      );
-      if (scheduled) {
-        res.fail(
-          'An interview is already scheduled with this candidate. Please wait until the current interview is completed before scheduling another one.',
-          400
-        );
-        return;
-      }
-    }
-
-    // Validate duration
-    const allowedDurations = [15, 30, 45, 60];
-    const durationNumber =
-      typeof durationMinutes === 'number'
-        ? durationMinutes
-        : typeof durationMinutes === 'string'
-          ? Number(durationMinutes)
-          : 30;
-    const validatedDuration = allowedDurations.includes(
-      Math.floor(durationNumber)
-    )
-      ? Math.floor(durationNumber)
-      : 30;
-
-    // Check if there's already an interview for this application
-    let interview: IInterview | null = await Interview.findOne({
-      applicationId: application._id,
+    // Store state with user ID for callback verification (expires in 10 minutes)
+    await Token.create({
+      user: userId,
+      tokenHash: stateHash,
+      type: TOKEN_TYPES.CALENDLY_OAUTH_STATE,
+      expiresAt: calculateExpiryDate(10 * 60 * 1000), // 10 minutes
+      metadata: { userId: userId.toString() },
     });
+
+    // Use admin-specific redirect URI (replace /companies/ with /admin/ if present, or append /admin/)
+    let adminRedirectUri = calendlyConfig.redirectUri;
+    if (adminRedirectUri.includes('/companies/')) {
+      adminRedirectUri = adminRedirectUri.replace('/companies/', '/admin/');
+    } else {
+      // If redirect URI doesn't have /companies/, append /admin/ before the last segment
+      const lastSlashIndex = adminRedirectUri.lastIndexOf('/');
+      if (lastSlashIndex > 0) {
+        adminRedirectUri =
+          adminRedirectUri.substring(0, lastSlashIndex) +
+          '/admin' +
+          adminRedirectUri.substring(lastSlashIndex);
+      }
+    }
+
+    const authUrl = new URL('https://auth.calendly.com/oauth/authorize');
+    authUrl.searchParams.append('client_id', calendlyConfig.clientId);
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('redirect_uri', adminRedirectUri);
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('scope', 'default');
+
+    res.json({
+      authUrl: authUrl.toString(),
+      state,
+    });
+  } catch (error) {
+    console.error('Get Admin Calendly auth URL error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Handle Calendly OAuth callback (Admin)
+ * GET /api/admin/calendly/callback
+ */
+export const adminCalendlyOAuthCallback = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const redirectToProfile = (success: boolean, message?: string) => {
+    const trimmedBase = CLIENT_BASE_URL.replace(/\/+$/, '');
+    const params = new URLSearchParams();
+
+    if (success) {
+      params.append('calendly', 'connected');
+    } else {
+      params.append('calendly', 'error');
+      if (message) {
+        params.append('message', encodeURIComponent(message));
+      }
+    }
+
+    const redirectUrl = `${trimmedBase}/admin/profile?${params.toString()}`;
+    res.redirect(redirectUrl);
+  };
+
+  try {
+    const { code, state } = req.query;
+
+    if (!state || typeof state !== 'string') {
+      redirectToProfile(false, 'Missing state parameter');
+      return;
+    }
+
+    // Look up user by state token
+    const stateHash = hashToken(state);
+    const stateToken = await Token.findOne({
+      tokenHash: stateHash,
+      type: TOKEN_TYPES.CALENDLY_OAUTH_STATE,
+      consumedAt: { $exists: false },
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!stateToken || !stateToken.isActive()) {
+      redirectToProfile(false, 'Invalid or expired state parameter');
+      return;
+    }
+
+    const userId = stateToken.user;
+
+    // Consume the state token
+    stateToken.consumedAt = new Date();
+    await stateToken.save();
+
+    if (!code || typeof code !== 'string') {
+      redirectToProfile(false, 'Authorization code is required');
+      return;
+    }
 
     if (
-      interview &&
-      ['pending_selection', 'scheduled', 'in_progress'].includes(
-        interview.status
-      )
+      !calendlyConfig.clientId ||
+      !calendlyConfig.clientSecret ||
+      !calendlyConfig.redirectUri
     ) {
-      res.fail(
-        'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.',
-        400
-      );
+      redirectToProfile(false, 'Calendly OAuth configuration is incomplete');
       return;
     }
 
-    const roomSlug = interview?.roomSlug ?? generateInterviewSlug();
-    const roomUrl = buildInterviewRoomUrl(roomSlug);
-
-    if (!interview) {
-      const jobIdValue =
-        jobData._id instanceof mongoose.Types.ObjectId
-          ? jobData._id
-          : new mongoose.Types.ObjectId(String(jobData._id));
-
-      interview = new Interview({
-        applicationId: application._id,
-        jobId: jobIdValue,
-        companyId: companyId,
-        companyUserId: companyUserId,
-        graduateId: graduateId,
-        graduateUserId: graduateUserId,
-        scheduledAt: scheduledDate,
-        durationMinutes: validatedDuration,
-        status: 'scheduled',
-        roomSlug,
-        roomUrl,
-        provider: 'stream',
-        createdBy: new mongoose.Types.ObjectId(userId),
-      });
+    // Exchange authorization code for access token
+    // Use the same redirect URI format as in getAdminCalendlyAuthUrl
+    let adminRedirectUri = calendlyConfig.redirectUri;
+    if (adminRedirectUri.includes('/companies/')) {
+      adminRedirectUri = adminRedirectUri.replace('/companies/', '/admin/');
     } else {
-      if (
-        interview.status === 'completed' ||
-        interview.status === 'cancelled'
-      ) {
-        interview.scheduledAt = scheduledDate;
-        interview.durationMinutes = validatedDuration;
-        interview.status = 'scheduled';
-        interview.roomSlug = roomSlug;
-        interview.roomUrl = roomUrl;
-        interview.updatedBy = new mongoose.Types.ObjectId(userId);
-        interview.startedAt = undefined;
-        interview.endedAt = undefined;
-      } else {
-        res.fail(
-          'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before scheduling another one.',
-          400
-        );
-        return;
+      const lastSlashIndex = adminRedirectUri.lastIndexOf('/');
+      if (lastSlashIndex > 0) {
+        adminRedirectUri =
+          adminRedirectUri.substring(0, lastSlashIndex) +
+          '/admin' +
+          adminRedirectUri.substring(lastSlashIndex);
       }
     }
 
-    await interview.save();
+    const tokenResponse = await axios.post(
+      'https://auth.calendly.com/oauth/token',
+      {
+        grant_type: 'authorization_code',
+        client_id: calendlyConfig.clientId,
+        client_secret: calendlyConfig.clientSecret,
+        code,
+        redirect_uri: adminRedirectUri,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // Update application
-    application.interviewScheduledAt = scheduledDate;
-    application.interviewLink = roomUrl;
-    application.interviewRoomSlug = roomSlug;
-    application.interviewId = interview._id as mongoose.Types.ObjectId;
-    // Set status to 'shortlisted' when interview is scheduled, not 'interviewed'
-    // 'interviewed' should only be set after the interview is completed
-    if (application.status === 'pending' || application.status === 'reviewed') {
-      application.status = 'shortlisted';
+    const { access_token, refresh_token, expires_in } = tokenResponse.data;
+
+    if (!access_token) {
+      redirectToProfile(false, 'Failed to obtain access token');
+      return;
     }
-    if (!application.reviewedAt) {
-      application.reviewedAt = new Date();
+
+    // Get user information from Calendly
+    const userInfo = await calendlyService.getCurrentUser(
+      calendlyService.encryptToken(access_token)
+    );
+
+    // Find admin user
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'admin') {
+      redirectToProfile(false, 'Admin user not found');
+      return;
     }
-    await application.save();
 
-    // Send notifications
-    const graduateName =
-      `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim() ||
-      'A candidate';
-    const formattedDate = scheduledDate.toLocaleString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+    const encryptedAccessToken =
+      calendlyService.encryptToken(access_token) || access_token;
+    const encryptedRefreshToken = refresh_token
+      ? calendlyService.encryptToken(refresh_token) || refresh_token
+      : undefined;
 
-    const interviewId = interview._id as mongoose.Types.ObjectId;
+    const tokenExpiresAt = expires_in
+      ? new Date(Date.now() + expires_in * 1000)
+      : undefined;
+
+    const userDoc = await User.findById(user._id).select(
+      '+calendly.accessToken +calendly.refreshToken'
+    );
+    if (!userDoc) {
+      redirectToProfile(false, 'Admin user not found');
+      return;
+    }
+
+    // Initialize calendly object if it doesn't exist
+    if (!userDoc.calendly) {
+      userDoc.calendly = {
+        enabled: false,
+      };
+    }
+
+    // Set all calendly fields directly on the document
+    userDoc.calendly.userUri = userInfo.uri;
+    userDoc.calendly.accessToken = encryptedAccessToken;
+    userDoc.calendly.tokenExpiresAt = tokenExpiresAt;
+    userDoc.calendly.connectedAt = new Date();
+    userDoc.calendly.enabled = true;
+
+    if (encryptedRefreshToken) {
+      userDoc.calendly.refreshToken = encryptedRefreshToken;
+    }
+
+    // Mark the nested calendly object as modified
+    userDoc.markModified('calendly');
+
+    // Save the document
+    await userDoc.save();
+
+    redirectToProfile(true);
+  } catch (error) {
+    console.error('Admin Calendly OAuth callback error:', error);
+    let errorMessage = 'Internal server error';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage =
+        error.response?.data?.message || error.message || errorMessage;
+    }
+
+    redirectToProfile(false, errorMessage);
+  }
+};
+
+/**
+ * Get Calendly connection status (Admin)
+ * GET /api/admin/calendly/status
+ */
+export const getAdminCalendlyStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    // Explicitly select calendly fields including accessToken (which has select: false)
+    const user = await User.findById(userId).select(
+      '+calendly.accessToken +calendly.refreshToken'
+    );
+    if (!user || user.role !== 'admin') {
+      res.status(404).json({ message: 'Admin user not found' });
+      return;
+    }
+
+    if (!user.calendly?.enabled) {
+      res.json({
+        connected: false,
+        enabled: false,
+      });
+      return;
+    }
+
+    // Try to get user info to verify connection is still valid
+    let userInfo = null;
+    if (!user.calendly.accessToken) {
+      res.json({
+        connected: !!user.calendly.userUri,
+        enabled: user.calendly.enabled,
+        userUri: user.calendly.userUri,
+        publicLink: user.calendly.publicLink,
+        connectedAt: user.calendly.connectedAt,
+        userInfo: null,
+      });
+      return;
+    }
 
     try {
-      await Promise.all([
-        createNotification({
-          userId: graduateUserId,
-          type: 'interview',
-          title: 'Interview Scheduled',
-          message: `Your interview for "${jobData.title || 'the position'}" at ${companyData.companyName} is set for ${formattedDate}.`,
-          relatedId: interviewId,
-          relatedType: 'interview',
-          email: {
-            subject: `Interview Scheduled: ${jobData.title || 'Position'} at ${companyData.companyName}`,
-            text: `Hello ${graduateName || 'there'},\n\nAn interview has been scheduled for your application to "${jobData.title || 'the position'}" at ${companyData.companyName}.\n\nDate: ${formattedDate}\nJoin Link: ${roomUrl}\n\nYou can also join directly from your Recruita Interviews tab when it's time.\n\nBest of luck!`,
-          },
-        }),
-        createNotification({
-          userId: companyUserId,
-          type: 'interview',
-          title: 'Interview Scheduled',
-          message: `An interview with ${graduateName || 'a candidate'} for "${jobData.title || 'the position'}" has been scheduled for ${formattedDate} by DLT Africa admin.`,
-          relatedId: interviewId,
-          relatedType: 'interview',
-        }),
-      ]);
+      // Check if token is expired and refresh if needed
+      let accessTokenToUse = user.calendly.accessToken;
+
+      if (
+        user.calendly.tokenExpiresAt &&
+        user.calendly.tokenExpiresAt < new Date() &&
+        user.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            user.calendly.refreshToken
+          );
+
+          // Update user with new tokens
+          user.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            user.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            user.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await user.save();
+
+          accessTokenToUse = refreshResult.accessToken;
+        } catch (refreshError) {
+          console.warn('Calendly token refresh failed:', refreshError);
+          // Continue with original token - it might still work
+        }
+      }
+
+      userInfo = await calendlyService.getCurrentUser(accessTokenToUse);
     } catch (error) {
-      console.error('Failed to send interview scheduling notification:', error);
+      console.warn('Calendly token validation failed:', error);
+      // If token is invalid and we have a refresh token, try to refresh
+      if (
+        error instanceof Error &&
+        error.message.includes('authentication failed') &&
+        user.calendly.refreshToken
+      ) {
+        try {
+          const refreshResult = await calendlyService.refreshAccessToken(
+            user.calendly.refreshToken
+          );
+
+          // Update user with new tokens
+          user.calendly.accessToken = refreshResult.accessToken;
+          if (refreshResult.refreshToken) {
+            user.calendly.refreshToken = refreshResult.refreshToken;
+          }
+          if (refreshResult.expiresIn) {
+            user.calendly.tokenExpiresAt = new Date(
+              Date.now() + refreshResult.expiresIn * 1000
+            );
+          }
+          await user.save();
+
+          // Retry with new token
+          userInfo = await calendlyService.getCurrentUser(
+            refreshResult.accessToken
+          );
+        } catch (refreshError) {
+          console.warn(
+            'Calendly token refresh failed after validation error:',
+            refreshError
+          );
+        }
+      }
     }
 
-    res.success({
-      message: 'Interview scheduled successfully',
-      application: application.toObject({ versionKey: false }),
-      interview: {
-        id: interviewId.toString(),
-        scheduledAt: interview.scheduledAt,
-        status: interview.status,
-        roomSlug: interview.roomSlug,
-        roomUrl: interview.roomUrl,
-        durationMinutes: interview.durationMinutes,
+    res.json({
+      connected: !!user.calendly.userUri,
+      enabled: user.calendly.enabled,
+      userUri: user.calendly.userUri,
+      publicLink: user.calendly.publicLink,
+      connectedAt: user.calendly.connectedAt,
+      userInfo: userInfo
+        ? {
+            name: userInfo.name,
+            email: userInfo.email,
+            schedulingUrl: userInfo.scheduling_url,
+          }
+        : null,
+    });
+  } catch (error) {
+    console.error('Get Admin Calendly status error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Set public Calendly link (alternative to OAuth) (Admin)
+ * POST /api/admin/calendly/public-link
+ */
+export const setAdminCalendlyPublicLink = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const { publicLink } = req.body;
+
+    if (!publicLink || typeof publicLink !== 'string') {
+      res.status(400).json({ message: 'Public Calendly link is required' });
+      return;
+    }
+
+    // Validate that it's a Calendly URL
+    let url: URL;
+    try {
+      url = new URL(publicLink);
+    } catch {
+      res.status(400).json({ message: 'Invalid URL format' });
+      return;
+    }
+
+    // Security: Validate hostname to prevent SSRF attacks
+    const hostname = url.hostname.toLowerCase();
+    if (!hostname.includes('calendly.com')) {
+      res.status(400).json({
+        message: 'Invalid Calendly link. Must be a calendly.com URL',
+      });
+      return;
+    }
+
+    // Security: Only allow HTTPS URLs
+    if (url.protocol !== 'https:') {
+      res.status(400).json({
+        message: 'Calendly link must use HTTPS protocol',
+      });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'admin') {
+      res.status(404).json({ message: 'Admin user not found' });
+      return;
+    }
+
+    if (!user.calendly) {
+      user.calendly = {
+        enabled: false,
+      };
+    }
+
+    user.calendly.publicLink = publicLink.trim();
+    user.calendly.enabled = true;
+    user.calendly.connectedAt = new Date();
+
+    await user.save();
+
+    res.json({
+      message: 'Public Calendly link set successfully',
+      calendly: {
+        publicLink: user.calendly.publicLink,
+        enabled: user.calendly.enabled,
       },
     });
   } catch (error) {
-    console.error('Schedule interview for applicant error:', error);
-    res.fail('Internal server error', 500);
+    console.error('Set Admin Calendly public link error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+/**
+ * Disconnect Calendly account (Admin)
+ * DELETE /api/admin/calendly/disconnect
+ */
+export const disconnectAdminCalendly = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ message: 'Unauthorized' });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user || user.role !== 'admin') {
+      res.status(404).json({ message: 'Admin user not found' });
+      return;
+    }
+
+    if (!user.calendly) {
+      res.json({
+        message: 'Calendly account disconnected successfully',
+      });
+      return;
+    }
+
+    user.calendly.enabled = false;
+    user.calendly.accessToken = undefined;
+    user.calendly.refreshToken = undefined;
+    user.calendly.tokenExpiresAt = undefined;
+    // Keep userUri and publicLink in case user wants to reconnect
+
+    await user.save();
+
+    res.json({
+      message: 'Calendly account disconnected successfully',
+    });
+  } catch (error) {
+    console.error('Disconnect Admin Calendly error:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
@@ -2147,288 +2339,6 @@ export const getTotalPostedJobs = async (
  * Get all interviews for admin-managed jobs
  * GET /api/admin/interviews
  */
-/**
- * Suggest multiple time slots for an interview (Admin)
- * POST /api/admin/applications/:applicationId/suggest-time-slots
- */
-export const suggestTimeSlotsForApplicant = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      res.fail('Unauthorized', 401);
-      return;
-    }
-
-    const { applicationId } = req.params;
-    const { timeSlots, adminTimezone, selectionDeadline } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(applicationId)) {
-      res.fail('Invalid application ID', 400);
-      return;
-    }
-
-    // Validate timeSlots array
-    if (!Array.isArray(timeSlots) || timeSlots.length === 0) {
-      res.fail('At least one time slot is required', 400);
-      return;
-    }
-
-    if (timeSlots.length > 5) {
-      res.fail('Maximum 5 time slots allowed', 400);
-      return;
-    }
-
-    // Validate timezone (default to UTC if not provided)
-    const timezone = adminTimezone || 'UTC';
-    const isValidTimezone = (tz: string): boolean => {
-      try {
-        Intl.DateTimeFormat(undefined, { timeZone: tz });
-        return true;
-      } catch {
-        return false;
-      }
-    };
-
-    if (!isValidTimezone(timezone)) {
-      res.fail('Valid timezone is required', 400);
-      return;
-    }
-
-    // Validate each time slot
-    const validDurations = [15, 30, 45, 60];
-    const now = new Date();
-    const suggestedSlots: Array<{
-      date: Date;
-      duration: number;
-      timezone: string;
-    }> = [];
-    const seenDates = new Set<string>();
-
-    for (const slot of timeSlots) {
-      if (!slot.date) {
-        res.fail('Each time slot must have a date', 400);
-        return;
-      }
-
-      const slotDate = new Date(slot.date);
-      if (isNaN(slotDate.getTime())) {
-        res.fail('Invalid date format in time slot', 400);
-        return;
-      }
-
-      if (slotDate < now) {
-        res.fail('Time slots cannot be in the past', 400);
-        return;
-      }
-
-      const duration = slot.duration || 30;
-      if (!validDurations.includes(duration)) {
-        res.fail('Duration must be 15, 30, 45, or 60 minutes', 400);
-        return;
-      }
-
-      // Check for duplicate time slots
-      const dateKey = slotDate.toISOString();
-      if (seenDates.has(dateKey)) {
-        res.fail(
-          'Duplicate time slots are not allowed. Each time slot must be unique.',
-          400
-        );
-        return;
-      }
-      seenDates.add(dateKey);
-
-      suggestedSlots.push({
-        date: slotDate,
-        duration,
-        timezone,
-      });
-    }
-
-    // Get application with all necessary info
-    const application = await Application.findById(applicationId)
-      .populate({
-        path: 'jobId',
-        select: 'companyId title directContact',
-        populate: {
-          path: 'companyId',
-          select: 'userId companyName',
-        },
-      })
-      .populate({
-        path: 'graduateId',
-        select: 'userId firstName lastName',
-      });
-
-    if (!application) {
-      res.fail('Application not found', 404);
-      return;
-    }
-
-    const job = application.jobId as PopulatedJob | mongoose.Types.ObjectId;
-    const jobData =
-      typeof job === 'object' &&
-      job &&
-      !(job instanceof mongoose.Types.ObjectId)
-        ? job
-        : null;
-
-    if (!jobData || jobData.directContact !== false) {
-      res.fail(
-        'This job is not managed by DLT Africa. Only jobs with admin handling can have interviews scheduled by admins.',
-        403
-      );
-      return;
-    }
-
-    const company = jobData.companyId as
-      | PopulatedCompany
-      | mongoose.Types.ObjectId;
-    const companyData =
-      typeof company === 'object' &&
-      company &&
-      !(company instanceof mongoose.Types.ObjectId)
-        ? company
-        : null;
-
-    if (!companyData) {
-      res.fail('Company not found', 404);
-      return;
-    }
-
-    const graduate = application.graduateId as
-      | PopulatedGraduate
-      | mongoose.Types.ObjectId;
-    const graduateData =
-      typeof graduate === 'object' &&
-      graduate &&
-      !(graduate instanceof mongoose.Types.ObjectId)
-        ? graduate
-        : null;
-
-    if (!graduateData) {
-      res.fail('Graduate not found', 404);
-      return;
-    }
-
-    const companyId =
-      companyData._id instanceof mongoose.Types.ObjectId
-        ? companyData._id
-        : new mongoose.Types.ObjectId(String(companyData._id));
-    const companyUserId =
-      companyData.userId instanceof mongoose.Types.ObjectId
-        ? companyData.userId
-        : new mongoose.Types.ObjectId(String(companyData.userId));
-    const graduateId =
-      graduateData._id instanceof mongoose.Types.ObjectId
-        ? graduateData._id
-        : new mongoose.Types.ObjectId(String(graduateData._id));
-    const graduateUserId =
-      graduateData.userId instanceof mongoose.Types.ObjectId
-        ? graduateData.userId
-        : new mongoose.Types.ObjectId(String(graduateData.userId));
-
-    // Check if there's already an active interview for this application
-    // Note: The unique constraint is on applicationId, not jobId or graduateId.
-    // This means multiple candidates (applications) for the same job can each have their own interview.
-    // However, each individual application can only have one interview at a time.
-    const existingInterview = await Interview.findOne({
-      applicationId: application._id,
-      status: { $in: ['pending_selection', 'scheduled', 'in_progress'] },
-    });
-
-    if (existingInterview) {
-      res.fail(
-        'An interview is already scheduled or pending for this application. Please wait until the current interview is completed before suggesting new time slots.',
-        400
-      );
-      return;
-    }
-
-    // Generate room details
-    const roomSlug = generateInterviewSlug();
-    const roomUrl = buildInterviewRoomUrl(roomSlug);
-
-    // Create interview with pending_selection status
-    const interview = new Interview({
-      applicationId: application._id,
-      jobId:
-        jobData._id instanceof mongoose.Types.ObjectId
-          ? jobData._id
-          : new mongoose.Types.ObjectId(String(jobData._id)),
-      companyId,
-      companyUserId,
-      graduateId,
-      graduateUserId,
-      status: 'pending_selection',
-      roomSlug,
-      roomUrl,
-      provider: 'stream',
-      createdBy: new mongoose.Types.ObjectId(userId),
-      suggestedTimeSlots: suggestedSlots,
-      companyTimezone: timezone,
-      durationMinutes: suggestedSlots[0].duration,
-      selectionDeadline: selectionDeadline
-        ? new Date(selectionDeadline)
-        : undefined,
-    });
-
-    await interview.save();
-
-    // Update application
-    application.interviewId = interview._id as mongoose.Types.ObjectId;
-    if (application.status === 'pending' || application.status === 'reviewed') {
-      application.status = 'shortlisted';
-    }
-    if (!application.reviewedAt) {
-      application.reviewedAt = new Date();
-    }
-    await application.save();
-
-    // Send notification to graduate
-    const graduateName =
-      `${graduateData.firstName || ''} ${graduateData.lastName || ''}`.trim();
-    const graduateUserIdString = graduateUserId.toString();
-
-    try {
-      const { createNotification } = await import(
-        '../services/notification.service'
-      );
-      await createNotification({
-        userId: graduateUserIdString,
-        type: 'interview',
-        title: 'Interview Time Slots Available',
-        message: `DLT Africa has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}". Please select your preferred time.`,
-        relatedId: interview._id as mongoose.Types.ObjectId,
-        relatedType: 'interview',
-        email: {
-          subject: `Interview Time Slots: ${jobData.title}`,
-          text: `Hello ${graduateName || 'there'},\n\nDLT Africa has suggested ${suggestedSlots.length} time slot${suggestedSlots.length > 1 ? 's' : ''} for your interview for "${jobData.title}".\n\nPlease log in to Recruita to view the available times and select your preferred slot.\n\nBest of luck!`,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to send interview slots notification:', error);
-    }
-
-    res.success({
-      message: 'Interview time slots suggested successfully',
-      interview: {
-        id: interview._id?.toString(),
-        status: interview.status,
-        suggestedTimeSlots: interview.suggestedTimeSlots,
-        companyTimezone: interview.companyTimezone,
-        selectionDeadline: interview.selectionDeadline,
-        roomSlug: interview.roomSlug,
-      },
-    });
-  } catch (error) {
-    console.error('Suggest time slots for applicant error:', error);
-    res.fail('Internal server error', 500);
-  }
-};
 
 /**
  * Update application status (accept/reject) - Admin

@@ -47,10 +47,14 @@ import {
   sendMessageToApplicant,
   sendMessageToGraduate,
   updateApplicationStatus,
-  scheduleInterviewForApplicant,
-  suggestTimeSlotsForApplicant,
   getTotalPostedJobs,
   getAdminInterviews,
+  // Calendly Integration
+  getAdminCalendlyAuthUrl,
+  adminCalendlyOAuthCallback,
+  getAdminCalendlyStatus,
+  setAdminCalendlyPublicLink,
+  disconnectAdminCalendly,
   // Offer Management
   getOfferById,
 } from '../controllers/admin.controller';
@@ -122,15 +126,16 @@ router.get('/graduates/:graduateId', getGraduateById);
 // ============================================
 router.post('/applications/:applicationId/message', sendMessageToApplicant);
 router.put('/applications/:applicationId/status', updateApplicationStatus);
-router.post(
-  '/applications/:applicationId/schedule-interview',
-  scheduleInterviewForApplicant
-);
-router.post(
-  '/applications/:applicationId/suggest-time-slots',
-  suggestTimeSlotsForApplicant
-);
 router.post('/graduates/:graduateId/message', sendMessageToGraduate);
+
+// ============================================
+// CALENDLY INTEGRATION ROUTES
+// ============================================
+router.get('/calendly/connect', getAdminCalendlyAuthUrl);
+router.get('/calendly/callback', adminCalendlyOAuthCallback);
+router.get('/calendly/status', getAdminCalendlyStatus);
+router.post('/calendly/public-link', setAdminCalendlyPublicLink);
+router.delete('/calendly/disconnect', disconnectAdminCalendly);
 
 // ============================================
 // INTERVIEW MANAGEMENT ROUTES
