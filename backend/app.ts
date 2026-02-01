@@ -36,9 +36,14 @@ if (securityConfig.https.trustProxy !== false) {
   app.set('trust proxy', securityConfig.https.trustProxy);
 }
 
+const origin = [
+  'https://recruita.org',
+  'http://localhost:5174',
+  'https://api.calendly.com',
+];
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: origin,
     credentials: true,
   })
 );
