@@ -1,0 +1,41 @@
+name: Build and Deploy Frontend to Namecheap
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    
+    # This ensures all 'run' commands happen in the subdirectory
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+
+    - name: ⚙️ Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: 🔨 Build Project
+      run: |
+        npm install
+        npm run build
+
+    - name: 📂 Sync files
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        # Point to the dist folder inside the subdirectory
+        local-dir: ./frontend/dist/ 
+        # Path on your Namecheap server (e.g., public_html/frontend)
+        server-dir: public_html/frontend/ 
