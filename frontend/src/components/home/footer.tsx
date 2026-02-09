@@ -4,17 +4,17 @@ import { FaTelegramPlane } from 'react-icons/fa';
 
 const Footer = () => {
   const productLinks = [
-    { name: 'Korem ipsum', href: '/korem' },
-    { name: 'Sorem ipsum', href: '/sorem' },
-    { name: 'Vorem ipsum', href: '/vorem' },
-    { name: 'Dorem ipsum', href: '/dorem' },
+    { name: 'Features', href: '/features' },
+    { name: 'Pricing', href: '/pricing' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'About Us', href: '/about' },
   ];
 
   const supportLinks = [
-    { name: 'Sorem ipsum', href: '/support-sorem' },
-    { name: 'Sorem ipsum', href: '/support-sorem-2' },
-    { name: 'Qorem ipsum', href: '/qorem' },
-    { name: 'Forem ipsum', href: '/forem' },
+    { name: 'Help Center', href: '/help' },
+    { name: 'Contact Support', href: '/contact' },
+    { name: 'Privacy Policy', href: '/privacy' },
+    { name: 'Terms of Service', href: '/terms' },
   ];
 
   return (
@@ -93,7 +93,8 @@ const Footer = () => {
                     {productLinks.map((link, index) => (
                       <Link
                         key={index}
-                        to={link.href}
+                        to="#"
+                        onClick={(e) => e.preventDefault()}
                         className="text-[#1C1C1C] text-[14px] lg:text-[16px] hover:text-[#1C1C1C]/70 transition-colors duration-200"
                       >
                         {link.name}
@@ -114,7 +115,8 @@ const Footer = () => {
                     {supportLinks.map((link, index) => (
                       <Link
                         key={index}
-                        to={link.href}
+                        to="#"
+                        onClick={(e) => e.preventDefault()}
                         className="text-[#1C1C1C] text-[14px] lg:text-[16px] hover:text-[#1C1C1C]/70 transition-colors duration-200"
                       >
                         {link.name}
@@ -140,13 +142,15 @@ const Footer = () => {
               {/* Legal Links */}
               <nav className="flex items-center gap-6" aria-label="Legal links">
                 <Link
-                  to="/privacy"
+                  to="#"
+                  onClick={(e) => e.preventDefault()}
                   className="text-[#1C1C1C] text-[14px] lg:text-[16px] hover:text-[#1C1C1C]/70 transition-colors duration-200 underline"
                 >
                   Privacy Policy
                 </Link>
                 <Link
-                  to="/terms"
+                  to="#"
+                  onClick={(e) => e.preventDefault()}
                   className="text-[#1C1C1C] text-[14px] lg:text-[16px] hover:text-[#1C1C1C]/70 transition-colors duration-200 underline"
                 >
                   Terms of Service

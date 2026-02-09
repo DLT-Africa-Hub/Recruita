@@ -22,7 +22,8 @@ const SimpleProcess = () => {
             Simple Process, Powerful Results
           </h2>
           <p className="text-[#1C1C1C] text-[16px] lg:text-[18px] max-w-[600px] leading-relaxed">
-            Norem ipsum dolor sit amet, consectetur adipiscing elit.
+            Our platform makes it easy to connect professionals with the right
+            opportunities, and companies with the right talent.
           </p>
         </div>
 
