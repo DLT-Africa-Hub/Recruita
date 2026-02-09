@@ -8,8 +8,8 @@ const Features = () => {
           Everything you need to succeed
         </p>
         <p className="text-[18px] text-[#1C1C1CBF] ">
-          Worem ipsum dolor sit amet, consectetur adipiscing elit. Nunc
-          vulputate libero et velit interdum, ac aliquet odio mattis.
+          Explore the tools and options that make it easy to find opportunities
+          and connect with companies.
         </p>
       </div>
       <div className=" flex flex-col items-center lg:w-auto w-full gap-[7px] lg:gap-[12px]">

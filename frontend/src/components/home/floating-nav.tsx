@@ -115,24 +115,25 @@ const FloatingNavbar = () => {
                     </button>
                   </DropdownMenuTrigger>
 
-                  <DropdownMenuContent className="w-56 ">
-                    <DropdownMenuLabel className="">
+                  <DropdownMenuContent className="w-56 font-bold backdrop-blur-xl border border-white/20 bg-[#00000033]">
+                    <DropdownMenuLabel className="backdrop-blur-xl border border-white/20 bg-[#00000033]">
                       Navigation
                     </DropdownMenuLabel>
-
-                    {navigationItems.map((item) => (
-                      <DropdownMenuItem key={item.name}>
-                        <Link className="w-full" to={item.href}>
-                          {' '}
-                          {item.name}
-                        </Link>
-                      </DropdownMenuItem>
-                    ))}
+                    <div className="backdrop-blur-xl border border-white/20 bg-[#00000033] ">
+                      {navigationItems.map((item) => (
+                        <DropdownMenuItem className=" " key={item.name}>
+                          <Link className="w-full " to={item.href}>
+                            {' '}
+                            {item.name}
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
 
                     <DropdownMenuSeparator />
 
                     {!isAuthenticated ? (
-                      <>
+                      <div className="backdrop-blur-xl border border-white/20 bg-[#00000033]">
                         <DropdownMenuItem>
                           <Link className="w-full" to="/login">
                             Login
@@ -143,9 +144,9 @@ const FloatingNavbar = () => {
                             Register
                           </Link>
                         </DropdownMenuItem>
-                      </>
+                      </div>
                     ) : (
-                      <>
+                      <div className="backdrop-blur-xl border border-white/20">
                         <DropdownMenuItem>
                           <Link className="w-full" to={dashboardPath}>
                             Dashboard
@@ -154,7 +155,7 @@ const FloatingNavbar = () => {
                         <DropdownMenuItem onClick={handleLogout}>
                           Logout
                         </DropdownMenuItem>
-                      </>
+                      </div>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
