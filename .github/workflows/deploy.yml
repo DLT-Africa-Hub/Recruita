@@ -44,6 +44,8 @@ jobs:
         test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing!"
         echo "📁 Checking assets folder:"
         test -d dist/assets && echo "✅ assets/ folder found" || echo "❌ assets/ folder missing!"
+        echo "🔧 Checking .htaccess exists:"
+        test -f dist/.htaccess && echo "✅ .htaccess found" || echo "❌ .htaccess missing!"
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -53,6 +55,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./frontend/dist/
+        server-dir: ./
         dangerous-clean-slate: false
         dry-run: false
         log-level: verbose
