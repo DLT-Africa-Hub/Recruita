@@ -9,8 +9,7 @@ jobs:
   web-deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    
-    # This ensures all 'run' commands happen in the subdirectory
+
     defaults:
       run:
         working-directory: ./frontend
@@ -18,6 +17,15 @@ jobs:
     steps:
     - name: 🚚 Get latest code
       uses: actions/checkout@v4
+
+    - name: 🔐 Check deploy secrets
+      run: |
+        if [ -z "${{ secrets.FTP_SERVER }}" ]; then
+          echo "::error::FTP_SERVER secret is missing or empty. Add it in repo Settings → Secrets and variables → Actions."
+          echo "For Namecheap: use the FTP host from cPanel (e.g. ftp.yourdomain.com or the hostname shown in FTP accounts)."
+          exit 1
+        fi
+        echo "FTP_SERVER is set (hostname hidden)."
 
     - name: ⚙️ Use Node.js
       uses: actions/setup-node@v4
@@ -29,13 +37,12 @@ jobs:
         npm install
         npm run build
 
-    - name: 📂 Sync files
+    - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
+        # Must be the exact FTP host from Namecheap (e.g. ftp.yourdomain.com). ENOTFOUND = wrong host or secret empty.
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        # Point to the dist folder inside the subdirectory
-        local-dir: ./frontend/dist/ 
-        # Path on your Namecheap server (e.g., public_html/frontend)
+        local-dir: ./frontend/dist/
         server-dir: public_html/frontend/ 
