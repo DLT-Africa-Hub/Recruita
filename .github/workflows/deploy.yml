@@ -33,9 +33,17 @@ jobs:
         node-version: '20'
 
     - name: 🔨 Build Project
+      env:
+        VITE_APP_API_URL: ${{ secrets.VITE_APP_API_URL }}
       run: |
         npm install
         npm run build
+        echo "📦 Build output verification:"
+        ls -lah dist/ | head -20
+        echo "📄 Checking index.html exists:"
+        test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html missing!"
+        echo "📁 Checking assets folder:"
+        test -d dist/assets && echo "✅ assets/ folder found" || echo "❌ assets/ folder missing!"
 
     - name: 📂 Sync files via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -46,4 +54,9 @@ jobs:
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./frontend/dist/
         server-dir: public_html/
-        dangerous-clean-slate: false 
+        dangerous-clean-slate: false
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/.DS_Store 
